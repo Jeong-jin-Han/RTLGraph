@@ -1,6 +1,6 @@
 import { FILTER_PRESETS, validateComponentGraph, type ComponentGraph, type Diagnostic, type FilterPreset, type ViewFilter } from '@rtlgraph/ir'
 import { layoutComponent, type LayoutResult } from '@rtlgraph/layout'
-import { renderSvg } from '@rtlgraph/render'
+import { buildScene, renderSvg, sceneToSvg } from '@rtlgraph/render'
 import type { HostToWebview, WebviewToHost } from '../protocol.ts'
 import {
   FLOW_LABELS, FLOWS, PRESET_LABELS, TIME_LABELS, TIMES,
@@ -53,6 +53,8 @@ const presetSelect = el('select', { title: 'View preset' })
 for (const [key, label] of Object.entries(PRESET_LABELS)) presetSelect.append(el('option', { value: key, textContent: label }))
 presetSelect.append(el('option', { value: '', textContent: 'Custom', disabled: true }))
 presetSelect.addEventListener('change', () => setFilter(FILTER_PRESETS[presetSelect.value as FilterPreset]))
+const exportButton = el('button', { type: 'button', textContent: 'Export…', title: 'Export the current view as SVG, PNG or PDF' })
+exportButton.addEventListener('click', () => vscode.postMessage({ type: 'export' }))
 const fitButton = el('button', { type: 'button', textContent: 'Fit', title: 'Fit the schematic to the window' })
 fitButton.addEventListener('click', fit)
 
@@ -60,7 +62,7 @@ const toolbar = el('div', { id: 'toolbar' },
   el('span', { className: 'label', textContent: 'flow' }), ...flowButtons,
   el('span', { className: 'label', textContent: 'time' }), ...timeButtons,
   el('span', { className: 'label', textContent: 'preset' }), presetSelect,
-  el('span', { className: 'spacer' }), fitButton,
+  el('span', { className: 'spacer' }), exportButton, fitButton,
 )
 const stage = el('div', { id: 'stage' })
 const canvas = el('div', { id: 'canvas' }, stage)
@@ -86,6 +88,36 @@ function render() {
       signals: stage.querySelectorAll('[data-signal]').length,
     },
   })
+}
+
+// PNG export: draw the cropped view (the same scene the SVG/PDF exports use) onto
+// a canvas at `scale` and return it base64-encoded.
+async function rasterize(scale: number): Promise<string> {
+  if (!graph || !layout) throw new Error('nothing is drawn yet')
+  const scene = buildScene(graph, { filter, layout })
+  const url = URL.createObjectURL(new Blob([sceneToSvg(scene)], { type: 'image/svg+xml' }))
+  try {
+    const image = new Image()
+    await new Promise<void>((resolve, reject) => {
+      image.onload = () => resolve()
+      image.onerror = () => reject(new Error('the SVG could not be loaded as an image'))
+      image.src = url
+    })
+    const surface = document.createElement('canvas')
+    surface.width = Math.round(scene.view.w * scale)
+    surface.height = Math.round(scene.view.h * scale)
+    const context = surface.getContext('2d')
+    if (!context) throw new Error('no 2D canvas available')
+    context.drawImage(image, 0, 0, surface.width, surface.height)
+    const blob = await new Promise<Blob>((resolve, reject) =>
+      surface.toBlob(b => (b ? resolve(b) : reject(new Error('PNG encoding failed'))), 'image/png'))
+    const bytes = new Uint8Array(await blob.arrayBuffer())
+    let binary = ''
+    for (let i = 0; i < bytes.length; i += 0x8000) binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000))
+    return btoa(binary)
+  } finally {
+    URL.revokeObjectURL(url)
+  }
 }
 
 function applyViewport() {
@@ -183,6 +215,12 @@ window.addEventListener('message', (event: MessageEvent<HostToWebview>) => {
     const next = normalizeFilter(message.filter)
     if (next) setFilter(next)
   } else if (message.type === 'fitView') fit()
+  else if (message.type === 'rasterize') {
+    rasterize(message.scale).then(
+      base64 => vscode.postMessage({ type: 'raster', id: message.id, base64 }),
+      (err: Error) => vscode.postMessage({ type: 'raster', id: message.id, error: err.message }),
+    )
+  }
 })
 
 render()

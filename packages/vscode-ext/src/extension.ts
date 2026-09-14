@@ -3,6 +3,8 @@ import { FILTER_PRESETS, type FilterPreset } from '@rtlgraph/ir'
 import { RtlGraphEditorProvider } from './editorProvider.ts'
 import { PRESET_LABELS } from './webview/state.ts'
 import { copyAgentSpec } from './agent/copyAgentSpec.ts'
+import { exportSchematic } from './export.ts'
+import { EXPORT_FORMATS, viewName, type ExportFormat } from './exportFiles.ts'
 
 // The folder a command acts on: the one right-clicked in the Explorer, else the
 // only workspace folder, else the one the user picks.
@@ -37,6 +39,49 @@ export function activate(context: vscode.ExtensionContext): void {
         return written
       } catch (err) {
         void vscode.window.showErrorMessage(`RTLGraph: could not write the agent files — ${(err as Error).message}`)
+        return undefined
+      }
+    }),
+
+    // Optional argument: the formats to write, e.g. ['svg', 'pdf']; without it, ask.
+    vscode.commands.registerCommand('rtlgraph.export', async (formats?: unknown) => {
+      const source = RtlGraphEditorProvider.activeExportSource()
+      if (!source) {
+        void vscode.window.showWarningMessage('RTLGraph: open a *.rtlgraph.json schematic first.')
+        return undefined
+      }
+      let chosen: ExportFormat[] | undefined = Array.isArray(formats)
+        ? EXPORT_FORMATS.filter(format => formats.includes(format))
+        : undefined
+      if (!chosen || chosen.length === 0) {
+        const picked = await vscode.window.showQuickPick(
+          [
+            { label: 'All', description: 'SVG, PNG and PDF', formats: [...EXPORT_FORMATS] },
+            { label: 'SVG', description: 'vector — edit in Inkscape or Illustrator, embed in web pages', formats: ['svg' as const] },
+            { label: 'PNG', description: 'image at 2× — slides, chat, documents', formats: ['png' as const] },
+            { label: 'PDF', description: 'vector — papers and reports', formats: ['pdf' as const] },
+          ],
+          { placeHolder: `Export the current view (${viewName(source.filter)})` },
+        )
+        chosen = picked?.formats
+      }
+      if (!chosen) return undefined
+      const formatsToWrite = chosen
+      try {
+        const { files, warnings } = await vscode.window.withProgress(
+          { location: vscode.ProgressLocation.Notification, title: 'RTLGraph: exporting…' },
+          () => exportSchematic(source, formatsToWrite),
+        )
+        for (const warning of warnings) void vscode.window.showWarningMessage(`RTLGraph: ${warning}`)
+        const folder = vscode.workspace.asRelativePath(vscode.Uri.joinPath(files[0], '..'))
+        void vscode.window
+          .showInformationMessage(`RTLGraph: exported ${files.map(f => f.path.split('/').pop()).join(', ')} to ${folder}`, 'Reveal in File Explorer')
+          .then(choice => {
+            if (choice) void vscode.commands.executeCommand('revealFileInOS', files[0])
+          })
+        return files.map(f => f.fsPath)
+      } catch (err) {
+        void vscode.window.showErrorMessage(`RTLGraph: export failed — ${(err as Error).message}`)
         return undefined
       }
     }),

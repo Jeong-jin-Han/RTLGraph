@@ -1,9 +1,9 @@
 import * as vscode from 'vscode'
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
-import { existsSync, mkdtempSync, readFileSync } from 'node:fs'
+import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 import type { RenderState } from '../src/protocol.ts'
 import { AGENT_FILES, ENVIRONMENT_FILE } from '../src/agent/files.ts'
 
@@ -61,6 +61,24 @@ export async function run(): Promise<void> {
   })
   assert.deepEqual(datapath, { filter: { flow: ['data'], time: ['comb', 'seq'] }, nodes: 8, signals: 7 })
   log('datapath preset leaves the 8 elements and 7 nets of slide p.31')
+
+  // ── export the current (datapath) view ──
+  const outDir = join(dirname(graphFile), 'out-acc_top')
+  try {
+    const exported = await vscode.commands.executeCommand<string[]>('rtlgraph.export', ['svg', 'png', 'pdf'])
+    assert.deepEqual(exported, ['svg', 'png', 'pdf'].map(ext => join(outDir, `acc_top.datapath.${ext}`)))
+    const svg = readFileSync(exported[0], 'utf8')
+    const [, , width, height] = /viewBox="(-?\d+) (-?\d+) (\d+) (\d+)"/.exec(svg)!.slice(1).map(Number)
+    assert.ok(!svg.includes('data-node-id="control_path"'))
+    const png = readFileSync(exported[1])
+    assert.deepEqual([...png.subarray(0, 8)], [137, 80, 78, 71, 13, 10, 26, 10])
+    assert.deepEqual([png.readUInt32BE(16), png.readUInt32BE(20)], [width * 2, height * 2])
+    const pdf = readFileSync(exported[2], 'latin1')
+    assert.ok(pdf.startsWith('%PDF-1.4') && pdf.includes(`/MediaBox [0 0 ${width} ${height}]`))
+    log(`Export wrote out-acc_top/acc_top.datapath.{svg,png,pdf} (PNG ${width * 2}×${height * 2}, PDF ${width}×${height} pt)`)
+  } finally {
+    rmSync(outDir, { recursive: true, force: true })
+  }
 
   await vscode.commands.executeCommand('rtlgraph.fitView')
 

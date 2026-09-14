@@ -29,7 +29,8 @@ body { display: flex; flex-direction: column; background: #ffffff; color: #11182
 export function webviewHtml({ scriptUri, cspSource, nonce }: WebviewHtmlOptions): string {
   const csp = [
     "default-src 'none'",
-    `img-src ${cspSource} data:`,
+    `img-src ${cspSource} data: blob:`, // blob: — PNG export draws the SVG through an <img>
+
     `style-src 'nonce-${nonce}'`,
     `script-src 'nonce-${nonce}'`,
   ].join('; ')

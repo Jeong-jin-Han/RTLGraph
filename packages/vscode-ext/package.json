@@ -40,6 +40,10 @@
         "title": "RTLGraph: Copy Agent Spec to Workspace"
       },
       {
+        "command": "rtlgraph.export",
+        "title": "RTLGraph: Export Schematic (SVG / PNG / PDF)"
+      },
+      {
         "command": "rtlgraph.fitView",
         "title": "RTLGraph: Fit View"
       },
@@ -56,6 +60,16 @@
           "group": "rtlgraph"
         }
       ]
+    },
+    "configuration": {
+      "title": "RTLGraph",
+      "properties": {
+        "rtlgraph.export.folder": {
+          "type": "string",
+          "default": "out-${name}",
+          "markdownDescription": "Folder next to the graph file that exports are written to. `${name}` is the graph file name without `.rtlgraph.json`. Use `.${name}-export` for a hidden folder."
+        }
+      }
     }
   },
   "scripts": {
