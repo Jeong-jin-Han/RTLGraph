@@ -139,6 +139,13 @@ export async function run(): Promise<void> {
   assert.equal(nested, join(dirname(deep.fsPath), 'sys/dev/inbuf/inbuf.rtlgraph-schematic.json'))
   log('Open Component Schematic reaches a component two levels down')
 
+  // ── back out of a component, three folders deep, to the root ──
+  await until('the nested schematic to draw', renderState)
+  const backToRoot = await vscode.commands.executeCommand<string>('rtlgraph.openRoot')
+  assert.equal(backToRoot, deep.fsPath)
+  await untilFold('the root again, as it was left', ['sys', 'sys/u_host', 'sys/u_dev', 'sys/u_dev/u_inbuf'])
+  log('Root walks back out of inbuf/ to sys_top.rtlgraph.json')
+
   // ── open a component's own schematic ──
   await vscode.commands.executeCommand('vscode.open', uri)
   await until('the acc root again', renderState)

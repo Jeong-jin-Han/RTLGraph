@@ -5,6 +5,8 @@ import { PRESET_LABELS } from './webview/state.ts'
 import { copyAgentSpec } from './agent/copyAgentSpec.ts'
 import { exportSchematic } from './export.ts'
 import { EXPORT_FORMATS, viewName, type ExportFormat } from './exportFiles.ts'
+import { collectHierarchyFiles } from './hierarchyFiles.ts'
+import { graphFileKind, hierarchyEntries, loadHierarchy } from '@rtlgraph/ir'
 import type { FoldAction, FoldScope } from './protocol.ts'
 
 // The folder a command acts on: the one right-clicked in the Explorer, else the
@@ -18,6 +20,45 @@ async function resolveTargetFolder(clicked: unknown): Promise<vscode.Uri | undef
 }
 
 const FOLD_SCOPES: readonly FoldScope[] = ['all', 'node', 'descendants']
+const ROOT_SEARCH_DEPTH = 8
+
+// The root file whose hierarchy contains `file`: the schematics sit in folders
+// under it, so look in this folder and then upwards.
+async function findRootOf(file: vscode.Uri): Promise<vscode.Uri | undefined> {
+  const read = async (uri: vscode.Uri) => {
+    const open = vscode.workspace.textDocuments.find(d => d.uri.toString() === uri.toString())
+    if (open) return open.getText()
+    try {
+      return new TextDecoder().decode(await vscode.workspace.fs.readFile(uri))
+    } catch {
+      return undefined
+    }
+  }
+  let dir = vscode.Uri.joinPath(file, '..')
+  for (let up = 0; up < ROOT_SEARCH_DEPTH; up++) {
+    let entries: [string, vscode.FileType][] = []
+    try {
+      entries = await vscode.workspace.fs.readDirectory(dir)
+    } catch {
+      return undefined
+    }
+    for (const [name, type] of entries) {
+      if (type !== vscode.FileType.File || graphFileKind(name) !== 'system') continue
+      const rootUri = vscode.Uri.joinPath(dir, name)
+      if (rootUri.toString() === file.toString()) return undefined // this is the root
+      const text = await read(rootUri)
+      if (text === undefined) continue
+      const { files } = await collectHierarchyFiles(name, text, path => read(vscode.Uri.joinPath(dir, path)))
+      const { root } = loadHierarchy(name, path => files[path])
+      const holds = hierarchyEntries(root).some(e => vscode.Uri.joinPath(dir, e.path).toString() === file.toString())
+      if (holds) return rootUri
+    }
+    const parent = vscode.Uri.joinPath(dir, '..')
+    if (parent.toString() === dir.toString()) return undefined
+    dir = parent
+  }
+  return undefined
+}
 
 // Returns the scope applied, or undefined when nothing was done.
 async function foldCommand(action: FoldAction, args: unknown): Promise<FoldScope | undefined> {
@@ -63,7 +104,7 @@ export function activate(context: vscode.ExtensionContext): void {
           () => copyAgentSpec(context.extensionUri, target),
         )
         void vscode.window.showInformationMessage(
-          `RTLGraph: wrote .agent/ and .prompt/{rtlgraph,rtl}/{korean,english}.md in ${target.fsPath}. ` +
+          `RTLGraph: wrote .agent/ and .prompt/{spec,rtl,refactor,rtlgraph}/{korean,english}.md in ${target.fsPath}. ` +
             'Paste .prompt/rtlgraph/korean.md (or english.md) into your agent to build a schematic of this RTL.',
         )
         return written
@@ -135,6 +176,22 @@ export function activate(context: vscode.ExtensionContext): void {
       }
       await vscode.commands.executeCommand('vscode.open', uri)
       return uri.fsPath
+    }),
+
+    // Walks back out of a component schematic to the root that contains it.
+    vscode.commands.registerCommand('rtlgraph.openRoot', async () => {
+      const document = RtlGraphEditorProvider.activeDocument()
+      if (!document) {
+        void vscode.window.showWarningMessage('RTLGraph: open a schematic first.')
+        return undefined
+      }
+      const rootUri = await findRootOf(document.uri)
+      if (!rootUri) {
+        void vscode.window.showWarningMessage('RTLGraph: no root file above this schematic.')
+        return undefined
+      }
+      await vscode.commands.executeCommand('vscode.open', rootUri)
+      return rootUri.fsPath
     }),
 
     vscode.commands.registerCommand('rtlgraph.fitView', () => RtlGraphEditorProvider.postToActive({ type: 'fitView' })),

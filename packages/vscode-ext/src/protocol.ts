@@ -16,7 +16,7 @@ export type HostToWebview =
   | { type: 'rasterize'; id: number; scale: number } // PNG export needs the browser canvas
 
 // Toolbar buttons that need the host (a quick pick, opening a file) run these.
-export type ToolbarCommand = 'rtlgraph.fold' | 'rtlgraph.unfold' | 'rtlgraph.openComponent'
+export type ToolbarCommand = 'rtlgraph.fold' | 'rtlgraph.unfold' | 'rtlgraph.openComponent' | 'rtlgraph.openRoot'
 
 export type WebviewToHost =
   | { type: 'ready' }

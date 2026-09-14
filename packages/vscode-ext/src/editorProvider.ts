@@ -12,6 +12,7 @@ const RELOAD_DELAY_MS = 100
 
 interface Panel {
   webview: vscode.Webview
+  document: vscode.TextDocument
   source: () => ExportSource
   componentUri: (instance: string) => vscode.Uri | undefined
   rendered?: RenderState
@@ -48,6 +49,10 @@ export class RtlGraphEditorProvider implements vscode.CustomTextEditorProvider {
 
   static activeComponentUri(instance: string): vscode.Uri | undefined {
     return RtlGraphEditorProvider.active?.componentUri(instance)
+  }
+
+  static activeDocument(): vscode.TextDocument | undefined {
+    return RtlGraphEditorProvider.active?.document
   }
 
   private readonly context: vscode.ExtensionContext
@@ -90,6 +95,7 @@ export class RtlGraphEditorProvider implements vscode.CustomTextEditorProvider {
 
     const panel: Panel = {
       webview,
+      document,
       source: () => ({
         document,
         filter: panel.rendered?.filter ?? storedFilter() ?? FILTER_PRESETS.all,

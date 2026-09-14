@@ -78,13 +78,17 @@ const exportButton = el('button', { type: 'button', textContent: 'Export…', ti
 exportButton.addEventListener('click', () => vscode.postMessage({ type: 'export' }))
 const fitButton = el('button', { type: 'button', textContent: 'Fit', title: 'Fit the schematic to the window' })
 fitButton.addEventListener('click', fit)
+// Opening a component leaves you inside its own file; this walks back out.
+const rootButton = commandButton('Root', 'rtlgraph.openRoot')
+rootButton.title = 'Open the root file this schematic belongs to'
 
 const toolbar = el('div', { id: 'toolbar' },
+  fitButton, rootButton,
   el('span', { className: 'label', textContent: 'flow' }), ...flowButtons,
   el('span', { className: 'label', textContent: 'time' }), ...timeButtons,
   el('span', { className: 'label', textContent: 'preset' }), presetSelect,
   componentTools,
-  el('span', { className: 'spacer' }), exportButton, fitButton,
+  el('span', { className: 'spacer' }), exportButton,
 )
 const stage = el('div', { id: 'stage' })
 const canvas = el('div', { id: 'canvas' }, stage)
@@ -93,6 +97,7 @@ document.body.append(toolbar, canvas, problems)
 
 // ── rendering ──
 function updateComponentTools() {
+  rootButton.hidden = root === undefined || root.graph.kind === 'system' // already there
   componentTools.hidden = instances.length === 0
   selectionLabel.textContent = selected ?? 'none selected'
   foldButton.title = selected ? `Fold ${selected}: only it, or it and everything inside` : 'Fold every component'
@@ -143,7 +148,7 @@ function render() {
 async function rasterize(scale: number): Promise<string> {
   if (!root || !layout) throw new Error('nothing is drawn yet')
   // The PNG is an export like the others: same scene, wrapper root left out.
-  const scene = buildHierarchyScene(root, { filter, isUnfolded, unwrap: true })
+  const scene = buildHierarchyScene(root, { filter, isUnfolded, unwrap: true, frames: false })
   const url = URL.createObjectURL(new Blob([sceneToSvg(scene)], { type: 'image/svg+xml' }))
   try {
     const image = new Image()
