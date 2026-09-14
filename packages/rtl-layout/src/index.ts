@@ -1,4 +1,4 @@
-import type { ComponentGraph, PortNode, RtlNode } from '@rtlgraph/ir'
+import type { ComponentGraph, HierarchyEntry, PortNode, RtlNode } from '@rtlgraph/ir'
 import { parseEndpoint } from '@rtlgraph/ir'
 import { lookupSymbol, type Side } from '@rtlgraph/registry'
 
@@ -68,6 +68,8 @@ const PORT_GAP = 36
 const CHAR_W = 7
 const BOX_PAD = 6
 const MIN_TRACK_SEP = 6
+const PORT_H = 18
+const STACK_GAP = 6
 
 const OPPOSITE: Record<Side, Side> = { top: 'bottom', bottom: 'top', left: 'right', right: 'left' }
 
@@ -78,16 +80,100 @@ interface Shape {
   h: number
   titled: boolean // generic boxes list their pins under a title
   sides: Map<string, Side> // pin -> side, in drawing order
+  pinOffsets?: Map<string, number> // side pins at a fixed distance from the top (frames)
+}
+
+// An unfolded component is drawn as a frame around its own schematic. The parent
+// layout only needs the frame size and where each child port meets its edge.
+export const FRAME_TITLE_H = 22
+
+export interface Frame {
+  w: number
+  h: number
+  pins: Record<string, { side: 'left' | 'right'; offset: number }> // offset from the frame top
+}
+
+export interface LayoutOptions {
+  frames?: Record<string, Frame> // component node id -> frame, for unfolded components
+  // Keep the component's own ports on its left (inputs) and right (outputs)
+  // edges, for a schematic drawn inside a frame.
+  boundaryPorts?: boolean
+}
+
+export interface ChildPlacement {
+  layout: NestedLayout
+  x: number // origin of the child layout in the parent's coordinates
+  y: number
+  connectors: Record<string, Segment> // child port name -> segment from the frame edge to that port
+}
+
+export interface NestedLayout extends LayoutResult {
+  children: Record<string, ChildPlacement> // unfolded component node id -> placement
+}
+
+// Lays out a hierarchy bottom-up: every unfolded child first, then its parent
+// with that child as a frame of the right size. `isUnfolded` receives the
+// child's instance path ("u_host", "u_host/u_dma").
+export function layoutHierarchy(
+  entry: HierarchyEntry,
+  isUnfolded: (instance: string) => boolean,
+  insideFrame = false,
+): NestedLayout {
+  const frames: Record<string, Frame> = {}
+  const inner = new Map<string, NestedLayout>()
+  for (const [id, child] of Object.entries(entry.children)) {
+    if (!isUnfolded(child.instance)) continue
+    const childLayout = layoutHierarchy(child, isUnfolded, true)
+    const pins: Frame['pins'] = {}
+    for (const [portId, box] of Object.entries(childLayout.nodes)) {
+      const pin = box.pins[PORT_PIN]
+      if (!portId.startsWith('@') || !pin) continue
+      pins[portId.slice(1)] = { side: pin.side === 'right' ? 'left' : 'right', offset: FRAME_TITLE_H + pin.y }
+    }
+    frames[id] = { w: childLayout.width, h: childLayout.height + FRAME_TITLE_H, pins }
+    inner.set(id, childLayout)
+  }
+
+  const layout = layoutComponent(entry.graph, { frames, boundaryPorts: insideFrame })
+  const children: Record<string, ChildPlacement> = {}
+  for (const [id, childLayout] of inner) {
+    const frame = layout.nodes[id]
+    const ox = frame.x
+    const oy = frame.y + FRAME_TITLE_H
+    const connectors: Record<string, Segment> = {}
+    for (const [portId, box] of Object.entries(childLayout.nodes)) {
+      const pin = box.pins[PORT_PIN]
+      if (!portId.startsWith('@') || !pin) continue
+      const y = oy + pin.y
+      connectors[portId.slice(1)] = pin.side === 'right'
+        ? { x1: frame.x, y1: y, x2: ox + box.x, y2: y } // input: frame's left edge -> port box
+        : { x1: ox + box.x + box.w, y1: y, x2: frame.x + frame.w, y2: y } // output: port box -> right edge
+    }
+    children[id] = { layout: childLayout, x: ox, y: oy, connectors }
+  }
+  return { ...layout, children }
 }
 
 export const displayName = (id: string): string => id.replace(/^@/, '').split('.').pop()!
 const textWidth = (s: string) => s.length * CHAR_W
 
-function shapeOf(id: string, node: RtlNode, portSide: Side): Shape {
+function shapeOf(id: string, node: RtlNode, portSide: Side, frame?: Frame): Shape {
   if (node.kind === 'port') {
-    return { w: Math.max(28, textWidth(displayName(id)) + 14), h: 18, titled: false, sides: new Map([[PORT_PIN, portSide]]) }
+    return { w: Math.max(28, textWidth(displayName(id)) + 14), h: PORT_H, titled: false, sides: new Map([[PORT_PIN, portSide]]) }
   }
   const sides = new Map<string, Side>()
+  if (node.kind === 'component' && frame) {
+    const pinOffsets = new Map<string, number>()
+    let unplaced = 0 // ports the child never draws (hidden nets) stack up from the bottom
+    for (const [name, dir] of Object.entries(node.ports)) {
+      const at = frame.pins[name]
+      sides.set(name, at?.side ?? (dir === 'out' ? 'right' : 'left'))
+      pinOffsets.set(name, at?.offset ?? frame.h - PIN_STEP / 2 - PIN_STEP * unplaced++)
+    }
+    // Drops are handed out in pin order, which must run top to bottom.
+    const ordered = new Map([...sides].sort(([a], [b]) => pinOffsets.get(a)! - pinOffsets.get(b)!))
+    return { w: frame.w, h: frame.h, titled: false, sides: ordered, pinOffsets }
+  }
   const def = node.kind === 'control' || node.kind === 'component' ? undefined : lookupSymbol(node.module)
   if (def) {
     for (const p of def.ports) if (Object.hasOwn(node.ports, p.name)) sides.set(p.name, p.side)
@@ -118,7 +204,10 @@ function pinsOf(x: number, y: number, shape: Shape): Record<string, Pin> {
       if (side === 'top' || side === 'bottom') {
         pins[name] = { side, x: x + Math.round((shape.w * (k + 1)) / (n + 1)), y: side === 'top' ? y : y + shape.h }
       } else {
-        const py = shape.titled ? y + TITLE_H + k * PIN_STEP + PIN_STEP / 2 : y + Math.round((shape.h * (k + 1)) / (n + 1))
+        const offset = shape.pinOffsets?.get(name)
+        const py = offset !== undefined ? y + offset
+          : shape.titled ? y + TITLE_H + k * PIN_STEP + PIN_STEP / 2
+          : y + Math.round((shape.h * (k + 1)) / (n + 1))
         pins[name] = { side, x: side === 'left' ? x : x + shape.w, y: py }
       }
     })
@@ -126,8 +215,9 @@ function pinsOf(x: number, y: number, shape: Shape): Record<string, Pin> {
   return pins
 }
 
-export function layoutComponent(graph: ComponentGraph): LayoutResult {
+export function layoutComponent(graph: ComponentGraph, options: LayoutOptions = {}): LayoutResult {
   const { nodes, signals } = graph
+  const boundary = options.boundaryPorts === true
   const ids = Object.keys(nodes)
   const signalNames = Object.keys(signals)
   const signalIndex = new Map(signalNames.map((name, i) => [name, i]))
@@ -141,7 +231,7 @@ export function layoutComponent(graph: ComponentGraph): LayoutResult {
 
   // ── shapes of instances, then port nodes facing the pin they connect to ──
   const shapes = new Map<string, Shape>()
-  for (const id of ids) if (nodes[id].kind !== 'port') shapes.set(id, shapeOf(id, nodes[id], 'left'))
+  for (const id of ids) if (nodes[id].kind !== 'port') shapes.set(id, shapeOf(id, nodes[id], 'left', options.frames?.[id]))
   const sideAt = (ref: string) => shapes.get(nodeOf(ref))?.sides.get(pinOf(ref))
 
   const portNets = new Map<string, string[]>()
@@ -157,6 +247,11 @@ export function layoutComponent(graph: ComponentGraph): LayoutResult {
   const directPort = new Map<string, string>() // port id -> the instance ref it hugs
   for (const [id, nets] of portNets) {
     const port = nodes[id] as PortNode
+    if (boundary) {
+      // Inside a frame a port meets the frame edge: inputs face right, outputs left.
+      shapes.set(id, shapeOf(id, port, port.dir === 'out' ? 'left' : 'right'))
+      continue
+    }
     const s = signals[nets[0]]
     let side: Side
     if (port.dir === 'out') {
@@ -210,6 +305,7 @@ export function layoutComponent(graph: ComponentGraph): LayoutResult {
     const hug = directPort.get(id)
     const s = signals[portNets.get(id)![0]]
     if (hug !== undefined) row.set(id, sideAt(hug) === 'bottom' ? depth + 1 : row.get(nodeOf(hug))!)
+    else if (port.dir === 'out' && boundary && nodes[nodeOf(s.driver)].kind !== 'port') row.set(id, row.get(nodeOf(s.driver))!)
     else if (port.dir === 'out') row.set(id, depth + 1)
     else {
       const sink = s.sinks.find(ref => nodes[nodeOf(ref)].kind !== 'port')
@@ -226,15 +322,52 @@ export function layoutComponent(graph: ComponentGraph): LayoutResult {
     }).map(([pin]) => pin)
   const huggers = (id: string, side: Side) =>
     [...directPort].filter(([, ref]) => nodeOf(ref) === id && sideAt(ref) === side).map(([port]) => shapes.get(port)!.w)
-  const leftSpace = (id: string) => PITCH * dropPins(id, 'left').length + Math.max(0, ...huggers(id, 'left').map(w => w + PORT_GAP))
-  const rightSpace = (id: string) => PITCH * dropPins(id, 'right').length + Math.max(0, ...huggers(id, 'right').map(w => w + PORT_GAP))
+
+  // Inside a frame, the ports of one row that face the same edge form a stack:
+  // one column, one width, each port on its own line so every frame pin gets its
+  // own y. The stack takes a single place in its row and a drop per member.
+  const stacks = new Map<string, string[]>() // port id -> its stack, top to bottom
+  if (boundary) {
+    const groups = new Map<string, string[]>()
+    for (const id of portNets.keys()) {
+      const key = `${row.get(id)}:${(nodes[id] as PortNode).dir}`
+      groups.set(key, [...(groups.get(key) ?? []), id])
+    }
+    for (const members of groups.values()) {
+      const w = Math.max(...members.map(id => shapes.get(id)!.w))
+      for (const id of members) {
+        shapes.set(id, { ...shapes.get(id)!, w })
+        stacks.set(id, members)
+      }
+    }
+  }
+  const stackIndex = (id: string) => stacks.get(id)?.indexOf(id) ?? 0
+  const heightInRow = (id: string) => {
+    const members = stacks.get(id)
+    return members ? members.length * PORT_H + (members.length - 1) * STACK_GAP : shapes.get(id)!.h
+  }
+  const topInRow = (id: string, rowH: number) =>
+    rowH - heightInRow(id) + (stacks.has(id) ? stackIndex(id) * (PORT_H + STACK_GAP) : 0)
+  // The refs that leave one side of a box (or a stack) through drops, top to bottom.
+  const dropRefs = (id: string, side: 'left' | 'right') =>
+    stacks.has(id)
+      ? shapes.get(id)!.sides.get(PORT_PIN) === side ? stacks.get(id)! : []
+      : dropPins(id, side).map(pin => refOf(id, pin))
+  const leftSpace = (id: string) => PITCH * dropRefs(id, 'left').length + Math.max(0, ...huggers(id, 'left').map(w => w + PORT_GAP))
+  const rightSpace = (id: string) => PITCH * dropRefs(id, 'right').length + Math.max(0, ...huggers(id, 'right').map(w => w + PORT_GAP))
 
   // ── x: order and place each row, pulling nodes over their data neighbours ──
   const packed = ids.filter(id => row.has(id) && !directPort.has(id))
+  const leader = (id: string) => stacks.get(id)?.[0] ?? id
   const fixed = (id: string) => nodes[id].kind === 'control' || nodes[id].kind === 'port'
   const rows: string[][] = Array.from({ length: rowCount }, () => [])
-  for (const id of packed.filter(fixed)) rows[row.get(id)!].push(id)
+  // Inside a frame, input ports lead their row and output ports close it.
+  const edge = (id: string) => (!boundary || nodes[id].kind !== 'port' ? 0 : (nodes[id] as PortNode).dir === 'out' ? 1 : -1)
+  const leading = packed.filter(id => fixed(id) && leader(id) === id).sort((a, b) => edge(a) - edge(b)).filter(id => edge(id) <= 0)
+  const closing = packed.filter(id => edge(id) === 1 && leader(id) === id)
+  for (const id of leading) rows[row.get(id)!].push(id)
   for (const id of packed.filter(id => !fixed(id))) rows[row.get(id)!].push(id)
+  for (const id of closing) rows[row.get(id)!].push(id)
 
   const x = new Map<string, number>()
   const W = (id: string) => shapes.get(id)!.w
@@ -273,15 +406,22 @@ export function layoutComponent(graph: ComponentGraph): LayoutResult {
   for (let iter = 0; iter < 8; iter++) {
     const order = rows.map((_, i) => (iter % 2 === 0 ? i : rows.length - 1 - i))
     for (const r of order) {
-      const head = rows[r].filter(fixed)
+      const head = rows[r].filter(id => fixed(id) && edge(id) <= 0)
       const tail = rows[r].filter(id => !fixed(id))
         .map((id, i) => ({ id, key: barycenter(id), i }))
         .sort((a, b) => a.key - b.key || a.i - b.i)
         .map(e => e.id)
-      rows[r] = [...head, ...tail]
+      rows[r] = [...head, ...tail, ...rows[r].filter(id => edge(id) === 1)]
       relax(rows[r], id => (fixed(id) ? -Infinity : barycenter(id) - W(id) / 2))
     }
   }
+  if (closing.length > 0) {
+    // Output ports line up on the right edge of the whole schematic.
+    const inner = packed.filter(id => edge(id) !== 1 && leader(id) === id)
+    const right = Math.max(MARGIN, ...inner.map(id => x.get(id)! + W(id) + rightSpace(id)))
+    for (const id of closing) x.set(id, Math.max(x.get(id)!, right + NODE_GAP + leftSpace(id)))
+  }
+  for (const id of packed) if (leader(id) !== id) x.set(id, x.get(leader(id))!)
 
   const pinX = (ref: string) => pinsOf(x.get(nodeOf(ref))!, 0, shapes.get(nodeOf(ref))!)[pinOf(ref)].x
   for (const [id, hug] of directPort) {
@@ -307,19 +447,19 @@ export function layoutComponent(graph: ComponentGraph): LayoutResult {
   }
   const nearerBelow = (id: string, pin: string) => {
     const shape = shapes.get(id)!
-    const rowH = Math.max(20, ...rows[row.get(id)!].map(member => shapes.get(member)!.h))
-    const pinY = rowH - shape.h + pinsOf(0, 0, shape)[pin].y
+    const rowH = Math.max(20, ...rows[row.get(id)!].map(heightInRow))
+    const pinY = topInRow(id, rowH) + pinsOf(0, 0, shape)[pin].y
     return rowH - pinY < pinY
   }
   const dropsDown = (id: string, side: 'left' | 'right') => {
     let vote = 0
-    for (const pin of dropPins(id, side)) {
-      const ref = refOf(id, pin)
+    for (const ref of dropRefs(id, side)) {
+      const pin = pinOf(ref)
       const net = signals[netAt.get(ref)!]
       const others = [net.driver, ...net.sinks].filter(other => other !== ref)
       const mean = others.reduce((sum, other) => sum + verticalRank(other), 0) / others.length
       const r = row.get(id)!
-      vote += mean > r ? 1 : mean < r ? -1 : nearerBelow(id, pin) ? 1 : -1
+      vote += mean > r ? 1 : mean < r ? -1 : nearerBelow(nodeOf(ref), pin) ? 1 : -1
     }
     return vote > 0
   }
@@ -332,10 +472,10 @@ export function layoutComponent(graph: ComponentGraph): LayoutResult {
     const r = row.get(id)!
     if (side === 'top') return { ref, ax: pinX(ref), ch: r }
     if (side === 'bottom') return { ref, ax: pinX(ref), ch: r + 1 }
-    const pins = dropPins(id, side)
+    const refs = dropRefs(id, side)
     const down = dropsDown(id, side)
     // The pin nearest the escape direction gets the drop closest to the box, so drops never cross stubs.
-    const offset = PITCH * (down ? pins.length - pins.indexOf(pin) : pins.indexOf(pin) + 1)
+    const offset = PITCH * (down ? refs.length - refs.indexOf(ref) : refs.indexOf(ref) + 1)
     const drop = side === 'left' ? x.get(id)! - offset : x.get(id)! + W(id) + offset
     return { ref, ax: drop, ch: down ? r + 1 : r, drop, down }
   }
@@ -469,7 +609,7 @@ export function layoutComponent(graph: ComponentGraph): LayoutResult {
 
   // ── y ──
   const rowH = rows.map((members, r) =>
-    Math.max(20, ...members.map(id => shapes.get(id)!.h), ...[...directPort.keys()].filter(id => row.get(id) === r && sideAt(directPort.get(id)!) === 'bottom').map(id => shapes.get(id)!.h)))
+    Math.max(20, ...members.map(heightInRow), ...[...directPort.keys()].filter(id => row.get(id) === r && sideAt(directPort.get(id)!) === 'bottom').map(id => shapes.get(id)!.h)))
   const chTop: number[] = []
   const rowTop: number[] = []
   let cursor = MARGIN
@@ -485,7 +625,7 @@ export function layoutComponent(graph: ComponentGraph): LayoutResult {
     const shape = shapes.get(id)!
     boxes[id] = { x: x.get(id)!, y: top, w: shape.w, h: shape.h, row: row.get(id)!, pins: pinsOf(x.get(id)!, top, shape) }
   }
-  for (const id of packed) place(id, rowTop[row.get(id)!] + rowH[row.get(id)!] - shapes.get(id)!.h)
+  for (const id of packed) place(id, rowTop[row.get(id)!] + topInRow(id, rowH[row.get(id)!]))
   for (const [id, hug] of directPort) {
     const side = sideAt(hug)
     if (side === 'bottom') place(id, rowTop[row.get(id)!] + rowH[row.get(id)!] - shapes.get(id)!.h)
