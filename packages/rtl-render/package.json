@@ -1,0 +1,17 @@
+{
+  "name": "@rtlgraph/render",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "bin": {
+    "rtlgraph-render": "./src/cli.ts"
+  },
+  "dependencies": {
+    "@rtlgraph/ir": "0.1.0",
+    "@rtlgraph/layout": "0.1.0",
+    "@rtlgraph/registry": "0.1.0"
+  }
+}

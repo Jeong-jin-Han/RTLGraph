@@ -8,7 +8,8 @@
   "scripts": {
     "test": "node --test \"packages/*/test/*.test.ts\"",
     "typecheck": "tsc -p tsconfig.json",
-    "check": "npm run typecheck && npm test"
+    "check": "npm run typecheck && npm test",
+    "golden": "UPDATE_GOLDEN=1 node --test packages/rtl-render/test/render.test.ts"
   },
   "devDependencies": {
     "@types/node": "^22.20.2",
