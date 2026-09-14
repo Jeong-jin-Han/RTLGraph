@@ -48,6 +48,9 @@ export interface HierarchyRenderOptions {
   crop?: boolean
   // Which component instances ("u_host", "u_host/u_dma") are drawn open. Default: none.
   isUnfolded?: (instance: string) => boolean
+  // Draw the fold markers a reader can click. They belong to the editor, not to an
+  // exported figure, so this is off by default.
+  controls?: boolean
   layout?: NestedLayout // must have been laid out with the same isUnfolded
 }
 
@@ -74,16 +77,16 @@ function foldMarker(b: NodeBox, titleH: number, folded: boolean): Item[] {
 }
 
 // An open component: a frame whose body is drawn by the child's own level.
-function frameItems(node: ComponentNode, b: NodeBox): Item[] {
+function frameItems(node: ComponentNode, b: NodeBox, controls: boolean): Item[] {
   return [
     { kind: 'rect', x: b.x, y: b.y, w: b.w, h: b.h, rx: 4, fill: PALETTE.componentFill, stroke: PALETTE.frameStroke, strokeWidth: 1.5 },
     { kind: 'lines', segments: [{ x1: b.x, y1: b.y + FRAME_TITLE_H, x2: b.x + b.w, y2: b.y + FRAME_TITLE_H }], fill: 'none', stroke: PALETTE.frameStroke },
     { kind: 'text', x: b.x + 8, y: b.y + FRAME_TITLE_H / 2, text: node.label ?? node.name, anchor: 'start', central: true, bold: true, fill: PALETTE.ink },
-    ...foldMarker(b, FRAME_TITLE_H, false),
+    ...(controls ? foldMarker(b, FRAME_TITLE_H, false) : []),
   ]
 }
 
-function nodeItems(id: string, node: RtlNode, b: NodeBox): Item[] {
+function nodeItems(id: string, node: RtlNode, b: NodeBox, controls = false): Item[] {
   const cx = b.x + b.w / 2
   const cy = b.y + b.h / 2
   if (node.kind === 'port') {
@@ -129,7 +132,7 @@ function nodeItems(id: string, node: RtlNode, b: NodeBox): Item[] {
       ...(node.kind === 'blackbox' ? { dash: '6 3' } : {}),
     },
     { kind: 'text', x: cx, y: b.y + TITLE_H / 2, text: node.label ?? (component ? node.name : node.module), anchor: 'middle', central: true, bold: true, fill: PALETTE.ink },
-    ...(component ? foldMarker(b, TITLE_H, true) : []),
+    ...(component && controls ? foldMarker(b, TITLE_H, true) : []),
   ]
   for (const [name, pin] of Object.entries(b.pins)) {
     if (name === PORT_PIN) continue
@@ -156,6 +159,7 @@ function translate(item: Item, dx: number, dy: number): Item {
 
 interface Canvas {
   filter: ViewFilter
+  controls: boolean
   groups: Group[]
   xs: number[] // extent of what is visible, for cropping
   ys: number[]
@@ -205,7 +209,7 @@ function drawLevel(
     const node = graph.nodes[id]
     const open = node.kind === 'component' && id in children
     const className = node.kind !== 'component' ? `node ${node.kind}` : `node component ${open ? 'unfolded' : 'folded'}`
-    const items = open ? frameItems(node as ComponentNode, b) : nodeItems(id, node, b)
+    const items = open ? frameItems(node as ComponentNode, b, canvas.controls) : nodeItems(id, node, b, canvas.controls)
     groups.push({ className, attribute: { name: 'data-node-id', value: prefix + id }, items: place(items) })
   }
 
@@ -240,7 +244,7 @@ function sceneOf(canvas: Canvas, width: number, height: number, crop: boolean): 
 
 export function buildScene(graph: ComponentGraph, options: RenderOptions = {}): Scene {
   const layout = options.layout ?? layoutComponent(graph)
-  const canvas: Canvas = { filter: options.filter ?? FILTER_PRESETS.all, groups: [], xs: [], ys: [] }
+  const canvas: Canvas = { filter: options.filter ?? FILTER_PRESETS.all, controls: false, groups: [], xs: [], ys: [] }
   drawLevel(canvas, graph, layout, {}, {}, 0, 0, '')
   return sceneOf(canvas, layout.width, layout.height, options.crop ?? true)
 }
@@ -249,7 +253,7 @@ export function buildScene(graph: ComponentGraph, options: RenderOptions = {}): 
 export function buildHierarchyScene(root: HierarchyEntry, options: HierarchyRenderOptions = {}): Scene {
   const isUnfolded = options.isUnfolded ?? (() => false)
   const layout = options.layout ?? layoutHierarchy(root, isUnfolded)
-  const canvas: Canvas = { filter: options.filter ?? FILTER_PRESETS.all, groups: [], xs: [], ys: [] }
+  const canvas: Canvas = { filter: options.filter ?? FILTER_PRESETS.all, controls: options.controls === true, groups: [], xs: [], ys: [] }
   drawLevel(canvas, root.graph, layout, layout.children, root.children, 0, 0, '')
   return sceneOf(canvas, layout.width, layout.height, options.crop ?? true)
 }

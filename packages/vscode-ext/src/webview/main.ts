@@ -132,7 +132,8 @@ function render() {
     return
   }
   // Full layout, no cropping: switching the filter must not move anything.
-  stage.innerHTML = sceneToSvg(buildHierarchyScene(root, { filter, layout, crop: false, isUnfolded }))
+  // controls: the fold markers are for clicking here; exports leave them out.
+  stage.innerHTML = sceneToSvg(buildHierarchyScene(root, { filter, layout, crop: false, isUnfolded, controls: true }))
   markSelection()
   report()
 }
