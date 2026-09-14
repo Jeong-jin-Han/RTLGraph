@@ -17,11 +17,12 @@ RTL folder ──[agent / rtl-parse]──→ *.rtlgraph.json ──[extension]�
 | `packages/rtl-registry` | Symbols for the `base/` primitives, width and port checks |
 | `packages/rtl-layout` | Row-based placement and orthogonal wire routing |
 | `packages/rtl-render` | IR → SVG, shared by the editor and HTML export |
+| `packages/vscode-ext` | The extension: custom editor for `*.rtlgraph.json` + webview |
 | `demo/acc` | D01-2 accumulator: golden IR and SVGs next to its Verilog |
 | `demo/base` | Shared primitives (`DFF INC ADD SUB MUX2 CMP_EQ`) |
-| `docs/DECISIONS.md` | Schema, layout and filter decisions |
+| `docs/DECISIONS.md` | Schema, layout, filter and editor decisions |
 
-Only `packages/vscode-ext` (not written yet) will import `vscode`.
+Only `packages/vscode-ext` imports `vscode`.
 
 ## Develop
 
@@ -29,12 +30,18 @@ Node ≥ 22.18 runs the TypeScript sources and tests directly.
 
 ```bash
 npm install
-npm run check    # tsc typecheck + node --test
+npm run check    # tsc typecheck + node --test (includes building the extension bundles)
 npm run golden   # regenerate demo/acc/*.svg after an intended visual change
+
+# end-to-end in a real VS Code with a throwaway profile, off screen
+VSCODE_EXECUTABLE=/usr/share/code/code xvfb-run -a npm run e2e
 
 # render any graph; presets: all | datapath | controlpath | comb | seq
 node packages/rtl-render/src/cli.ts demo/acc/acc_top.rtlgraph.json datapath > datapath.svg
 ```
+
+To try the extension, open this folder in VS Code and run **Run RTLGraph** (F5).
+It opens `demo/` in an Extension Development Host; open `acc/acc_top.rtlgraph.json`.
 
 ## Status
 
@@ -42,4 +49,5 @@ node packages/rtl-render/src/cli.ts demo/acc/acc_top.rtlgraph.json datapath > da
 |---|---|---|
 | M0 | `rtl-ir` + hand-written golden IR + registry | done |
 | M1 | `rtl-layout` + `rtl-render` (IR → SVG, no VS Code) | done — `datapath` preset matches slide p.31 |
-| M2 | Custom Editor + 2-axis filter | next |
+| M2 | Custom editor + 2-axis filter | done — presets, filter kept per file, verified in real VS Code |
+| M3 | Manual placement + `layout` merge on re-extraction | next |

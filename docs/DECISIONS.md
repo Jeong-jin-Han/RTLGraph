@@ -68,6 +68,20 @@
 테스트가 보장하는 성질: 결정성, 상자 겹침 없음, 모든 선분 수평·수직, 선이 상자를 관통하지 않음,
 서로 다른 넷의 선분이 겹치지 않음, 각 넷이 드라이버와 모든 싱크를 실제로 연결, 팬아웃에 접점.
 
+## 에디터 (`packages/vscode-ext`) — M2
+
+| # | 결정 | 이유 |
+|---|---|---|
+| E1 | 웹뷰는 React 없이 vanilla TS. `rtl-render` 의 SVG 를 넣고 팬·줌·툴바만 다룬다 | 그림은 이미 순수 함수가 만든다. 의존성 최소화. 드래그 편집(M3)에서 필요해지면 다시 판단 |
+| E2 | **읽기 전용 에디터** — 호스트는 문서 텍스트만 전달하고, 파싱·검증·배치·렌더는 웹뷰에서 | 렌더 경로가 하나. 호스트는 얇게 |
+| E3 | **필터 상태는 JSON 이 아니라** 웹뷰 state + 파일별 `workspaceState` 에 저장. 파일의 `view.filter` 는 첫 기본값으로만 읽는다 | 보기만 해도 파일이 수정되던 NodeGraph 문제. e2e 가 문서가 dirty 가 되지 않음을 확인한다 |
+| E4 | 배치는 문서 버전마다 한 번, 필터 변경은 `crop: false` 로 다시 그리기만 | 필터를 바꿔도 상자가 제자리 |
+| E5 | 외부 수정(에이전트가 JSON 을 다시 씀)은 `onDidChangeTextDocument` 로 즉시 반영 | NodeGraph 의 Reload 버튼 단계를 없앤다 |
+| E6 | CSP `default-src 'none'`, 스크립트·스타일 모두 nonce | |
+| E7 | 툴바 문구는 영어 | 마켓플레이스 배포, NodeGraph 와 일관 |
+| E8 | 명령 `RTLGraph: Fit View`, `RTLGraph: Set View Preset`. 내부 명령 `rtlgraph._renderState` 는 팔레트에 올리지 않는다 | 선언과 등록이 같은 집합인지 테스트한다(NodeGraph 의 "command not found") |
+| E9 | **실제 VS Code 로 e2e** — 설치된 VS Code 를 격리 프로필(`.vscode-test/`)·`xvfb-run` 으로 띄워, 기본 에디터로 열림 · 웹뷰가 그린 노드·넷 수 · 프리셋 · 재오픈 후 필터 유지 · 문서 비수정을 확인 | NodeGraph 는 테스트가 없었다. 웹뷰 안은 호스트에서 못 보므로 웹뷰가 그린 결과를 `rendered` 메시지로 보고한다 |
+
 ## 개발 환경
 
 - Node 22 의 타입 스트리핑 + `node:test`. 의존성은 `typescript`, `@types/node` 뿐.
