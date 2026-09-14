@@ -5,6 +5,7 @@ import { PRESET_LABELS } from './webview/state.ts'
 import { copyAgentSpec } from './agent/copyAgentSpec.ts'
 import { exportSchematic } from './export.ts'
 import { EXPORT_FORMATS, viewName, type ExportFormat } from './exportFiles.ts'
+import type { FoldAction, FoldScope } from './protocol.ts'
 
 // The folder a command acts on: the one right-clicked in the Explorer, else the
 // only workspace folder, else the one the user picks.
@@ -14,6 +15,35 @@ async function resolveTargetFolder(clicked: unknown): Promise<vscode.Uri | undef
   if (folders.length <= 1) return folders[0]?.uri
   const picked = await vscode.window.showWorkspaceFolderPick({ placeHolder: 'Folder to copy the RTLGraph agent files into' })
   return picked?.uri
+}
+
+const FOLD_SCOPES: readonly FoldScope[] = ['all', 'node', 'descendants']
+
+// Returns the scope applied, or undefined when nothing was done.
+async function foldCommand(action: FoldAction, args: unknown): Promise<FoldScope | undefined> {
+  const state = RtlGraphEditorProvider.activeRenderState()
+  if (!state) {
+    void vscode.window.showWarningMessage('RTLGraph: open a schematic first.')
+    return undefined
+  }
+  const given = (typeof args === 'object' && args !== null ? args : {}) as { instance?: unknown; scope?: unknown }
+  let scope = FOLD_SCOPES.find(s => s === given.scope)
+  const instance = scope === 'all' ? undefined : typeof given.instance === 'string' ? given.instance : state.selected
+  if (instance === undefined) scope = 'all'
+  else if (scope === undefined) {
+    const verb = action === 'fold' ? 'Fold' : 'Unfold'
+    const picked = await vscode.window.showQuickPick(
+      [
+        { label: `${verb} ${instance} only`, description: 'components inside it keep their own state', scope: 'node' as const },
+        { label: `${verb} ${instance} and everything inside`, description: 'every component nested in it as well', scope: 'descendants' as const },
+      ],
+      { placeHolder: `${verb} the selected component` },
+    )
+    scope = picked?.scope
+  }
+  if (scope === undefined) return undefined
+  RtlGraphEditorProvider.postToActive({ type: 'fold', action, scope, ...(instance !== undefined ? { instance } : {}) })
+  return scope
 }
 
 // Only this package imports `vscode`; everything else lives in @rtlgraph/*.
@@ -84,6 +114,27 @@ export function activate(context: vscode.ExtensionContext): void {
         void vscode.window.showErrorMessage(`RTLGraph: export failed — ${(err as Error).message}`)
         return undefined
       }
+    }),
+
+    // Optional argument { instance?, scope? }; without it, act on the selected box
+    // (asking whether to include what is inside) or, with nothing selected, on all.
+    vscode.commands.registerCommand('rtlgraph.fold', (args?: unknown) => foldCommand('fold', args)),
+    vscode.commands.registerCommand('rtlgraph.unfold', (args?: unknown) => foldCommand('unfold', args)),
+
+    // Optional argument: the instance path; without it, the selected box.
+    vscode.commands.registerCommand('rtlgraph.openComponent', async (instance?: unknown) => {
+      const target = typeof instance === 'string' ? instance : RtlGraphEditorProvider.activeRenderState()?.selected
+      if (target === undefined) {
+        void vscode.window.showWarningMessage('RTLGraph: select a component box first.')
+        return undefined
+      }
+      const uri = RtlGraphEditorProvider.activeComponentUri(target)
+      if (!uri) {
+        void vscode.window.showWarningMessage(`RTLGraph: ${target} has no readable schematic.`)
+        return undefined
+      }
+      await vscode.commands.executeCommand('vscode.open', uri)
+      return uri.fsPath
     }),
 
     vscode.commands.registerCommand('rtlgraph.fitView', () => RtlGraphEditorProvider.postToActive({ type: 'fitView' })),

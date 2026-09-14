@@ -1,5 +1,5 @@
-import type { Flow, Time, ViewFilter } from '@rtlgraph/ir'
-import { FILTER_PRESETS, type FilterPreset } from '@rtlgraph/ir'
+import type { Flow, HierarchyEntry, Time, ViewFilter } from '@rtlgraph/ir'
+import { FILTER_PRESETS, hierarchyEntries, type FilterPreset } from '@rtlgraph/ir'
 
 // Pure view-state logic of the webview, kept out of the DOM code so it can be
 // tested under node.
@@ -45,6 +45,54 @@ export function presetOf(filter: ViewFilter): FilterPreset | undefined {
   return (Object.keys(FILTER_PRESETS) as FilterPreset[]).find(
     key => sameSet(FILTER_PRESETS[key].flow, filter.flow) && sameSet(FILTER_PRESETS[key].time, filter.time),
   )
+}
+
+// ── fold state: the component instances drawn open ("u_host", "u_host/u_dma") ──
+
+export type FoldAction = 'fold' | 'unfold'
+// all: every component · node: just the one · descendants: it and everything inside
+export type FoldScope = 'all' | 'node' | 'descendants'
+
+// Every component instance of a hierarchy, parents before children.
+export function componentInstances(root: HierarchyEntry): string[] {
+  return hierarchyEntries(root).slice(1).map(e => e.instance)
+}
+
+// A root that only wraps one main component opens it; anything else starts folded.
+export function defaultUnfolded(root: HierarchyEntry): string[] {
+  const children = Object.values(root.children)
+  return root.graph.kind === 'system' && children.length === 1 ? [children[0].instance] : []
+}
+
+// Stored state may name instances that no longer exist; keep the rest in order.
+export function normalizeUnfolded(value: unknown, instances: readonly string[]): string[] | undefined {
+  if (!Array.isArray(value)) return undefined
+  return instances.filter(i => value.includes(i))
+}
+
+const isInside = (instance: string, outer: string) => instance.startsWith(`${outer}/`)
+
+// A component is on screen when every component around it is open.
+export function isInstanceShown(instance: string, unfolded: readonly string[]): boolean {
+  const parts = instance.split('/')
+  return parts.slice(0, -1).every((_, k) => unfolded.includes(parts.slice(0, k + 1).join('/')))
+}
+
+// Folding one component leaves the state of those inside it alone, so unfolding
+// it again brings back the same picture. Unfolding opens the way to it as well.
+export function applyFold(
+  unfolded: readonly string[],
+  instances: readonly string[],
+  action: FoldAction,
+  scope: FoldScope,
+  instance?: string,
+): string[] {
+  const whole = scope === 'all' || instance === undefined
+  return instances.filter(i => {
+    if (whole || i === instance || (scope === 'descendants' && isInside(i, instance))) return action === 'unfold'
+    if (action === 'unfold' && isInside(instance, i)) return true
+    return unfolded.includes(i)
+  })
 }
 
 export interface Viewport {

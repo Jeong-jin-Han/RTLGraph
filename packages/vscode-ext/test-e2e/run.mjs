@@ -31,7 +31,7 @@ try {
     vscodeExecutablePath: process.env.VSCODE_EXECUTABLE,
     extensionDevelopmentPath: root,
     extensionTestsPath: join(scratch, 'e2e/suite.cjs'),
-    extensionTestsEnv: { RTLGRAPH_E2E_FILE: join(repo, 'demo/acc/acc/acc.rtlgraph-schematic.json') },
+    extensionTestsEnv: { RTLGRAPH_E2E_FILE: join(repo, 'demo/acc/acc_top.rtlgraph.json') },
     launchArgs: [
       join(repo, 'demo'),
       '--disable-extensions',

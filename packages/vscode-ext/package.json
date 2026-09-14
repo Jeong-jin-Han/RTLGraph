@@ -47,6 +47,18 @@
         "title": "RTLGraph: Export Schematic (SVG / PNG / PDF)"
       },
       {
+        "command": "rtlgraph.fold",
+        "title": "RTLGraph: Fold Components"
+      },
+      {
+        "command": "rtlgraph.unfold",
+        "title": "RTLGraph: Unfold Components"
+      },
+      {
+        "command": "rtlgraph.openComponent",
+        "title": "RTLGraph: Open Component Schematic"
+      },
+      {
         "command": "rtlgraph.fitView",
         "title": "RTLGraph: Fit View"
       },

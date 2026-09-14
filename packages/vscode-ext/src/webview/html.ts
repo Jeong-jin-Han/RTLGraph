@@ -16,6 +16,11 @@ body { display: flex; flex-direction: column; background: #ffffff; color: #11182
 #toolbar button, #toolbar select { font: inherit; height: 24px; padding: 0 10px; border: 1px solid #d1d5db; border-radius: 4px; background: #ffffff; color: #374151; cursor: pointer; }
 #toolbar button[aria-pressed="true"] { background: #2563eb; border-color: #1d4ed8; color: #ffffff; }
 #toolbar .spacer { flex: 1; }
+#toolbar .group { display: inline-flex; align-items: center; gap: 6px; }
+#toolbar .selection { font-family: ui-monospace, monospace; color: #374151; }
+#toolbar button:disabled { opacity: 0.5; cursor: default; }
+#stage g.component { cursor: pointer; }
+#stage g.selected > rect:first-child { stroke: #f59e0b; stroke-width: 3px; }
 #canvas { flex: 1; position: relative; overflow: hidden; background: #ffffff; cursor: grab; touch-action: none; }
 #canvas.panning { cursor: grabbing; }
 #stage { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
