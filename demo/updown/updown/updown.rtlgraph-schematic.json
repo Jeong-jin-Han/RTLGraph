@@ -1,0 +1,97 @@
+{
+  "version": "0.1.0",
+  "kind": "component",
+  "title": "updown",
+  "created": "2026-09-14T13:40:00.000Z",
+  "modified": "2026-09-14T13:40:00.000Z",
+  "source": {
+    "root": ".",
+    "lib": "../../base",
+    "files": ["seq/updown.v", "comb/data_path/updown_dp.v", "comb/control_path/updown_cp.v"],
+    "libFiles": ["DFF.v", "INC.v", "SUB.v", "MUX2.v"],
+    "top": "updown",
+    "contractCheck": "pass"
+  },
+  "signals": {
+    "CLK":      { "width": 1, "flow": "clock",   "driver": "@CLK",  "sinks": ["CNT_FF:CLK"],   "hidden": true, "origin": { "file": "seq/updown.v", "line": 9 } },
+    "RST":      { "width": 1, "flow": "reset",   "driver": "@RST",  "sinks": ["control_path:RST"],  "origin": { "file": "seq/updown.v", "line": 10 } },
+    "EN":       { "width": 1, "flow": "control", "driver": "@EN",   "sinks": ["control_path:EN"],   "origin": { "file": "seq/updown.v", "line": 11 } },
+    "UP":       { "width": 1, "flow": "control", "driver": "@UP",   "sinks": ["control_path:UP"],   "origin": { "file": "seq/updown.v", "line": 12 } },
+    "LOAD":     { "width": 1, "flow": "control", "driver": "@LOAD", "sinks": ["control_path:LOAD"], "origin": { "file": "seq/updown.v", "line": 13 } },
+    "DIN":      { "width": 6, "flow": "data",    "driver": "@DIN",  "sinks": ["data_path.u_mux_load:d1"], "origin": { "file": "seq/updown.v", "line": 14 } },
+    "CNT_D":    { "width": 6, "flow": "data",    "driver": "data_path.u_mux_load:y", "sinks": ["CNT_FF:D"], "origin": { "file": "seq/updown.v", "line": 19 } },
+    "CNT_Q":    { "width": 6, "flow": "data",    "driver": "CNT_FF:Q", "sinks": ["data_path.u_inc:a", "data_path.u_dec:a", "@CNT"], "aliases": ["CNT"], "origin": { "file": "seq/updown.v", "line": 20 } },
+    "CNT_RST":  { "width": 1, "flow": "control", "driver": "control_path:CNT_RST",  "sinks": ["CNT_FF:RST"], "meaning": "1=clear counter to 0", "origin": { "file": "seq/updown.v", "line": 24 } },
+    "CNT_EN":   { "width": 1, "flow": "control", "driver": "control_path:CNT_EN",   "sinks": ["CNT_FF:EN"],  "meaning": "0=hold, 1=update counter", "origin": { "file": "seq/updown.v", "line": 26 } },
+    "LOAD_SEL": { "width": 1, "flow": "control", "driver": "control_path:LOAD_SEL", "sinks": ["data_path.u_mux_load:sel"], "meaning": "0=step (INC/SUB), 1=load DIN", "origin": { "file": "seq/updown.v", "line": 28 } },
+    "DIR_SEL":  { "width": 1, "flow": "control", "driver": "control_path:DIR_SEL",  "sinks": ["data_path.u_mux_dir:sel"],  "meaning": "0=decrement (SUB), 1=increment (INC)", "origin": { "file": "seq/updown.v", "line": 30 } },
+    "data_path.INC_OUT":  { "width": 6, "flow": "data", "driver": "data_path.u_inc:y",     "sinks": ["data_path.u_mux_dir:d1"],  "origin": { "file": "comb/data_path/updown_dp.v", "line": 16 } },
+    "data_path.DEC_OUT":  { "width": 6, "flow": "data", "driver": "data_path.u_dec:y",     "sinks": ["data_path.u_mux_dir:d0"],  "origin": { "file": "comb/data_path/updown_dp.v", "line": 17 } },
+    "data_path.STEP_OUT": { "width": 6, "flow": "data", "driver": "data_path.u_mux_dir:y", "sinks": ["data_path.u_mux_load:d0"], "origin": { "file": "comb/data_path/updown_dp.v", "line": 18 } }
+  },
+  "nodes": {
+    "@CLK":  { "kind": "port", "dir": "in",  "flow": "clock",   "origin": { "file": "seq/updown.v", "line": 9 } },
+    "@RST":  { "kind": "port", "dir": "in",  "flow": "reset",   "origin": { "file": "seq/updown.v", "line": 10 } },
+    "@EN":   { "kind": "port", "dir": "in",  "flow": "control", "origin": { "file": "seq/updown.v", "line": 11 } },
+    "@UP":   { "kind": "port", "dir": "in",  "flow": "control", "origin": { "file": "seq/updown.v", "line": 12 } },
+    "@LOAD": { "kind": "port", "dir": "in",  "flow": "control", "origin": { "file": "seq/updown.v", "line": 13 } },
+    "@DIN":  { "kind": "port", "dir": "in",  "flow": "data",    "origin": { "file": "seq/updown.v", "line": 14 } },
+    "@CNT":  { "kind": "port", "dir": "out", "flow": "data",    "origin": { "file": "seq/updown.v", "line": 15 } },
+    "control_path": {
+      "kind": "control", "flow": "control", "time": "comb", "module": "updown_cp",
+      "ports": { "RST": "in", "LOAD": "in", "EN": "in", "UP": "in", "CNT_RST": "out", "CNT_EN": "out", "LOAD_SEL": "out", "DIR_SEL": "out" },
+      "truthTable": {
+        "inputs": ["RST", "LOAD", "EN", "UP"],
+        "outputs": ["CNT_RST", "CNT_EN", "LOAD_SEL", "DIR_SEL"],
+        "rows": [
+          { "in": ["1", "x", "x", "x"], "out": ["1", "0", "0", "0"], "note": "리셋(reset): LOAD·EN 보다 우선" },
+          { "in": ["0", "1", "x", "x"], "out": ["0", "1", "1", "0"], "note": "적재(load): DIN 적재, EN 보다 우선" },
+          { "in": ["0", "0", "1", "0"], "out": ["0", "1", "0", "0"], "note": "감소 카운트(count down)" },
+          { "in": ["0", "0", "1", "1"], "out": ["0", "1", "0", "1"], "note": "증가 카운트(count up)" },
+          { "in": ["0", "0", "0", "x"], "out": ["0", "0", "0", "0"], "note": "유지(hold)" }
+        ],
+        "default": { "out": ["0", "0", "0", "0"] },
+        "origin": { "file": "comb/control_path/updown_cp.v", "line": 23 }
+      },
+      "origin": { "file": "seq/updown.v", "line": 33 }
+    },
+    "data_path.u_inc": {
+      "kind": "op", "flow": "data", "time": "comb", "module": "INC", "params": { "BW": 5 },
+      "ports": { "a": "in", "y": "out" },
+      "group": "next_count",
+      "origin": { "file": "comb/data_path/updown_dp.v", "line": 21 }
+    },
+    "data_path.u_dec": {
+      "kind": "op", "flow": "data", "time": "comb", "module": "SUB", "params": { "BW": 5 },
+      "ports": { "a": "in", "b": "in", "y": "out" },
+      "consts": { "b": "6'd1" },
+      "group": "next_count",
+      "origin": { "file": "comb/data_path/updown_dp.v", "line": 26 }
+    },
+    "data_path.u_mux_dir": {
+      "kind": "mux", "flow": "data", "time": "comb", "module": "MUX2", "params": { "BW": 5 },
+      "ports": { "sel": "in", "d0": "in", "d1": "in", "y": "out" },
+      "group": "next_count",
+      "origin": { "file": "comb/data_path/updown_dp.v", "line": 32 }
+    },
+    "data_path.u_mux_load": {
+      "kind": "mux", "flow": "data", "time": "comb", "module": "MUX2", "params": { "BW": 5 },
+      "ports": { "sel": "in", "d0": "in", "d1": "in", "y": "out" },
+      "group": "next_count",
+      "origin": { "file": "comb/data_path/updown_dp.v", "line": 39 }
+    },
+    "CNT_FF": {
+      "kind": "reg", "flow": "data", "time": "seq", "module": "DFF", "params": { "BW": 5 },
+      "ports": { "CLK": "in", "RST": "in", "EN": "in", "D": "in", "Q": "out" },
+      "rstKind": "sync", "rstPriority": "rst>en", "rstValue": "0",
+      "origin": { "file": "seq/updown.v", "line": 54 }
+    }
+  },
+  "groups": {
+    "next_count": {
+      "label": "다음 카운트 값(next count) 계산",
+      "members": ["data_path.u_inc", "data_path.u_dec", "data_path.u_mux_dir", "data_path.u_mux_load"]
+    }
+  },
+  "diagnostics": []
+}

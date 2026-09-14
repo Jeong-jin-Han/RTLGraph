@@ -273,18 +273,6 @@ export function layoutComponent(graph: ComponentGraph, options: LayoutOptions = 
     }
     shapes.set(id, shapeOf(id, port, side))
   }
-  if (boundary) {
-    // That holds only for a single control block with no other input port in its row.
-    const controls = ids.filter(id => nodes[id].kind === 'control')
-    const crowded = [...portNets.keys()].some(id => {
-      if (directPort.has(id) || (nodes[id] as PortNode).dir === 'out') return false
-      return signals[portNets.get(id)![0]].sinks.some(ref => nodes[nodeOf(ref)].kind === 'control')
-    })
-    if (controls.length !== 1 || crowded) directPort.clear()
-  }
-  const directNets = new Set<string>()
-  for (const id of directPort.keys()) directNets.add(portNets.get(id)![0])
-  const channelNet = (name: string) => routedNet(name) && !directNets.has(name)
 
   // ── rows ──
   const isComb = (n: RtlNode) => n.kind !== 'port' && n.kind !== 'control' && n.kind !== 'component' && n.time === 'comb'
@@ -316,6 +304,15 @@ export function layoutComponent(graph: ComponentGraph, options: LayoutOptions = 
     if (n.kind === 'control') row.set(id, 0)
     else if (n.kind !== 'port') row.set(id, isComb(n) ? depth - levelOf(id) : depth)
   }
+  // That holds only for a single control block. Any other input port bound for the
+  // control block's row moves one row down (below), so it never stacks beside the
+  // huggers' frame pins.
+  const controls = ids.filter(id => nodes[id].kind === 'control')
+  if (boundary && controls.length !== 1) directPort.clear()
+  const huggedRow = boundary && directPort.size > 0 ? row.get(controls[0]) : undefined
+  const directNets = new Set<string>()
+  for (const id of directPort.keys()) directNets.add(portNets.get(id)![0])
+  const channelNet = (name: string) => routedNet(name) && !directNets.has(name)
   for (const id of portNets.keys()) {
     const port = nodes[id] as PortNode
     const hug = directPort.get(id)
@@ -325,7 +322,8 @@ export function layoutComponent(graph: ComponentGraph, options: LayoutOptions = 
     else if (port.dir === 'out') row.set(id, depth + 1)
     else {
       const sink = s.sinks.find(ref => nodes[nodeOf(ref)].kind !== 'port')
-      row.set(id, sink ? row.get(nodeOf(sink))! : 0)
+      const r = sink ? row.get(nodeOf(sink))! : 0
+      row.set(id, r === huggedRow ? r + 1 : r)
     }
   }
   const rowCount = Math.max(...row.values()) + 1

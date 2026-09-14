@@ -1,0 +1,231 @@
+   1 RST=1 LOAD=1 EN=1 UP=1 DIN=33 | CNT= 0 exp= 0              
+   2 RST=1 LOAD=1 EN=1 UP=1 DIN=33 | CNT= 0 exp= 0              
+   3 RST=0 LOAD=0 EN=1 UP=1 DIN= 0 | CNT= 0 exp= 0              
+   4 RST=0 LOAD=0 EN=1 UP=1 DIN= 0 | CNT= 1 exp= 1              
+   5 RST=0 LOAD=0 EN=1 UP=1 DIN= 0 | CNT= 2 exp= 2              
+   6 RST=0 LOAD=0 EN=1 UP=1 DIN= 0 | CNT= 3 exp= 3              
+   7 RST=0 LOAD=0 EN=1 UP=1 DIN= 0 | CNT= 4 exp= 4              
+   8 RST=0 LOAD=0 EN=1 UP=0 DIN= 0 | CNT= 5 exp= 5              
+   9 RST=0 LOAD=0 EN=1 UP=0 DIN= 0 | CNT= 4 exp= 4              
+  10 RST=0 LOAD=0 EN=1 UP=0 DIN= 0 | CNT= 3 exp= 3              
+  11 RST=0 LOAD=0 EN=1 UP=0 DIN= 0 | CNT= 2 exp= 2              
+  12 RST=0 LOAD=0 EN=1 UP=0 DIN= 0 | CNT= 1 exp= 1              
+  13 RST=0 LOAD=0 EN=1 UP=0 DIN= 0 | CNT= 0 exp= 0              
+  14 RST=0 LOAD=0 EN=1 UP=0 DIN= 0 | CNT=63 exp=63              
+  15 RST=0 LOAD=0 EN=1 UP=0 DIN= 0 | CNT=62 exp=62              
+  16 RST=0 LOAD=0 EN=0 UP=1 DIN= 0 | CNT=61 exp=61              
+  17 RST=0 LOAD=0 EN=0 UP=1 DIN= 0 | CNT=61 exp=61              
+  18 RST=0 LOAD=0 EN=0 UP=1 DIN= 0 | CNT=61 exp=61              
+  19 RST=0 LOAD=1 EN=0 UP=0 DIN=62 | CNT=61 exp=61              
+  20 RST=0 LOAD=0 EN=1 UP=1 DIN= 0 | CNT=62 exp=62              
+  21 RST=0 LOAD=0 EN=1 UP=1 DIN= 0 | CNT=63 exp=63              
+  22 RST=0 LOAD=0 EN=1 UP=1 DIN= 0 | CNT= 0 exp= 0              
+  23 RST=0 LOAD=1 EN=1 UP=0 DIN=10 | CNT= 1 exp= 1              
+  24 RST=0 LOAD=0 EN=1 UP=0 DIN= 0 | CNT=10 exp=10              
+  25 RST=0 LOAD=0 EN=1 UP=0 DIN= 0 | CNT= 9 exp= 9              
+  26 RST=1 LOAD=1 EN=1 UP=1 DIN=20 | CNT= 8 exp= 8              
+  27 RST=0 LOAD=0 EN=0 UP=0 DIN= 0 | CNT= 0 exp= 0              
+  28 RST=0 LOAD=0 EN=0 UP=0 DIN= 0 | CNT= 0 exp= 0              
+  29 RST=0 LOAD=0 EN=1 UP=0 DIN=22 | CNT= 0 exp= 0              
+  30 RST=0 LOAD=0 EN=1 UP=0 DIN=14 | CNT=63 exp=63              
+  31 RST=0 LOAD=0 EN=1 UP=1 DIN=23 | CNT=62 exp=62              
+  32 RST=0 LOAD=0 EN=0 UP=1 DIN=40 | CNT=63 exp=63              
+  33 RST=0 LOAD=0 EN=0 UP=1 DIN=31 | CNT=63 exp=63              
+  34 RST=0 LOAD=0 EN=0 UP=0 DIN=20 | CNT=63 exp=63              
+  35 RST=0 LOAD=0 EN=0 UP=1 DIN=10 | CNT=63 exp=63              
+  36 RST=0 LOAD=0 EN=0 UP=0 DIN=40 | CNT=63 exp=63              
+  37 RST=0 LOAD=0 EN=1 UP=1 DIN=34 | CNT=63 exp=63              
+  38 RST=0 LOAD=0 EN=1 UP=0 DIN=34 | CNT= 0 exp= 0              
+  39 RST=0 LOAD=0 EN=0 UP=1 DIN=59 | CNT=63 exp=63              
+  40 RST=0 LOAD=0 EN=1 UP=1 DIN=23 | CNT=63 exp=63              
+  41 RST=0 LOAD=0 EN=0 UP=1 DIN= 5 | CNT= 0 exp= 0              
+  42 RST=1 LOAD=0 EN=0 UP=0 DIN=51 | CNT= 0 exp= 0              
+  43 RST=0 LOAD=0 EN=1 UP=1 DIN=41 | CNT= 0 exp= 0              
+  44 RST=0 LOAD=0 EN=1 UP=1 DIN=41 | CNT= 1 exp= 1              
+  45 RST=0 LOAD=0 EN=0 UP=1 DIN=31 | CNT= 2 exp= 2              
+  46 RST=1 LOAD=0 EN=0 UP=1 DIN=50 | CNT= 2 exp= 2              
+  47 RST=0 LOAD=0 EN=0 UP=1 DIN= 4 | CNT= 0 exp= 0              
+  48 RST=0 LOAD=0 EN=1 UP=0 DIN= 1 | CNT= 0 exp= 0              
+  49 RST=0 LOAD=0 EN=1 UP=0 DIN=55 | CNT=63 exp=63              
+  50 RST=0 LOAD=0 EN=0 UP=0 DIN=59 | CNT=62 exp=62              
+  51 RST=0 LOAD=1 EN=0 UP=0 DIN=43 | CNT=62 exp=62              
+  52 RST=0 LOAD=0 EN=0 UP=0 DIN=49 | CNT=43 exp=43              
+  53 RST=0 LOAD=0 EN=0 UP=1 DIN= 3 | CNT=43 exp=43              
+  54 RST=0 LOAD=0 EN=1 UP=1 DIN=23 | CNT=43 exp=43              
+  55 RST=0 LOAD=1 EN=0 UP=1 DIN=43 | CNT=44 exp=44              
+  56 RST=0 LOAD=0 EN=1 UP=0 DIN=61 | CNT=43 exp=43              
+  57 RST=0 LOAD=0 EN=0 UP=0 DIN=44 | CNT=42 exp=42              
+  58 RST=0 LOAD=0 EN=0 UP=1 DIN= 3 | CNT=42 exp=42              
+  59 RST=0 LOAD=0 EN=1 UP=0 DIN= 6 | CNT=42 exp=42              
+  60 RST=0 LOAD=0 EN=1 UP=1 DIN=23 | CNT=41 exp=41              
+  61 RST=0 LOAD=0 EN=1 UP=1 DIN= 7 | CNT=42 exp=42              
+  62 RST=0 LOAD=0 EN=0 UP=1 DIN=41 | CNT=43 exp=43              
+  63 RST=0 LOAD=0 EN=0 UP=1 DIN=40 | CNT=43 exp=43              
+  64 RST=0 LOAD=1 EN=0 UP=0 DIN=36 | CNT=43 exp=43              
+  65 RST=0 LOAD=0 EN=0 UP=0 DIN=29 | CNT=36 exp=36              
+  66 RST=0 LOAD=0 EN=1 UP=0 DIN=37 | CNT=36 exp=36              
+  67 RST=0 LOAD=0 EN=0 UP=1 DIN=50 | CNT=35 exp=35              
+  68 RST=0 LOAD=0 EN=1 UP=0 DIN=53 | CNT=35 exp=35              
+  69 RST=0 LOAD=0 EN=0 UP=1 DIN=35 | CNT=34 exp=34              
+  70 RST=0 LOAD=0 EN=1 UP=1 DIN= 0 | CNT=34 exp=34              
+  71 RST=0 LOAD=0 EN=1 UP=0 DIN=51 | CNT=35 exp=35              
+  72 RST=0 LOAD=0 EN=1 UP=1 DIN=13 | CNT=34 exp=34              
+  73 RST=0 LOAD=0 EN=1 UP=0 DIN= 2 | CNT=35 exp=35              
+  74 RST=0 LOAD=0 EN=1 UP=0 DIN=55 | CNT=34 exp=34              
+  75 RST=0 LOAD=0 EN=0 UP=0 DIN=41 | CNT=33 exp=33              
+  76 RST=0 LOAD=1 EN=0 UP=0 DIN=33 | CNT=33 exp=33              
+  77 RST=0 LOAD=0 EN=1 UP=0 DIN=15 | CNT=33 exp=33              
+  78 RST=0 LOAD=1 EN=0 UP=0 DIN=52 | CNT=32 exp=32              
+  79 RST=0 LOAD=1 EN=0 UP=1 DIN= 3 | CNT=52 exp=52              
+  80 RST=0 LOAD=0 EN=0 UP=0 DIN=18 | CNT= 3 exp= 3              
+  81 RST=0 LOAD=0 EN=0 UP=1 DIN=18 | CNT= 3 exp= 3              
+  82 RST=0 LOAD=0 EN=1 UP=0 DIN=18 | CNT= 3 exp= 3              
+  83 RST=0 LOAD=0 EN=0 UP=0 DIN=33 | CNT= 2 exp= 2              
+  84 RST=0 LOAD=0 EN=1 UP=0 DIN=52 | CNT= 2 exp= 2              
+  85 RST=1 LOAD=0 EN=1 UP=1 DIN= 2 | CNT= 1 exp= 1              
+  86 RST=0 LOAD=0 EN=0 UP=0 DIN=28 | CNT= 0 exp= 0              
+  87 RST=0 LOAD=0 EN=1 UP=1 DIN=17 | CNT= 0 exp= 0              
+  88 RST=0 LOAD=0 EN=0 UP=1 DIN= 9 | CNT= 1 exp= 1              
+  89 RST=1 LOAD=0 EN=0 UP=1 DIN= 6 | CNT= 1 exp= 1              
+  90 RST=0 LOAD=0 EN=0 UP=1 DIN=13 | CNT= 0 exp= 0              
+  91 RST=0 LOAD=0 EN=0 UP=0 DIN=19 | CNT= 0 exp= 0              
+  92 RST=0 LOAD=0 EN=0 UP=1 DIN= 5 | CNT= 0 exp= 0              
+  93 RST=0 LOAD=0 EN=1 UP=1 DIN=53 | CNT= 0 exp= 0              
+  94 RST=0 LOAD=1 EN=1 UP=0 DIN=17 | CNT= 1 exp= 1              
+  95 RST=0 LOAD=0 EN=1 UP=0 DIN=21 | CNT=17 exp=17              
+  96 RST=0 LOAD=1 EN=1 UP=1 DIN=11 | CNT=16 exp=16              
+  97 RST=1 LOAD=0 EN=1 UP=1 DIN=22 | CNT=11 exp=11              
+  98 RST=0 LOAD=0 EN=1 UP=0 DIN= 2 | CNT= 0 exp= 0              
+  99 RST=0 LOAD=0 EN=1 UP=1 DIN=54 | CNT=63 exp=63              
+ 100 RST=0 LOAD=1 EN=1 UP=0 DIN=46 | CNT= 0 exp= 0              
+ 101 RST=0 LOAD=0 EN=0 UP=1 DIN=32 | CNT=46 exp=46              
+ 102 RST=0 LOAD=0 EN=1 UP=0 DIN=43 | CNT=46 exp=46              
+ 103 RST=0 LOAD=0 EN=1 UP=1 DIN= 6 | CNT=45 exp=45              
+ 104 RST=0 LOAD=0 EN=0 UP=0 DIN=48 | CNT=46 exp=46              
+ 105 RST=0 LOAD=0 EN=0 UP=1 DIN=58 | CNT=46 exp=46              
+ 106 RST=0 LOAD=0 EN=1 UP=0 DIN= 7 | CNT=46 exp=46              
+ 107 RST=0 LOAD=0 EN=0 UP=0 DIN= 4 | CNT=45 exp=45              
+ 108 RST=0 LOAD=0 EN=0 UP=0 DIN= 5 | CNT=45 exp=45              
+ 109 RST=0 LOAD=1 EN=0 UP=0 DIN=59 | CNT=45 exp=45              
+ 110 RST=0 LOAD=0 EN=1 UP=1 DIN= 1 | CNT=59 exp=59              
+ 111 RST=0 LOAD=0 EN=0 UP=0 DIN=30 | CNT=60 exp=60              
+ 112 RST=0 LOAD=0 EN=1 UP=1 DIN=15 | CNT=60 exp=60              
+ 113 RST=0 LOAD=0 EN=1 UP=0 DIN=42 | CNT=61 exp=61              
+ 114 RST=0 LOAD=0 EN=0 UP=0 DIN=53 | CNT=60 exp=60              
+ 115 RST=0 LOAD=0 EN=1 UP=1 DIN=51 | CNT=60 exp=60              
+ 116 RST=0 LOAD=1 EN=0 UP=0 DIN=35 | CNT=61 exp=61              
+ 117 RST=1 LOAD=1 EN=0 UP=1 DIN=61 | CNT=35 exp=35              
+ 118 RST=0 LOAD=0 EN=0 UP=0 DIN=45 | CNT= 0 exp= 0              
+ 119 RST=0 LOAD=0 EN=0 UP=0 DIN=19 | CNT= 0 exp= 0              
+ 120 RST=0 LOAD=1 EN=0 UP=0 DIN= 2 | CNT= 0 exp= 0              
+ 121 RST=0 LOAD=0 EN=1 UP=0 DIN=29 | CNT= 2 exp= 2              
+ 122 RST=0 LOAD=0 EN=0 UP=1 DIN=35 | CNT= 1 exp= 1              
+ 123 RST=0 LOAD=0 EN=0 UP=0 DIN=60 | CNT= 1 exp= 1              
+ 124 RST=0 LOAD=1 EN=1 UP=1 DIN=31 | CNT= 1 exp= 1              
+ 125 RST=0 LOAD=0 EN=1 UP=1 DIN=31 | CNT=31 exp=31              
+ 126 RST=0 LOAD=0 EN=1 UP=0 DIN= 5 | CNT=32 exp=32              
+ 127 RST=0 LOAD=0 EN=0 UP=0 DIN=30 | CNT=31 exp=31              
+ 128 RST=0 LOAD=0 EN=0 UP=1 DIN=30 | CNT=31 exp=31              
+ 129 RST=0 LOAD=0 EN=0 UP=0 DIN=12 | CNT=31 exp=31              
+ 130 RST=0 LOAD=0 EN=1 UP=0 DIN=43 | CNT=31 exp=31              
+ 131 RST=0 LOAD=0 EN=1 UP=0 DIN=23 | CNT=30 exp=30              
+ 132 RST=0 LOAD=0 EN=1 UP=1 DIN=18 | CNT=29 exp=29              
+ 133 RST=0 LOAD=0 EN=1 UP=1 DIN=25 | CNT=30 exp=30              
+ 134 RST=0 LOAD=0 EN=1 UP=1 DIN=33 | CNT=31 exp=31              
+ 135 RST=0 LOAD=0 EN=0 UP=1 DIN=54 | CNT=32 exp=32              
+ 136 RST=0 LOAD=0 EN=0 UP=1 DIN=62 | CNT=32 exp=32              
+ 137 RST=0 LOAD=0 EN=0 UP=0 DIN=47 | CNT=32 exp=32              
+ 138 RST=0 LOAD=0 EN=1 UP=0 DIN=35 | CNT=32 exp=32              
+ 139 RST=0 LOAD=0 EN=0 UP=1 DIN=59 | CNT=31 exp=31              
+ 140 RST=0 LOAD=1 EN=0 UP=0 DIN=21 | CNT=31 exp=31              
+ 141 RST=0 LOAD=0 EN=1 UP=0 DIN=35 | CNT=21 exp=21              
+ 142 RST=0 LOAD=0 EN=0 UP=0 DIN=27 | CNT=20 exp=20              
+ 143 RST=0 LOAD=0 EN=0 UP=1 DIN=20 | CNT=20 exp=20              
+ 144 RST=0 LOAD=0 EN=1 UP=0 DIN=57 | CNT=20 exp=20              
+ 145 RST=0 LOAD=0 EN=1 UP=1 DIN=61 | CNT=19 exp=19              
+ 146 RST=0 LOAD=0 EN=1 UP=0 DIN=36 | CNT=20 exp=20              
+ 147 RST=1 LOAD=0 EN=1 UP=1 DIN=33 | CNT=19 exp=19              
+ 148 RST=0 LOAD=0 EN=1 UP=1 DIN=61 | CNT= 0 exp= 0              
+ 149 RST=0 LOAD=0 EN=1 UP=1 DIN=52 | CNT= 1 exp= 1              
+ 150 RST=0 LOAD=0 EN=0 UP=1 DIN= 9 | CNT= 2 exp= 2              
+ 151 RST=1 LOAD=0 EN=0 UP=0 DIN=49 | CNT= 2 exp= 2              
+ 152 RST=0 LOAD=1 EN=0 UP=0 DIN=38 | CNT= 0 exp= 0              
+ 153 RST=0 LOAD=0 EN=0 UP=1 DIN=47 | CNT=38 exp=38              
+ 154 RST=0 LOAD=0 EN=1 UP=0 DIN= 6 | CNT=38 exp=38              
+ 155 RST=0 LOAD=0 EN=0 UP=1 DIN= 1 | CNT=37 exp=37              
+ 156 RST=0 LOAD=0 EN=0 UP=0 DIN=37 | CNT=37 exp=37              
+ 157 RST=0 LOAD=0 EN=0 UP=1 DIN= 5 | CNT=37 exp=37              
+ 158 RST=0 LOAD=0 EN=1 UP=1 DIN= 4 | CNT=37 exp=37              
+ 159 RST=0 LOAD=0 EN=0 UP=1 DIN= 2 | CNT=38 exp=38              
+ 160 RST=0 LOAD=1 EN=1 UP=0 DIN=30 | CNT=38 exp=38              
+ 161 RST=0 LOAD=0 EN=1 UP=1 DIN=61 | CNT=30 exp=30              
+ 162 RST=0 LOAD=0 EN=0 UP=0 DIN=32 | CNT=31 exp=31              
+ 163 RST=0 LOAD=0 EN=1 UP=0 DIN=19 | CNT=31 exp=31              
+ 164 RST=0 LOAD=0 EN=1 UP=1 DIN=35 | CNT=30 exp=30              
+ 165 RST=0 LOAD=0 EN=0 UP=1 DIN=14 | CNT=31 exp=31              
+ 166 RST=0 LOAD=0 EN=1 UP=0 DIN=36 | CNT=31 exp=31              
+ 167 RST=0 LOAD=0 EN=1 UP=0 DIN= 2 | CNT=30 exp=30              
+ 168 RST=0 LOAD=0 EN=1 UP=0 DIN=57 | CNT=29 exp=29              
+ 169 RST=0 LOAD=0 EN=0 UP=1 DIN=31 | CNT=28 exp=28              
+ 170 RST=0 LOAD=0 EN=1 UP=1 DIN=11 | CNT=28 exp=28              
+ 171 RST=0 LOAD=0 EN=1 UP=1 DIN=14 | CNT=29 exp=29              
+ 172 RST=0 LOAD=0 EN=0 UP=1 DIN=16 | CNT=30 exp=30              
+ 173 RST=0 LOAD=0 EN=1 UP=0 DIN= 7 | CNT=30 exp=30              
+ 174 RST=0 LOAD=0 EN=0 UP=1 DIN= 0 | CNT=29 exp=29              
+ 175 RST=0 LOAD=0 EN=1 UP=1 DIN=39 | CNT=29 exp=29              
+ 176 RST=0 LOAD=0 EN=1 UP=0 DIN=14 | CNT=30 exp=30              
+ 177 RST=0 LOAD=0 EN=1 UP=0 DIN=13 | CNT=29 exp=29              
+ 178 RST=0 LOAD=0 EN=1 UP=0 DIN=31 | CNT=28 exp=28              
+ 179 RST=0 LOAD=0 EN=1 UP=1 DIN=43 | CNT=27 exp=27              
+ 180 RST=0 LOAD=0 EN=1 UP=1 DIN= 4 | CNT=28 exp=28              
+ 181 RST=1 LOAD=0 EN=0 UP=1 DIN=39 | CNT=29 exp=29              
+ 182 RST=0 LOAD=0 EN=0 UP=0 DIN=50 | CNT= 0 exp= 0              
+ 183 RST=0 LOAD=0 EN=0 UP=1 DIN=42 | CNT= 0 exp= 0              
+ 184 RST=0 LOAD=0 EN=0 UP=1 DIN=54 | CNT= 0 exp= 0              
+ 185 RST=0 LOAD=0 EN=0 UP=0 DIN=62 | CNT= 0 exp= 0              
+ 186 RST=1 LOAD=0 EN=0 UP=0 DIN=52 | CNT= 0 exp= 0              
+ 187 RST=0 LOAD=0 EN=0 UP=1 DIN=34 | CNT= 0 exp= 0              
+ 188 RST=0 LOAD=0 EN=0 UP=0 DIN=23 | CNT= 0 exp= 0              
+ 189 RST=0 LOAD=0 EN=1 UP=1 DIN=39 | CNT= 0 exp= 0              
+ 190 RST=0 LOAD=0 EN=0 UP=0 DIN=16 | CNT= 1 exp= 1              
+ 191 RST=0 LOAD=0 EN=1 UP=1 DIN= 3 | CNT= 1 exp= 1              
+ 192 RST=0 LOAD=0 EN=1 UP=1 DIN= 9 | CNT= 2 exp= 2              
+ 193 RST=0 LOAD=0 EN=1 UP=0 DIN=43 | CNT= 3 exp= 3              
+ 194 RST=0 LOAD=0 EN=1 UP=1 DIN=33 | CNT= 2 exp= 2              
+ 195 RST=0 LOAD=1 EN=1 UP=1 DIN=43 | CNT= 3 exp= 3              
+ 196 RST=0 LOAD=1 EN=1 UP=1 DIN=32 | CNT=43 exp=43              
+ 197 RST=0 LOAD=1 EN=1 UP=1 DIN=63 | CNT=32 exp=32              
+ 198 RST=1 LOAD=0 EN=0 UP=1 DIN=50 | CNT=63 exp=63              
+ 199 RST=0 LOAD=0 EN=0 UP=0 DIN=42 | CNT= 0 exp= 0              
+ 200 RST=0 LOAD=0 EN=0 UP=0 DIN=31 | CNT= 0 exp= 0              
+ 201 RST=0 LOAD=0 EN=0 UP=0 DIN=12 | CNT= 0 exp= 0              
+ 202 RST=0 LOAD=0 EN=0 UP=1 DIN=63 | CNT= 0 exp= 0              
+ 203 RST=0 LOAD=0 EN=1 UP=0 DIN=62 | CNT= 0 exp= 0              
+ 204 RST=0 LOAD=0 EN=0 UP=1 DIN=56 | CNT=63 exp=63              
+ 205 RST=0 LOAD=0 EN=0 UP=0 DIN=39 | CNT=63 exp=63              
+ 206 RST=0 LOAD=0 EN=0 UP=1 DIN=50 | CNT=63 exp=63              
+ 207 RST=0 LOAD=0 EN=1 UP=0 DIN=22 | CNT=63 exp=63              
+ 208 RST=0 LOAD=0 EN=0 UP=1 DIN=15 | CNT=62 exp=62              
+ 209 RST=0 LOAD=0 EN=0 UP=1 DIN=24 | CNT=62 exp=62              
+ 210 RST=0 LOAD=0 EN=1 UP=1 DIN=38 | CNT=62 exp=62              
+ 211 RST=0 LOAD=0 EN=1 UP=0 DIN=18 | CNT=63 exp=63              
+ 212 RST=0 LOAD=0 EN=1 UP=1 DIN=55 | CNT=62 exp=62              
+ 213 RST=0 LOAD=0 EN=0 UP=1 DIN=22 | CNT=63 exp=63              
+ 214 RST=0 LOAD=0 EN=1 UP=1 DIN=38 | CNT=63 exp=63              
+ 215 RST=1 LOAD=1 EN=1 UP=0 DIN= 0 | CNT= 0 exp= 0              
+ 216 RST=0 LOAD=0 EN=1 UP=0 DIN=51 | CNT= 0 exp= 0              
+ 217 RST=0 LOAD=0 EN=1 UP=1 DIN= 8 | CNT=63 exp=63              
+ 218 RST=0 LOAD=0 EN=1 UP=0 DIN=46 | CNT= 0 exp= 0              
+ 219 RST=0 LOAD=0 EN=0 UP=0 DIN=32 | CNT=63 exp=63              
+ 220 RST=0 LOAD=0 EN=0 UP=0 DIN=53 | CNT=63 exp=63              
+ 221 RST=0 LOAD=0 EN=1 UP=1 DIN= 5 | CNT=63 exp=63              
+ 222 RST=0 LOAD=0 EN=0 UP=1 DIN=39 | CNT= 0 exp= 0              
+ 223 RST=0 LOAD=0 EN=1 UP=0 DIN=32 | CNT= 0 exp= 0              
+ 224 RST=0 LOAD=0 EN=0 UP=0 DIN=33 | CNT=63 exp=63              
+ 225 RST=0 LOAD=0 EN=1 UP=1 DIN=20 | CNT=63 exp=63              
+ 226 RST=0 LOAD=0 EN=1 UP=1 DIN=46 | CNT= 0 exp= 0              
+ 227 RST=0 LOAD=0 EN=0 UP=1 DIN=31 | CNT= 1 exp= 1              
+ 228 RST=0 LOAD=0 EN=0 UP=1 DIN= 9 | CNT= 1 exp= 1              
+ 229 RST=0 LOAD=0 EN=0 UP=0 DIN= 0 | CNT= 1 exp= 1              
+PASS: 229 cycles, 0 mismatches
+updown/tb/tb_updown.v:81: $finish called at 2300000 (1ps)

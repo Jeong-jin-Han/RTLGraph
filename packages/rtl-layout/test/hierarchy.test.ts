@@ -112,6 +112,26 @@ test('inside a frame, inputs sit leftmost and outputs rightmost in their row', (
   }
 })
 
+// demo/updown was written by a fresh agent session from the rtl prompt. Its data
+// input DIN shares the control block's row, which once put two frame pins 9px
+// apart and the root's UP and DIN ports on top of each other.
+test('a data input in the control block\'s row does not crowd the frame pins', () => {
+  const project = join(import.meta.dirname, '../../../demo/updown')
+  const read = (path: string) => {
+    try {
+      return readFileSync(join(project, path), 'utf8')
+    } catch {
+      return undefined
+    }
+  }
+  const root = loadHierarchy('updown.rtlgraph.json', read).root!
+  const layout = layoutHierarchy(root, () => true)
+  const pins = Object.values(layout.nodes.updown.pins).filter(p => p.side === 'left').map(p => p.y).sort((a, b) => a - b)
+  for (let i = 1; i < pins.length; i++) assert.ok(pins[i] - pins[i - 1] >= 18, `frame pins ${pins[i - 1]} and ${pins[i]} are too close`)
+  checkLevel(layout, root.graph)
+  checkLevel(layout.children.updown.layout, root.children.updown.graph)
+})
+
 test('nests recursively: every box of a child stays inside its frame', () => {
   const root = synthetic()
   const layout = layoutHierarchy(root, () => true)
