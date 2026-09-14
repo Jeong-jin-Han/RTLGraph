@@ -26,46 +26,45 @@ export interface SymbolDef {
   widthParam: { name: string; default: number; offset: number }
 }
 
+// Sides follow the slide p.31 schematic: registers sit on the bottom row with D
+// entering from the top and Q leaving from the bottom; combinational blocks take
+// data from below and drive it upward; control pins come in from the left.
 const BW = { name: 'BW', default: 5, offset: 1 }
-const dataIn = (name: string): SymbolPort => ({ name, dir: 'in', side: 'left', role: 'data', width: 'param' })
-const dataOut = (name: string, width: SymbolPort['width'] = 'param'): SymbolPort =>
-  ({ name, dir: 'out', side: 'right', role: 'data', width })
+const port = (name: string, dir: PortDir, side: Side, role: PortRole, width: SymbolPort['width']): SymbolPort =>
+  ({ name, dir, side, role, width })
+const opIn = (name: string) => port(name, 'in', 'bottom', 'data', 'param')
+const opOut = (name: string, width: SymbolPort['width'] = 'param') => port(name, 'out', 'top', 'data', width)
 
 export const BASE_REGISTRY: Readonly<Record<string, SymbolDef>> = {
   DFF: {
     module: 'DFF', kind: 'reg', time: 'seq', symbol: 'register', widthParam: BW,
     ports: [
-      { name: 'CLK', dir: 'in', side: 'bottom', role: 'clock', width: 1 },
-      { name: 'RST', dir: 'in', side: 'top', role: 'reset', width: 1 },
-      { name: 'EN', dir: 'in', side: 'top', role: 'enable', width: 1 },
-      dataIn('D'),
-      dataOut('Q'),
+      port('CLK', 'in', 'right', 'clock', 1),
+      port('RST', 'in', 'left', 'reset', 1),
+      port('EN', 'in', 'left', 'enable', 1),
+      port('D', 'in', 'top', 'data', 'param'),
+      port('Q', 'out', 'bottom', 'data', 'param'),
     ],
   },
   INC: {
     module: 'INC', kind: 'op', time: 'comb', symbol: 'box', label: '+1', widthParam: BW,
-    ports: [dataIn('a'), dataOut('y')],
+    ports: [opIn('a'), opOut('y')],
   },
   ADD: {
     module: 'ADD', kind: 'op', time: 'comb', symbol: 'box', label: 'ADD', widthParam: BW,
-    ports: [dataIn('a'), dataIn('b'), dataOut('y')],
+    ports: [opIn('a'), opIn('b'), opOut('y')],
   },
   SUB: {
     module: 'SUB', kind: 'op', time: 'comb', symbol: 'box', label: 'SUB', widthParam: BW,
-    ports: [dataIn('a'), dataIn('b'), dataOut('y')],
+    ports: [opIn('a'), opIn('b'), opOut('y')],
   },
   MUX2: {
     module: 'MUX2', kind: 'mux', time: 'comb', symbol: 'mux', widthParam: BW,
-    ports: [
-      { name: 'sel', dir: 'in', side: 'top', role: 'select', width: 1 },
-      dataIn('d0'),
-      dataIn('d1'),
-      dataOut('y'),
-    ],
+    ports: [port('sel', 'in', 'left', 'select', 1), opIn('d0'), opIn('d1'), opOut('y')],
   },
   CMP_EQ: {
     module: 'CMP_EQ', kind: 'op', time: 'comb', symbol: 'box', label: '=', widthParam: BW,
-    ports: [dataIn('a'), dataIn('b'), dataOut('y', 1)],
+    ports: [opIn('a'), opIn('b'), opOut('y', 1)],
   },
 }
 
