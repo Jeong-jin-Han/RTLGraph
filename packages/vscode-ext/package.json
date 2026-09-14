@@ -66,8 +66,8 @@
       "properties": {
         "rtlgraph.export.folder": {
           "type": "string",
-          "default": "out-${name}",
-          "markdownDescription": "Folder next to the graph file that exports are written to. `${name}` is the graph file name without `.rtlgraph.json`. Use `.${name}-export` for a hidden folder."
+          "default": ".out-${name}",
+          "markdownDescription": "Folder next to the graph file that exports are written to. `${name}` is the graph file name without `.rtlgraph.json`. The default is hidden, like NodeGraph's `.<name>-imgs`; use `out-${name}` for a visible folder."
         }
       }
     }

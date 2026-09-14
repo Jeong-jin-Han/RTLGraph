@@ -13,11 +13,11 @@ test('the graph name drops the .rtlgraph.json suffix', () => {
 })
 
 test('export folder: default, custom patterns, and nothing outside the graph directory', () => {
-  assert.equal(exportFolderName(undefined, 'acc_top'), 'out-acc_top')
-  assert.equal(exportFolderName('.${name}-export', 'acc_top'), '.acc_top-export')
+  assert.equal(exportFolderName(undefined, 'acc_top'), '.out-acc_top')
+  assert.equal(exportFolderName('out-${name}', 'acc_top'), 'out-acc_top')
   assert.equal(exportFolderName('exports/${name}', 'acc_top'), 'exports/acc_top')
   for (const unsafe of ['../${name}', '/tmp/${name}', 'C:/x', 'a/../../b', '', '  ', './${name}']) {
-    assert.equal(exportFolderName(unsafe, 'acc_top'), 'out-acc_top', unsafe)
+    assert.equal(exportFolderName(unsafe, 'acc_top'), '.out-acc_top', unsafe)
   }
 })
 

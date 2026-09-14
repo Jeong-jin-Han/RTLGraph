@@ -10,7 +10,7 @@ export interface ExportSource {
 }
 
 // Writes the current view of a schematic next to its graph file:
-//   <dir>/out-<name>/<name>.<view>.{svg,png,pdf}
+//   <dir>/.out-<name>/<name>.<view>.{svg,png,pdf}
 // SVG and PDF are drawn here from the same scene; PNG comes from the webview canvas.
 export async function exportSchematic(source: ExportSource, formats: readonly ExportFormat[]): Promise<{ files: vscode.Uri[]; warnings: string[] }> {
   let graph: unknown

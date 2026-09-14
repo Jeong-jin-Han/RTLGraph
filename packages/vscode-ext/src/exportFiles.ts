@@ -2,13 +2,14 @@ import type { ViewFilter } from '@rtlgraph/ir'
 import { presetOf } from './webview/state.ts'
 
 // Where an export goes. Pure, so it can be tested without VS Code.
-//   acc_top.rtlgraph.json + datapath filter + pdf  ->  out-acc_top/acc_top.datapath.pdf
+//   acc_top.rtlgraph.json + datapath filter + pdf  ->  .out-acc_top/acc_top.datapath.pdf
 
 export type ExportFormat = 'svg' | 'png' | 'pdf'
 export const EXPORT_FORMATS: readonly ExportFormat[] = ['svg', 'png', 'pdf']
 
 // Setting rtlgraph.export.folder; ${name} is the graph file name without .rtlgraph.json.
-export const DEFAULT_EXPORT_FOLDER = 'out-${name}'
+// Hidden by default, like NodeGraph's `.<name>-imgs` folder next to a graph.
+export const DEFAULT_EXPORT_FOLDER = '.out-${name}'
 
 export function graphBaseName(fileName: string): string {
   const base = fileName.split(/[\\/]/).pop() ?? fileName
