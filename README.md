@@ -25,8 +25,28 @@ RTL folder ──[AI agent + .agent/RTLGRAPH_SPEC.md]──→ *.rtlgraph.json �
    | Command | What it does |
    |---|---|
    | `RTLGraph: Copy Agent Spec to Workspace` | Writes the agent files into a folder (also on folder right-click in the Explorer) |
+   | `RTLGraph: Export Schematic (SVG / PNG / PDF)` | Exports the current view (also the **Export…** toolbar button) |
    | `RTLGraph: Set View Preset` | All · Datapath · Control path · Combinational only · Sequential only |
    | `RTLGraph: Fit View` | Fit the schematic to the window |
+
+### Export
+
+**Export…** writes what is on screen — the current filter, cropped to what is visible — next to the
+graph file:
+
+```
+acc/acc_top.rtlgraph.json
+acc/out-acc_top/acc_top.datapath.svg    vector; Inkscape, Illustrator, web pages
+acc/out-acc_top/acc_top.datapath.png    2× image; slides, chat
+acc/out-acc_top/acc_top.datapath.pdf    vector; papers, reports
+```
+
+The file name carries the view (`all`, `datapath`, `controlpath`, `comb`, `seq`, or the raw filter).
+The folder is the `rtlgraph.export.folder` setting, default `out-${name}`; set it to
+`.${name}-export` for a hidden folder. PDF text uses the built-in Helvetica font, so non-Latin labels
+(e.g. Hangul) show as `?` there — you are warned, and SVG/PNG show them correctly.
+
+Without VS Code: `node packages/rtl-render/src/cli.ts <graph> datapath --format pdf -o out.pdf`.
 
 ### Your own RTL
 
