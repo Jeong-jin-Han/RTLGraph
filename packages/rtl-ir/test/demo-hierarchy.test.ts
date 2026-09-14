@@ -4,29 +4,64 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { checkSources, hierarchyEntries, loadHierarchy } from '../src/index.ts'
 
-// demo/acc: the root acc_top.rtlgraph.json and its main component acc/.
-const PROJECT = join(import.meta.dirname, '../../../demo/acc')
-const read = (path: string) => {
+// Every demo project that has RTLGraph files: the root, and each component
+// schematic it reaches. demo/sys is the deep one (a component inside a component).
+const DEMO = join(import.meta.dirname, '../../../demo')
+const reader = (project: string) => (path: string) => {
   try {
-    return readFileSync(join(PROJECT, path), 'utf8')
+    return readFileSync(join(DEMO, project, path), 'utf8')
   } catch {
     return undefined
   }
 }
 
-test('the demo root loads its main component without problems', () => {
-  const h = loadHierarchy('acc_top.rtlgraph.json', read)
-  assert.deepEqual(h.diagnostics, [])
-  assert.deepEqual(hierarchyEntries(h.root).map(e => [e.instance, e.path, e.graph.kind]), [
-    ['', 'acc_top.rtlgraph.json', 'system'],
-    ['acc', 'acc/acc.rtlgraph-schematic.json', 'component'],
-  ])
-})
+const PROJECTS: Record<string, { root: string; entries: [string, string, string][] }> = {
+  acc: {
+    root: 'acc_top.rtlgraph.json',
+    entries: [
+      ['', 'acc_top.rtlgraph.json', 'system'],
+      ['acc', 'acc/acc.rtlgraph-schematic.json', 'component'],
+    ],
+  },
+  updown: {
+    root: 'updown.rtlgraph.json',
+    entries: [
+      ['', 'updown.rtlgraph.json', 'system'],
+      ['updown', 'updown/updown.rtlgraph-schematic.json', 'component'],
+    ],
+  },
+  sys: {
+    root: 'sys_top.rtlgraph.json',
+    entries: [
+      ['', 'sys_top.rtlgraph.json', 'system'],
+      ['sys', 'sys/sys.rtlgraph-schematic.json', 'component'],
+      ['sys/u_host', 'sys/host/host.rtlgraph-schematic.json', 'component'],
+      ['sys/u_dev', 'sys/dev/dev.rtlgraph-schematic.json', 'component'],
+      ['sys/u_dev/u_inbuf', 'sys/dev/inbuf/inbuf.rtlgraph-schematic.json', 'component'],
+    ],
+  },
+}
 
-test('every file in the demo hierarchy agrees with its sources', () => {
-  for (const entry of hierarchyEntries(loadHierarchy('acc_top.rtlgraph.json', read).root)) {
-    const dir = entry.path.split('/').slice(0, -1).join('/')
-    const base = [dir, entry.graph.source.root].filter(p => p && p !== '.').join('/')
-    assert.deepEqual(checkSources(entry.graph, path => read(base ? `${base}/${path}` : path)), [], entry.path)
-  }
+for (const [project, { root, entries }] of Object.entries(PROJECTS)) {
+  const read = reader(project)
+
+  test(`demo/${project} loads every component it refers to`, () => {
+    const h = loadHierarchy(root, read)
+    assert.deepEqual(h.diagnostics, [])
+    assert.deepEqual(hierarchyEntries(h.root).map(e => [e.instance, e.path, e.graph.kind]), entries)
+  })
+
+  test(`demo/${project} agrees with its sources`, () => {
+    for (const entry of hierarchyEntries(loadHierarchy(root, read).root)) {
+      const dir = entry.path.split('/').slice(0, -1).join('/')
+      const base = [dir, entry.graph.source.root].filter(p => p && p !== '.').join('/')
+      assert.deepEqual(checkSources(entry.graph, path => read(base ? `${base}/${path}` : path)), [], entry.path)
+    }
+  })
+}
+
+test('a component box is reused wherever the same schematic is referred to', () => {
+  // Instance paths stay unique even when two boxes point at one file.
+  const instances = hierarchyEntries(loadHierarchy(PROJECTS.sys.root, reader('sys')).root).map(e => e.instance)
+  assert.equal(new Set(instances).size, instances.length)
 })

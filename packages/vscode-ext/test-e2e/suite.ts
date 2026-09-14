@@ -111,7 +111,35 @@ export async function run(): Promise<void> {
   assert.ok(document && !document.isDirty)
   log('viewing, filtering and folding never dirtied the document')
 
+  // ── three levels: demo/sys ──
+  const deep = vscode.Uri.file(join(dirname(dirname(graphFile)), 'sys/sys_top.rtlgraph.json'))
+  await vscode.commands.executeCommand('vscode.open', deep)
+  const untilFold = (what: string, unfolded: string[]) =>
+    until(what, async () => {
+      const state = await renderState()
+      return state && JSON.stringify(state.unfolded) === JSON.stringify(unfolded) ? state : undefined
+    })
+
+  const deepOpen = await untilFold('the nested root to open its main component', ['sys'])
+  assert.ok(deepOpen.nodes > 0)
+  await vscode.commands.executeCommand('rtlgraph.unfold')
+  const all = await untilFold('every level open', ['sys', 'sys/u_host', 'sys/u_dev', 'sys/u_dev/u_inbuf'])
+  log(`three levels open at once: ${all.nodes} elements, ${all.signals} nets, deepest is sys/u_dev/u_inbuf`)
+
+  await vscode.commands.executeCommand('rtlgraph.fold', { instance: 'sys/u_dev', scope: 'descendants' })
+  const branch = await untilFold('one branch folded', ['sys', 'sys/u_host'])
+  assert.ok(branch.nodes < all.nodes)
+  await vscode.commands.executeCommand('rtlgraph.unfold', { instance: 'sys/u_dev/u_inbuf', scope: 'node' })
+  await untilFold('unfolding a deep box opens the way to it', ['sys', 'sys/u_host', 'sys/u_dev', 'sys/u_dev/u_inbuf'])
+  log('folding a branch and reopening the box two levels down both work')
+
+  const nested = await vscode.commands.executeCommand<string>('rtlgraph.openComponent', 'sys/u_dev/u_inbuf')
+  assert.equal(nested, join(dirname(deep.fsPath), 'sys/dev/inbuf/inbuf.rtlgraph-schematic.json'))
+  log('Open Component Schematic reaches a component two levels down')
+
   // ── open a component's own schematic ──
+  await vscode.commands.executeCommand('vscode.open', uri)
+  await until('the acc root again', renderState)
   const child = await vscode.commands.executeCommand<string>('rtlgraph.openComponent', 'acc')
   assert.equal(child, join(dirname(graphFile), 'acc/acc.rtlgraph-schematic.json'))
   const childState = await renderWith('the component schematic', 12)

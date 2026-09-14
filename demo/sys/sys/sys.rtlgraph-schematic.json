@@ -1,0 +1,39 @@
+{
+  "version": "0.1.0",
+  "kind": "component",
+  "title": "sys",
+  "created": "2026-09-15T00:00:00.000Z",
+  "modified": "2026-09-15T00:00:00.000Z",
+  "source": {
+    "root": ".",
+    "files": ["seq/sys_top.v"],
+    "top": "sys_top",
+    "contractCheck": "pass"
+  },
+  "signals": {
+    "CLK":   { "width": 1, "flow": "clock",   "driver": "@CLK",   "sinks": ["u_host:CLK", "u_dev:CLK"], "hidden": true, "origin": { "file": "seq/sys_top.v", "line": 9 } },
+    "RST":   { "width": 1, "flow": "reset",   "driver": "@RST",   "sinks": ["u_host:RST", "u_dev:RST"], "origin": { "file": "seq/sys_top.v", "line": 10 } },
+    "START": { "width": 1, "flow": "control", "driver": "@START", "sinks": ["u_host:START"], "origin": { "file": "seq/sys_top.v", "line": 11 } },
+    "DATA":  { "width": 6, "flow": "data",    "driver": "u_host:DATA",  "sinks": ["u_dev:DATA"],  "origin": { "file": "seq/sys_top.v", "line": 15 } },
+    "VALID": { "width": 1, "flow": "control", "driver": "u_host:VALID", "sinks": ["u_dev:VALID"], "meaning": "1=DATA holds a sample for the device", "origin": { "file": "seq/sys_top.v", "line": 16 } },
+    "SUM":   { "width": 6, "flow": "data",    "driver": "u_dev:SUM",    "sinks": ["@SUM"],        "origin": { "file": "seq/sys_top.v", "line": 12 } }
+  },
+  "nodes": {
+    "@CLK":   { "kind": "port", "dir": "in",  "flow": "clock",   "origin": { "file": "seq/sys_top.v", "line": 9 } },
+    "@RST":   { "kind": "port", "dir": "in",  "flow": "reset",   "origin": { "file": "seq/sys_top.v", "line": 10 } },
+    "@START": { "kind": "port", "dir": "in",  "flow": "control", "origin": { "file": "seq/sys_top.v", "line": 11 } },
+    "@SUM":   { "kind": "port", "dir": "out", "flow": "data",    "origin": { "file": "seq/sys_top.v", "line": 12 } },
+    "u_host": {
+      "kind": "component", "name": "host", "module": "host_top",
+      "ref": "host/host.rtlgraph-schematic.json",
+      "ports": { "CLK": "in", "RST": "in", "START": "in", "DATA": "out", "VALID": "out" },
+      "origin": { "file": "seq/sys_top.v", "line": 18 }
+    },
+    "u_dev": {
+      "kind": "component", "name": "dev", "module": "dev_top",
+      "ref": "dev/dev.rtlgraph-schematic.json",
+      "ports": { "CLK": "in", "RST": "in", "VALID": "in", "DATA": "in", "SUM": "out" },
+      "origin": { "file": "seq/sys_top.v", "line": 26 }
+    }
+  }
+}

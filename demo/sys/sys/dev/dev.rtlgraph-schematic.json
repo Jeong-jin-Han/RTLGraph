@@ -1,0 +1,68 @@
+{
+  "version": "0.1.0",
+  "kind": "component",
+  "title": "dev",
+  "created": "2026-09-15T00:00:00.000Z",
+  "modified": "2026-09-15T00:00:00.000Z",
+  "source": {
+    "root": ".",
+    "lib": "../../../base",
+    "files": ["seq/dev_top.v", "comb/data_path/dev_dp.v", "comb/control_path/dev_cp.v"],
+    "libFiles": ["DFF.v", "ADD.v"],
+    "top": "dev_top",
+    "contractCheck": "pass"
+  },
+  "signals": {
+    "CLK":     { "width": 1, "flow": "clock",   "driver": "@CLK",   "sinks": ["u_inbuf:CLK", "SUM_FF:CLK"], "hidden": true, "origin": { "file": "seq/dev_top.v", "line": 8 } },
+    "RST":     { "width": 1, "flow": "reset",   "driver": "@RST",   "sinks": ["control_path:RST"],   "origin": { "file": "seq/dev_top.v", "line": 9 } },
+    "VALID":   { "width": 1, "flow": "control", "driver": "@VALID", "sinks": ["control_path:VALID"], "meaning": "1=DATA holds a sample from the host", "origin": { "file": "seq/dev_top.v", "line": 10 } },
+    "DATA":    { "width": 6, "flow": "data",    "driver": "@DATA",  "sinks": ["u_inbuf:DIN"], "origin": { "file": "seq/dev_top.v", "line": 11 } },
+    "BUF_OUT": { "width": 6, "flow": "data",    "driver": "u_inbuf:DOUT", "sinks": ["data_path.u_add:b"], "origin": { "file": "seq/dev_top.v", "line": 15 } },
+    "BUF_RST": { "width": 1, "flow": "control", "driver": "control_path:BUF_RST", "sinks": ["u_inbuf:RST"], "meaning": "1=clear the input buffer", "origin": { "file": "seq/dev_top.v", "line": 16 } },
+    "BUF_EN":  { "width": 1, "flow": "control", "driver": "control_path:BUF_EN",  "sinks": ["u_inbuf:EN"],  "meaning": "1=capture DATA into the input buffer", "origin": { "file": "seq/dev_top.v", "line": 17 } },
+    "SUM_D":   { "width": 6, "flow": "data",    "driver": "data_path.u_add:y", "sinks": ["SUM_FF:D"], "origin": { "file": "seq/dev_top.v", "line": 19 } },
+    "SUM_Q":   { "width": 6, "flow": "data",    "driver": "SUM_FF:Q", "sinks": ["data_path.u_add:a", "@SUM"], "aliases": ["SUM"], "origin": { "file": "seq/dev_top.v", "line": 20 } },
+    "SUM_RST": { "width": 1, "flow": "control", "driver": "control_path:SUM_RST", "sinks": ["SUM_FF:RST"], "meaning": "1=clear the running sum", "origin": { "file": "seq/dev_top.v", "line": 21 } },
+    "SUM_EN":  { "width": 1, "flow": "control", "driver": "control_path:SUM_EN",  "sinks": ["SUM_FF:EN"],  "meaning": "1=add the buffered sample to the sum", "origin": { "file": "seq/dev_top.v", "line": 22 } }
+  },
+  "nodes": {
+    "@CLK":   { "kind": "port", "dir": "in",  "flow": "clock",   "origin": { "file": "seq/dev_top.v", "line": 8 } },
+    "@RST":   { "kind": "port", "dir": "in",  "flow": "reset",   "origin": { "file": "seq/dev_top.v", "line": 9 } },
+    "@VALID": { "kind": "port", "dir": "in",  "flow": "control", "origin": { "file": "seq/dev_top.v", "line": 10 } },
+    "@DATA":  { "kind": "port", "dir": "in",  "flow": "data",    "origin": { "file": "seq/dev_top.v", "line": 11 } },
+    "@SUM":   { "kind": "port", "dir": "out", "flow": "data",    "origin": { "file": "seq/dev_top.v", "line": 12 } },
+    "u_inbuf": {
+      "kind": "component", "name": "inbuf", "module": "inbuf_top",
+      "ref": "inbuf/inbuf.rtlgraph-schematic.json",
+      "ports": { "CLK": "in", "RST": "in", "EN": "in", "DIN": "in", "DOUT": "out" },
+      "origin": { "file": "seq/dev_top.v", "line": 25 }
+    },
+    "data_path.u_add": {
+      "kind": "op", "flow": "data", "time": "comb", "module": "ADD", "params": { "BW": 5 },
+      "ports": { "a": "in", "b": "in", "y": "out" },
+      "origin": { "file": "comb/data_path/dev_dp.v", "line": 10 }
+    },
+    "control_path": {
+      "kind": "control", "flow": "control", "time": "comb", "module": "dev_cp",
+      "ports": { "RST": "in", "VALID": "in", "BUF_RST": "out", "BUF_EN": "out", "SUM_RST": "out", "SUM_EN": "out" },
+      "truthTable": {
+        "inputs": ["RST", "VALID"],
+        "outputs": ["BUF_RST", "BUF_EN", "SUM_RST", "SUM_EN"],
+        "rows": [
+          { "in": ["1", "x"], "out": ["1", "0", "1", "0"], "note": "reset: clear buffer and sum" },
+          { "in": ["0", "0"], "out": ["0", "0", "0", "0"], "note": "idle: hold both" },
+          { "in": ["0", "1"], "out": ["0", "1", "0", "1"], "note": "sample: capture DATA, add the buffered one" }
+        ],
+        "default": { "out": ["1", "0", "1", "0"] },
+        "origin": { "file": "comb/control_path/dev_cp.v", "line": 22 }
+      },
+      "origin": { "file": "seq/dev_top.v", "line": 41 }
+    },
+    "SUM_FF": {
+      "kind": "reg", "flow": "data", "time": "seq", "module": "DFF", "params": { "BW": 5 },
+      "ports": { "CLK": "in", "RST": "in", "EN": "in", "D": "in", "Q": "out" },
+      "rstKind": "sync", "rstPriority": "rst>en", "rstValue": "0",
+      "origin": { "file": "seq/dev_top.v", "line": 51 }
+    }
+  }
+}

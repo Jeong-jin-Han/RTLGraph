@@ -1,0 +1,31 @@
+{
+  "version": "0.1.0",
+  "kind": "system",
+  "title": "sys_top",
+  "created": "2026-09-15T00:00:00.000Z",
+  "modified": "2026-09-15T00:00:00.000Z",
+  "source": {
+    "root": ".",
+    "files": ["sys/seq/sys_top.v"],
+    "top": "sys_top",
+    "contractCheck": "pass"
+  },
+  "signals": {
+    "CLK":   { "width": 1, "flow": "clock",   "driver": "@CLK",   "sinks": ["sys:CLK"],   "hidden": true, "origin": { "file": "sys/seq/sys_top.v", "line": 9 } },
+    "RST":   { "width": 1, "flow": "reset",   "driver": "@RST",   "sinks": ["sys:RST"],   "origin": { "file": "sys/seq/sys_top.v", "line": 10 } },
+    "START": { "width": 1, "flow": "control", "driver": "@START", "sinks": ["sys:START"], "origin": { "file": "sys/seq/sys_top.v", "line": 11 } },
+    "SUM":   { "width": 6, "flow": "data",    "driver": "sys:SUM", "sinks": ["@SUM"],     "origin": { "file": "sys/seq/sys_top.v", "line": 12 } }
+  },
+  "nodes": {
+    "@CLK":   { "kind": "port", "dir": "in",  "flow": "clock",   "origin": { "file": "sys/seq/sys_top.v", "line": 9 } },
+    "@RST":   { "kind": "port", "dir": "in",  "flow": "reset",   "origin": { "file": "sys/seq/sys_top.v", "line": 10 } },
+    "@START": { "kind": "port", "dir": "in",  "flow": "control", "origin": { "file": "sys/seq/sys_top.v", "line": 11 } },
+    "@SUM":   { "kind": "port", "dir": "out", "flow": "data",    "origin": { "file": "sys/seq/sys_top.v", "line": 12 } },
+    "sys": {
+      "kind": "component", "name": "sys", "module": "sys_top",
+      "ref": "sys/sys.rtlgraph-schematic.json",
+      "ports": { "CLK": "in", "RST": "in", "START": "in", "SUM": "out" },
+      "origin": { "file": "sys/seq/sys_top.v", "line": 8 }
+    }
+  }
+}

@@ -1,0 +1,59 @@
+{
+  "version": "0.1.0",
+  "kind": "component",
+  "title": "host",
+  "created": "2026-09-15T00:00:00.000Z",
+  "modified": "2026-09-15T00:00:00.000Z",
+  "source": {
+    "root": ".",
+    "lib": "../../../base",
+    "files": ["seq/host_top.v", "comb/data_path/host_dp.v", "comb/control_path/host_cp.v"],
+    "libFiles": ["DFF.v", "INC.v"],
+    "top": "host_top",
+    "contractCheck": "pass"
+  },
+  "signals": {
+    "CLK":     { "width": 1, "flow": "clock",   "driver": "@CLK",   "sinks": ["CNT_FF:CLK"], "hidden": true, "origin": { "file": "seq/host_top.v", "line": 7 } },
+    "RST":     { "width": 1, "flow": "reset",   "driver": "@RST",   "sinks": ["control_path:RST"],   "origin": { "file": "seq/host_top.v", "line": 8 } },
+    "START":   { "width": 1, "flow": "control", "driver": "@START", "sinks": ["control_path:START"], "origin": { "file": "seq/host_top.v", "line": 9 } },
+    "CNT_RST": { "width": 1, "flow": "control", "driver": "control_path:CNT_RST", "sinks": ["CNT_FF:RST"], "meaning": "1=clear the sample counter", "origin": { "file": "seq/host_top.v", "line": 16 } },
+    "CNT_EN":  { "width": 1, "flow": "control", "driver": "control_path:CNT_EN",  "sinks": ["CNT_FF:EN"],  "meaning": "1=advance to the next sample", "origin": { "file": "seq/host_top.v", "line": 17 } },
+    "VALID":   { "width": 1, "flow": "control", "driver": "control_path:VALID",   "sinks": ["@VALID"],     "meaning": "1=DATA holds a sample for the device", "origin": { "file": "seq/host_top.v", "line": 11 } },
+    "CNT_D":   { "width": 6, "flow": "data",    "driver": "data_path.u_inc:y", "sinks": ["CNT_FF:D"], "origin": { "file": "seq/host_top.v", "line": 14 } },
+    "CNT_Q":   { "width": 6, "flow": "data",    "driver": "CNT_FF:Q", "sinks": ["data_path.u_inc:a", "@DATA"], "aliases": ["DATA"], "origin": { "file": "seq/host_top.v", "line": 15 } }
+  },
+  "nodes": {
+    "@CLK":   { "kind": "port", "dir": "in",  "flow": "clock",   "origin": { "file": "seq/host_top.v", "line": 7 } },
+    "@RST":   { "kind": "port", "dir": "in",  "flow": "reset",   "origin": { "file": "seq/host_top.v", "line": 8 } },
+    "@START": { "kind": "port", "dir": "in",  "flow": "control", "origin": { "file": "seq/host_top.v", "line": 9 } },
+    "@DATA":  { "kind": "port", "dir": "out", "flow": "data",    "origin": { "file": "seq/host_top.v", "line": 10 } },
+    "@VALID": { "kind": "port", "dir": "out", "flow": "control", "origin": { "file": "seq/host_top.v", "line": 11 } },
+    "data_path.u_inc": {
+      "kind": "op", "flow": "data", "time": "comb", "module": "INC", "params": { "BW": 5 },
+      "ports": { "a": "in", "y": "out" },
+      "origin": { "file": "comb/data_path/host_dp.v", "line": 9 }
+    },
+    "control_path": {
+      "kind": "control", "flow": "control", "time": "comb", "module": "host_cp",
+      "ports": { "RST": "in", "START": "in", "CNT_RST": "out", "CNT_EN": "out", "VALID": "out" },
+      "truthTable": {
+        "inputs": ["RST", "START"],
+        "outputs": ["CNT_RST", "CNT_EN", "VALID"],
+        "rows": [
+          { "in": ["1", "x"], "out": ["1", "0", "0"], "note": "reset: clear the counter" },
+          { "in": ["0", "0"], "out": ["0", "0", "0"], "note": "idle: hold, nothing valid" },
+          { "in": ["0", "1"], "out": ["0", "1", "1"], "note": "running: next sample, DATA valid" }
+        ],
+        "default": { "out": ["1", "0", "0"] },
+        "origin": { "file": "comb/control_path/host_cp.v", "line": 20 }
+      },
+      "origin": { "file": "seq/host_top.v", "line": 26 }
+    },
+    "CNT_FF": {
+      "kind": "reg", "flow": "data", "time": "seq", "module": "DFF", "params": { "BW": 5 },
+      "ports": { "CLK": "in", "RST": "in", "EN": "in", "D": "in", "Q": "out" },
+      "rstKind": "sync", "rstPriority": "rst>en", "rstValue": "0",
+      "origin": { "file": "seq/host_top.v", "line": 35 }
+    }
+  }
+}

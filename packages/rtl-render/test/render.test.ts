@@ -80,11 +80,46 @@ test('unfolded, the child is drawn inside the frame under prefixed ids', () => {
   assert.equal([...svg.matchAll(/class="wire connector /g)].length, 4) // RST SHOW MODE ACC; CLK is hidden
 })
 
+test('fold markers are drawn for the editor only, never in an export', () => {
+  const marker = (svg: string) => (svg.match(/width="10" height="10"/g) ?? []).length // the marker box
+  const folded = renderHierarchySvg(root)
+  const open = renderHierarchySvg(root, { isUnfolded: () => true })
+  assert.equal(marker(folded), 0)
+  assert.equal(marker(open), 0)
+  assert.ok(marker(renderHierarchySvg(root, { controls: true })) > 0)
+  assert.ok(marker(renderHierarchySvg(root, { isUnfolded: () => true, controls: true })) > 0)
+})
+
 test('the filter applies inside frames, connectors included', () => {
   const svg = renderHierarchySvg(root, { isUnfolded: () => true, filter: FILTER_PRESETS.datapath })
   assert.ok(!svg.includes('stroke-dasharray'))
   assert.ok(nodeIds(svg).includes('acc/data_path.u_mux'))
   assert.ok(!nodeIds(svg).includes('acc/control_path'))
+})
+
+// ── three levels: demo/sys ──
+const SYS = join(DEMO, '../../sys')
+const sysRoot = loadHierarchy('sys_top.rtlgraph.json', (path: string) => {
+  try {
+    return readFileSync(join(SYS, path), 'utf8')
+  } catch {
+    return undefined
+  }
+}).root!
+
+test('ids carry the whole instance path, however deep', () => {
+  const svg = renderHierarchySvg(sysRoot, { isUnfolded: () => true })
+  for (const id of ['sys', 'sys/u_host', 'sys/u_dev', 'sys/u_dev/u_inbuf', 'sys/u_dev/u_inbuf/BUF_FF', 'sys/u_host/data_path.u_inc']) {
+    assert.ok(nodeIds(svg).includes(id), id)
+  }
+  assert.ok(signalIds(svg).includes('sys/u_dev/u_inbuf/BUF_Q'), 'a net two levels down')
+  assert.equal(classOf(svg, 'sys/u_dev/u_inbuf'), 'node component unfolded')
+
+  // Folding a branch hides what is inside it, and only that.
+  const inner = renderHierarchySvg(sysRoot, { isUnfolded: i => i !== 'sys/u_dev/u_inbuf' })
+  assert.equal(classOf(inner, 'sys/u_dev/u_inbuf'), 'node component folded')
+  assert.ok(!nodeIds(inner).some(id => id.startsWith('sys/u_dev/u_inbuf/')))
+  assert.ok(nodeIds(inner).includes('sys/u_host/CNT_FF'))
 })
 
 // Golden SVGs: regenerate with `npm run golden` after an intended visual change.
@@ -100,6 +135,13 @@ for (const preset of ['all', 'datapath'] as const) {
 test('matches the golden unfolded root SVG', () => {
   const file = join(PROJECT, 'acc_top.svg')
   const svg = renderHierarchySvg(root, { isUnfolded: () => true })
+  if (process.env.UPDATE_GOLDEN) writeFileSync(file, svg)
+  assert.equal(svg, readFileSync(file, 'utf8'))
+})
+
+test('matches the golden three-level SVG', () => {
+  const file = join(SYS, 'sys_top.svg')
+  const svg = renderHierarchySvg(sysRoot, { isUnfolded: () => true })
   if (process.env.UPDATE_GOLDEN) writeFileSync(file, svg)
   assert.equal(svg, readFileSync(file, 'utf8'))
 })

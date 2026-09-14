@@ -150,6 +150,45 @@ test('nests recursively: every box of a child stays inside its frame', () => {
   checkLevel(layout.children.u_top.layout.children.u_sub.layout, root.children.u_top.children.u_sub.graph)
 })
 
+// demo/sys is the deep case on disk: root → sys → host, dev → inbuf.
+test('lays out three levels of real files, each level clean', () => {
+  const project = join(import.meta.dirname, '../../../demo/sys')
+  const read = (path: string) => {
+    try {
+      return readFileSync(join(project, path), 'utf8')
+    } catch {
+      return undefined
+    }
+  }
+  const root = loadHierarchy('sys_top.rtlgraph.json', read).root!
+  const layout = layoutHierarchy(root, () => true)
+
+  const sys = layout.children.sys
+  const dev = sys.layout.children.u_dev
+  const inbuf = dev.layout.children.u_inbuf
+  assert.deepEqual(Object.keys(sys.layout.children).sort(), ['u_dev', 'u_host'])
+  assert.ok(inbuf, 'the component two levels down is drawn open')
+
+  checkLevel(layout, root.graph)
+  checkLevel(sys.layout, root.children.sys.graph)
+  checkLevel(dev.layout, root.children.sys.children.u_dev.graph)
+  checkLevel(inbuf.layout, root.children.sys.children.u_dev.children.u_inbuf.graph)
+
+  // Every box, at any depth, stays inside the frames around it.
+  const boxes = flatten(layout)
+  for (const { id, box } of boxes) {
+    for (const p of boxes.filter(b => b.frame && id.startsWith(`${b.id}/`))) {
+      assert.ok(box.x >= p.box.x && box.y >= p.box.y && box.x + box.w <= p.box.x + p.box.w && box.y + box.h <= p.box.y + p.box.h, `${id} leaves ${p.id}`)
+    }
+  }
+  assert.ok(boxes.some(b => b.id === 'sys/u_dev/u_inbuf/BUF_FF'), 'the deepest register is placed')
+
+  // Folding one branch leaves the other alone.
+  const hostOnly = layoutHierarchy(root, i => i === 'sys' || i === 'sys/u_host')
+  assert.deepEqual(Object.keys(hostOnly.children.sys.layout.children), ['u_host'])
+  assert.ok(hostOnly.nodes.sys.w < layout.nodes.sys.w)
+})
+
 test('fold state is per instance, and layout is deterministic', () => {
   const root = synthetic()
   const onlyTop = layoutHierarchy(root, instance => instance === 'u_top')

@@ -9,7 +9,7 @@ Golden cases shared by every package's tests, and projects for trying the agent 
 | `acc/acc_top.rtlgraph.json` | Root file (kind `system`): the top module's ports wired to the one component box |
 | `acc/acc/` | The main component: `comb/`, `seq/`, `tb/` and its schematic |
 | `acc/acc/acc.rtlgraph-schematic.json` | Hand-written golden schematic. Its `origin` line numbers are checked against the `.v` files by `packages/rtl-ir/test/golden.test.ts` |
-| `sys/` | RTL only, written for RTLGraph: a conforming nested design — main component `sys` wires `host` and `dev`, and `dev` owns a nested `inbuf` component. `sys/tb/TB_sys.v` prints a running sum 0, 1, 3, 6, 10, 15, 21 |
+| `sys/` | A conforming nested design and the deep golden case: root → `sys` → `host`, `dev` → `inbuf`, three levels of component boxes. `sys/sys/tb/TB_sys.v` prints a running sum 0, 1, 3, 6, 10, 15, 21 |
 | `stopwatch/` | RTL only: typical non-conforming student code — a flat folder, an FSM in `always` blocks, a positional port connection, and one counter module instantiated twice. `tb/tb_stopwatch.v` starts, pauses and clears |
 | `updown/` | Written end to end by a fresh `claude -p` session from `.prompt/rtl/korean.md` (Workflow B) with the request "6-bit up/down counter with synchronous load, RST > LOAD > EN": RTL, testbench, root and schematic, kept as produced |
 
