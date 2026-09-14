@@ -373,8 +373,13 @@ export function layoutComponent(graph: ComponentGraph, options: LayoutOptions = 
     const members = stacks.get(id)
     return members ? members.length * PORT_H + (members.length - 1) * STACK_GAP : shapes.get(id)!.h
   }
+  // Registers, control blocks and frames stand on the bottom of their row, as the
+  // slide draws them. Combinational boxes hang from the top instead: their output
+  // pin is on top, and in a row made tall by a control block the climb up to the
+  // channel was longer than the box itself.
+  const hangs = (id: string) => isComb(nodes[id]) && !stacks.has(id)
   const topInRow = (id: string, rowH: number) =>
-    rowH - heightInRow(id) + (stacks.has(id) ? stackIndex(id) * (PORT_H + STACK_GAP) : 0)
+    (hangs(id) ? 0 : rowH - heightInRow(id)) + (stacks.has(id) ? stackIndex(id) * (PORT_H + STACK_GAP) : 0)
   // The refs that leave one side of a box (or a stack) through drops, top to bottom.
   const dropRefs = (id: string, side: 'left' | 'right') =>
     stacks.has(id)
@@ -442,11 +447,29 @@ export function layoutComponent(graph: ComponentGraph, options: LayoutOptions = 
       relax(rows[r], id => (fixed(id) ? -Infinity : barycenter(id) - W(id) / 2))
     }
   }
-  if (closing.length > 0) {
-    // Output ports line up on the right edge of the whole schematic.
-    const inner = packed.filter(id => edge(id) !== 1 && leader(id) === id)
-    const right = Math.max(MARGIN, ...inner.map(id => x.get(id)! + W(id) + rightSpace(id)))
-    for (const id of closing) x.set(id, Math.max(x.get(id)!, right + NODE_GAP + leftSpace(id)))
+  // An output port closes its own row, right after what drives it: pushing them all
+  // out to the widest row's edge made every frame as wide as its longest row.
+  //
+  // The passes above only ever move a box toward its neighbours, so a group that
+  // refers to nothing else can settle far to the right of the fixed heads and stay
+  // there. Take back the slack every row can spare, the same amount everywhere, so
+  // nothing moves relative to anything else.
+  const slack = Math.min(...rows.map(members => {
+    const first = members.findIndex(id => !fixed(id))
+    if (first < 0) return Infinity
+    const id = members[first]
+    const lo = first === 0
+      ? MARGIN + leftSpace(id)
+      : x.get(members[first - 1])! + W(members[first - 1]) + gap(members[first - 1], id)
+    return x.get(id)! - lo
+  }))
+  if (Number.isFinite(slack) && slack > 0) {
+    for (const members of rows) {
+      const first = members.findIndex(id => !fixed(id))
+      if (first < 0) continue
+      for (const id of members.slice(first)) x.set(id, x.get(id)! - slack)
+      relax(members, id => x.get(id)!) // trailing output ports follow their row left
+    }
   }
   for (const id of packed) if (leader(id) !== id) x.set(id, x.get(leader(id))!)
 
