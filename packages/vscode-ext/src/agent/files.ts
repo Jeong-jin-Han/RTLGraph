@@ -1,7 +1,9 @@
 // What `RTLGraph: Copy Agent Spec to Workspace` writes into the chosen folder.
 // Paths: `from` is relative to the extension root, `to` to the target folder.
 
-export const PROMPT_KINDS = ['rtlgraph', 'rtl'] as const // existing RTL → schematic · spec → RTL
+// spec → an idea becomes a specification · rtl → that spec becomes new RTL ·
+// refactor → existing RTL is restructured and extended · rtlgraph → RTL becomes a schematic
+export const PROMPT_KINDS = ['spec', 'rtl', 'refactor', 'rtlgraph'] as const
 export const PROMPT_LANGUAGES = ['korean', 'english'] as const
 
 export const VALIDATOR_BUNDLE = 'dist/agent/rtlgraph-validate.mjs'

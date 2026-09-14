@@ -42,7 +42,8 @@ export async function run(): Promise<void> {
   assert.deepEqual([...(written ?? [])].sort(), expected)
   for (const file of expected) assert.ok(existsSync(join(folder, file)), file)
   assert.match(readFileSync(join(folder, ENVIRONMENT_FILE), 'utf8'), /^# RTLGraph — Agent Environment Report/)
-  log(`Copy Agent Spec wrote ${expected.length} files: spec, validator, environment report, 4 prompts`)
+  const prompts = expected.filter(f => f.startsWith('.prompt/')).length
+  log(`Copy Agent Spec wrote ${expected.length} files: spec, validator, environment report, ${prompts} prompts`)
 
   const validate = spawnSync('node', [join(folder, '.agent/rtlgraph-validate.mjs'), graphFile], { encoding: 'utf8' })
   assert.equal(validate.status, 0, validate.stdout + validate.stderr)

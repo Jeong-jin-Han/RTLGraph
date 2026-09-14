@@ -17,7 +17,9 @@ it never changes the RTL.
 | The user gives you | Workflow | Result |
 |---|---|---|
 | A folder of **existing** RTL, asks for a schematic ("apply RTLGraph", "RTLGraph 만들어줘") | **Workflow A — RTL → RTLGraph** | `<top>.rtlgraph.json` + one `<name>.rtlgraph-schematic.json` per component, RTL untouched |
-| A spec or a request to **write or restructure** RTL | **Workflow B — Spec → RTL** | RTL in the three-layer layout, then Workflow A |
+| An **idea** (a file, a paragraph) and no code yet | **Workflow S — Idea → Spec** | `SPEC.md`: ports, components, control table, states — no code |
+| A spec, and an **empty or new** project | **Workflow B — Spec → RTL** | new RTL in the three-layer layout, then Workflow A |
+| **Existing** RTL to restructure, often with a feature to add | **Workflow C — Existing RTL → Refactored RTL** | the same design in the three-layer layout, the feature added separately, then Workflow A |
 
 Run the chosen workflow end to end without asking for clarification.
 
@@ -91,11 +93,11 @@ The project **conforms** when it follows the RTLGraph authoring contract (Workfl
 |---|---|
 | C1 | Clock edges only inside `DFF` instances in the component top (the only `posedge` is in the `DFF` primitive) |
 | C2 | All port connections by name `.port(sig)` |
-| C3 | Files in `comb/data_path/`, `comb/control_path/`, `seq/` inside a component folder — the main component has one too |
+| C3 | Files in `comb/data_path/`, `comb/control_path/`, `seq/` inside a component folder — the main component has one too. A folder the design does not need (a component with no combinational logic of its own) is not a violation |
 | C4 | Register nets come in `_D` / `_Q` pairs |
 | C5 | `assign` in the top is plain wiring (right-hand side is one identifier) |
 | C6 | Every net has exactly one driver |
-| C7 | `` `default_nettype none `` in every file |
+| C7 | `` `default_nettype none `` in every project file. Testbenches are outside every contract |
 
 Both kinds of code are supported. Conforming code maps mechanically (Step 4a). Other code needs
 inference (Step 4b), and every node inferred from an expression or an `always` block gets an `info`
@@ -104,8 +106,12 @@ with `code` `"C1"`…`"C7"`, `file` and `line` (line 1 for a file-level violatio
 and set `source.contractCheck` to `"pass"` (none), `"partial"` (only C3/C4/C5/C7) or `"fail"`
 (C1, C2 or C6).
 
-- **Primitive definitions** (a `DFF`, `ADD`, … module defined inside the project) go in
-  `source.files` and are exempt from C1 and C3 — their `posedge` is expected.
+- **Primitive definitions** (a `DFF`, `ADD`, … module) are exempt from C1 and C3 — their `posedge` is
+  expected. Inside the project they go in `source.files`; in a shared library they go in
+  `source.libFiles`, with `source.lib` naming the folder.
+- **A `reg` node's `rstKind`, `rstPriority` and `rstValue`** describe the flip-flop it instantiates, so
+  for a registry primitive they come from that primitive's own definition (`base/DFF.v`: synchronous,
+  `RST` beats `EN`, clears to 0). Reading them there is not invention.
 - **Code that does not compile** (missing `;`, trailing commas, undeclared names): still extract what
   the code clearly means, and add one `error` diagnostic with `code` `"syntax"`, `file` and `line` per
   problem. If ENVIRONMENT.md lists a compiler, run it to find them. Put this first in your final
@@ -124,10 +130,13 @@ schematic, so ids never reach into another component.
 | Instance of a registry primitive (table below) | a node with that `module`, `kind` from the table, `params` from `#(...)` |
 | Instance of a component (Step 2) | **one** `component` node (id = instance path): `name` = that component's name, `module`, `ref` = its schematic's path relative to this file (`dev/dev.rtlgraph-schematic.json`), `ports` = the module's ports with directions, `params`/`consts` as for primitives. Not flattened, in conforming and non-conforming code alike |
 | Instance of a `comb/data_path` module, or any other project module that is not a component | **not a node** — flatten: its contents become nodes with the instance name prefixed |
-| Instance of a `comb/control_path` module | **one** `control` node (id = instance path) with `truthTable` from its `casex` |
+| Instance of a `comb/control_path` module | **one** `control` node (id = instance path), `ports` = that module's own ports, `truthTable` from its `casex` |
 | Vendor macro / IP you cannot read (`// @sch: blackbox`) | `blackbox` node, `rdelay` if given |
 | `assign X = Y;` in the top | no node: `X` becomes an alias of net `Y` |
 | Input tied to a literal (`.EN(1'b1)`) | `consts: { "EN": "1'b1" }` on that node |
+
+The two layers are treated differently on purpose: a data-path module is a wrapper around boxes worth
+drawing, so it is flattened, while a control-path module **is** one box — its table.
 
 ### Step 4b — Infer from non-conforming code
 Recover the same picture a designer would draw. Name inferred nodes after the net they drive so the
@@ -167,11 +176,20 @@ declared width of the net it drives (`[5:0]` → `{ "BW": 5 }`).
     input nets that only reach control logic or `sel`/`EN`/`RST` pins;
   - `"data"` — everything else.
 - `hidden: true` on clock nets.
-- `meaning`: copy `// @sch: meaning="..."` verbatim (on the declaration line or the line just before).
+- `meaning`: copy `// @sch: meaning="..."` verbatim. Look on the net's declaration line and the line
+  just before it, **and** on the declaration of the port that drives the net — in a conforming design
+  the annotation sits on the control path's output port, in another file. Copying it onto the net in
+  the component top is right; so is carrying a component's port meaning up to the net that feeds it in
+  the parent. Add an `info` diagnostic with `code` `"meaning-copied"` naming the file it came from.
   Without an annotation, write a meaning only when the code makes it certain — for example the select
   of a `MUX2` whose `d0`/`d1` come from `ADD`/`SUB` gets `"0=ADD, 1=SUB"` — and add an `info`
   diagnostic with `code` `"meaning-derived"`. Otherwise leave `meaning` out; never guess intent.
 - `origin`: the declaration line of the net (for a top port, its port line).
+- **Each file describes its own component.** A wire the parent calls `control` (it leaves the parent's
+  control block) is the child's own reset or enable input, and inside the child it is tagged by what it
+  does there: the net that clears the child's registers is `"reset"` in the child even though the same
+  physical wire is `"control"` in the parent. Nothing has to agree across the boundary except port
+  names and directions.
 
 ### Step 6 — Tags on nodes
 Every non-port node needs `flow` and `time`:
@@ -189,8 +207,15 @@ neither `flow` nor `time` — what is inside them is tagged in their own schemat
 ### Step 7 — Origins
 Every node gets `origin: { "file": <path relative to source.root>, "line": <1-based> }`:
 the instance statement, the `assign`, or the `always` line. A `control` node's
-`truthTable.origin` is the `case`/`casex` line. **Line numbers must be exact** — the validator
-checks that the line mentions the node's name (or, for `op_y`/`y_reg`, the net `y`).
+`truthTable.origin` is the `case`/`casex` line. **Line numbers must be exact** — the validator checks
+that the line carries a name the element is known by:
+
+| Element | Names the line may carry |
+|---|---|
+| any node | the node id, or its last path segment (`data_path.u_inc` → `u_inc`) |
+| `component` node | also its `module`, so a root box sits on the top's `module` line |
+| inferred `op_<net>` / `<net>_reg` | also the net (`op_CNT_D` → `CNT_D`) |
+| net | also any of its `aliases` |
 
 ### Step 8 — Validate
 ```bash
@@ -214,16 +239,42 @@ automatically when any of the files changes).
 
 ---
 
+## Workflow S — Idea → Spec
+
+Use when the user has an idea and no code: produce `SPEC.md` in `PROJECT_FOLDER`, and nothing else.
+Workflow B then builds from it.
+
+1. **Read the idea in full** (the file the user names, plus anything it points at).
+2. **Write `SPEC.md`** covering, in this order:
+   - what the design does, in two or three sentences;
+   - the top module's ports: name, direction, width, meaning;
+   - the components (Step 2 of Workflow A defines what a component is) and what each is responsible
+     for, as a tree;
+   - per component: the registers, the operations between them, and the control signal table
+     (input combination → output values, one row per case);
+   - the states and transitions where a state machine is needed, each with what it means;
+   - reset behaviour and the priority between reset, load and enable;
+   - how the result will be checked (what a testbench drives and what it expects).
+3. **Decide what the idea leaves open** — widths, clock rate, initial values, encodings. Collect every
+   such choice in a **Decisions** section with the reason. Never leave a blank for the user to fill.
+4. **List what stays unclear** in an **Open questions** section: contradictions in the idea, missing
+   numbers you had to invent, anything a reviewer should confirm.
+5. Choose signal, module and port names as identifiers the code can use unchanged. Write the prose in
+   the language the user asked for; keep the identifiers in English.
+
+Do not create folders, RTL or RTLGraph files in this workflow.
+
+---
+
 ## Workflow B — Spec → RTL
 
-Use when writing new RTL or restructuring existing RTL so it conforms (C1–C7 above).
+Use when writing **new** RTL (an empty or fresh project). To restructure code that already exists,
+use Workflow C.
 
 1. **Read `.agent/ENVIRONMENT.md`** and pick a simulator (`iverilog`, or Vivado `xvlog`/`xelab`/`xsim`).
-2. **Refactoring existing code: dump a baseline first.** Add a testbench in `tb/` that drives inputs on
-   the *negative* clock edge and samples/prints on the positive edge (driving and sampling on the same
-   edge is a race whose result differs between simulators). Save its output as `tb/baseline.txt`
-   before changing anything. The refactor is done only when the new output is identical (`diff` empty).
-   A behaviour change is not a refactor — never mix the two.
+2. **Read the spec document** if the user names one (`SPEC.md` from Workflow S, or their own): its
+   ports, component tree and control tables are the contract. Departing from it needs a reason in your
+   final report. Without a document, work from the request itself and say what you assumed.
 3. **Create the main component folder before writing code** — always, even when it will be the only
    component:
    ```
@@ -259,6 +310,31 @@ Use when writing new RTL or restructuring existing RTL so it conforms (C1–C7 a
    *different* project needs the same thing with the same meaning; repetition inside one project is
    not a reason.
 8. **Run Workflow A** to produce or refresh the root and the schematics, and validate the root.
+
+**The main component's name** comes from the user when they give one. Otherwise name it after what the
+design is (`acc`, `uart`, `stopwatch`), never after the file layout, and say in your report why you
+chose it.
+
+---
+
+## Workflow C — Existing RTL → Refactored RTL
+
+Use when code already exists and the user wants it restructured, usually with something added. The
+rule is that **restructuring and new behaviour never happen in the same step**.
+
+1. **Read the code and report first**: how it is structured today, which of C1–C7 it breaks, and what
+   has to change for the request. Then work without asking.
+2. **Dump a baseline before touching anything.** Add a testbench in `tb/` that drives inputs on the
+   *negative* clock edge and samples/prints on the positive edge (driving and sampling on the same
+   edge is a race whose result differs between simulators). Save its output as `tb/baseline.txt`.
+3. **Step one — same behaviour, new structure.** Move the design into the layout of Workflow B step 3
+   and follow C1–C7. The step is done only when the testbench output is identical (`diff` empty). If
+   the diff is not empty, fix the refactor; never adjust the baseline to match.
+4. **Step two — the new behaviour.** Add what the user asked for, extend the testbench for it, and say
+   which outputs change and why. Keep the old expectations that still apply.
+5. **Keep the code's own names** — modules, nets, ports — unless the request is to rename them. A
+   refactor that renames everything cannot be reviewed against the baseline.
+6. **Check it** as in Workflow B step 6, and run **Workflow A** at the end.
 
 ---
 
@@ -381,18 +457,18 @@ is drawn as a generic box — that is normal, not an error.
 |---|---|
 | top level | required: `version` (`"0.1.0"`), `kind` (`"system"` for the root, `"component"` for a schematic), `title`, `created`, `modified`, `source`, `signals`, `nodes`. Optional: `groups`, `layout`, `view`, `diagnostics` |
 | root | only `port` and `component` nodes (a logic node there is the error `system-logic`) |
-| `source` | required `root`, `files`, `top`; optional `lib`, `libFiles`, `contractCheck` |
+| `source` | required `root`, `files`, `top`; optional `lib`, `libFiles`, `contractCheck`. `root` is where `files` are rooted, relative to this JSON file; `lib` is where `libFiles` are rooted, relative to `root` |
 | node `kind` | `port` · `reg` · `op` · `mux` · `control` · `module` · `blackbox` · `component` |
 | logic node (not `port`/`component`) | required `flow` (`data`/`control`), `time` (`comb`/`seq`), `module`, `ports` (`{ pin: "in"/"out"/"inout" }`). Optional `params`, `consts`, `label`, `group`, `origin` |
 | `component` node | required `name` (identifier), `module`, `ref` (a `*.rtlgraph-schematic.json` path relative to this file), `ports` — exactly the ports of that schematic, same directions. Optional `params`, `consts`, `label`, `origin`. No `flow`/`time` |
 | `reg` extras | `rstKind` (`sync`/`async`), `rstPriority` (`rst>en`/`en>rst`), `rstValue` |
-| `control` extras | `truthTable` { `inputs`, `outputs`, `rows`: [{ `in`, `out`, `note?` }], `default?`: { `out` }, `origin` } with values `"0"`/`"1"`/`"x"`; or `equations`: [{ `output`, `expr` }] |
+| `control` extras | `truthTable` { `inputs`, `outputs`, `rows`: [{ `in`, `out`, `note?` }], `default?`: { `out` }, `origin` } with values `"0"`/`"1"`/`"x"`; or `equations`: [{ `output`, `expr` }]. `note` is one short line saying what the row means ("reset: clear the counter"); keep a `default` row even when the listed cases already cover every input |
 | `blackbox` extras | `rdelay` |
 | port node | required `dir`, `flow` (`data`/`control`/`clock`/`reset`); no `time` |
 | signal | required `width`, `flow`, `driver`, `sinks`; optional `aliases`, `meaning`, `hidden`, `origin` |
 | `groups` | `{ "<id>": { "label": "...", "members": [nodeIds] } }` from `// @sch: group=` |
 | `layout`, `view` | **owned by the user and the extension — never write them**, keep them as they are |
-| `diagnostics` | `{ severity: error/warn/info, code, msg, file?, line?, node?, signal? }` |
+| `diagnostics` | `{ severity: error/warn/info, code, msg, file?, line?, node?, signal? }`. Leave the key out when there is nothing to report |
 
 ### Ids and names
 

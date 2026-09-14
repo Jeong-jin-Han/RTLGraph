@@ -24,15 +24,23 @@ test('every file the command copies exists in the extension', () => {
   assert.equal(AGENT_FILES.filter(f => f.to.startsWith('.prompt/')).length, PROMPT_KINDS.length * PROMPT_LANGUAGES.length)
 })
 
-test('prompts: two kinds in two languages, each pointing at a workflow the spec defines', () => {
-  const workflows = [...spec.matchAll(/^## (Workflow [AB] — .+)$/gm)].map(m => m[1])
-  assert.equal(workflows.length, 2)
-  const expected = { rtlgraph: workflows[0], rtl: workflows[1] }
+test('prompts: every kind in two languages, each pointing at a workflow the spec defines', () => {
+  const workflows = [...spec.matchAll(/^## (Workflow ([A-Z]) — .+)$/gm)].map(m => [m[2], m[1]] as const)
+  assert.deepEqual(workflows.map(([letter]) => letter).sort(), ['A', 'B', 'C', 'S'])
+  const byLetter = Object.fromEntries(workflows)
+  const expected: Record<(typeof PROMPT_KINDS)[number], string> = {
+    spec: byLetter.S, // idea → specification
+    rtl: byLetter.B, // specification → new RTL
+    refactor: byLetter.C, // existing RTL → restructured RTL
+    rtlgraph: byLetter.A, // RTL → schematic
+  }
   for (const kind of PROMPT_KINDS) {
     for (const language of PROMPT_LANGUAGES) {
       const prompt = flat(read(`assets/prompt/${kind}/${language}.md`))
       assert.ok(prompt.includes(`"${expected[kind]}"`), `${kind}/${language} names "${expected[kind]}"`)
-      for (const needle of ['.agent/RTLGRAPH_SPEC.md', '.agent/ENVIRONMENT.md', 'rtlgraph-validate.mjs', '<PROJECT_ROOT_ABSOLUTE_PATH>']) {
+      // The spec workflow writes a document, not RTLGraph files, so it runs no validator.
+      const needles = ['.agent/RTLGRAPH_SPEC.md', '.agent/ENVIRONMENT.md', '<PROJECT_ROOT_ABSOLUTE_PATH>']
+      for (const needle of kind === 'spec' ? [...needles, 'SPEC.md'] : [...needles, 'rtlgraph-validate.mjs']) {
         assert.ok(prompt.includes(needle), `${kind}/${language} mentions ${needle}`)
       }
     }
