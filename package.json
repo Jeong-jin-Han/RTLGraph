@@ -7,9 +7,10 @@
   ],
   "scripts": {
     "test": "node --test \"packages/*/test/*.test.ts\"",
-    "typecheck": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json && tsc -p packages/vscode-ext",
     "check": "npm run typecheck && npm test",
-    "golden": "UPDATE_GOLDEN=1 node --test packages/rtl-render/test/render.test.ts"
+    "e2e": "npm run e2e -w rtlgraph",
+    "golden":"UPDATE_GOLDEN=1 node --test packages/rtl-render/test/render.test.ts"
   },
   "devDependencies": {
     "@types/node": "^22.20.2",

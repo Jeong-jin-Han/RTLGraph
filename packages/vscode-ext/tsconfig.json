@@ -1,0 +1,9 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "lib": ["es2023", "DOM"],
+    "types": ["node", "vscode"]
+  },
+  "include": ["src", "test", "test-e2e"],
+  "exclude": []
+}

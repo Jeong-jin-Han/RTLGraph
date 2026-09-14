@@ -1,0 +1,64 @@
+{
+  "name": "rtlgraph",
+  "displayName": "RTLGraph",
+  "description": "High-level schematics of RTL projects, drawn from *.rtlgraph.json",
+  "version": "0.1.0",
+  "publisher": "JeongjinHan",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Jeong-jin-Han/RTLGraph"
+  },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Visualization"
+  ],
+  "activationEvents": [
+    "onCustomEditor:rtlgraph.editor"
+  ],
+  "main": "./dist/extension.cjs",
+  "contributes": {
+    "customEditors": [
+      {
+        "viewType": "rtlgraph.editor",
+        "displayName": "RTLGraph Schematic",
+        "selector": [
+          {
+            "filenamePattern": "*.rtlgraph.json"
+          }
+        ],
+        "priority": "default"
+      }
+    ],
+    "commands": [
+      {
+        "command": "rtlgraph.fitView",
+        "title": "RTLGraph: Fit View"
+      },
+      {
+        "command": "rtlgraph.setPreset",
+        "title": "RTLGraph: Set View Preset"
+      }
+    ]
+  },
+  "scripts": {
+    "build": "node esbuild.mjs",
+    "watch": "node esbuild.mjs --watch",
+    "e2e": "node test-e2e/run.mjs"
+  },
+  "dependencies": {
+    "@rtlgraph/ir": "0.1.0",
+    "@rtlgraph/layout": "0.1.0",
+    "@rtlgraph/registry": "0.1.0",
+    "@rtlgraph/render": "0.1.0"
+  },
+  "devDependencies": {
+    "@types/vscode": "~1.85.0",
+    "@vscode/test-electron": "^3.1.0",
+    "esbuild": "^0.28.2"
+  }
+}
