@@ -58,7 +58,7 @@ function nodeItems(id: string, node: RtlNode, b: NodeBox): Item[] {
       { kind: 'text', x: cx, y: cy, text: displayName(id), anchor: 'middle', central: true, size: 11, fill: PALETTE.ink },
     ]
   }
-  const def = node.kind === 'control' ? undefined : lookupSymbol(node.module)
+  const def = node.kind === 'control' || node.kind === 'component' ? undefined : lookupSymbol(node.module)
   if (def?.symbol === 'register') {
     return [
       { kind: 'rect', x: b.x, y: b.y, w: b.w, h: b.h, fill: PALETTE.nodeFill, stroke: PALETTE.ink, strokeWidth: 2 },

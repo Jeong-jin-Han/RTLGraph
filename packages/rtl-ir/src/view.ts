@@ -26,7 +26,7 @@ export interface VisibleElements {
 // visible; a port node is drawn only when one of its nets is.
 export function visibleElements(graph: ComponentGraph, filter: ViewFilter): VisibleElements {
   const shown = (n: RtlNode | undefined) =>
-    !!n && (n.kind === 'port' || (filter.flow.includes(n.flow) && filter.time.includes(n.time)))
+    !!n && (n.kind === 'port' || n.kind === 'component' || (filter.flow.includes(n.flow) && filter.time.includes(n.time)))
   const endpointShown = (ref: string) => shown(graph.nodes[parseEndpoint(ref).node])
 
   const signals = new Set<string>()

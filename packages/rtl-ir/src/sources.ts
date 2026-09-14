@@ -60,7 +60,11 @@ export function checkSources(graph: ComponentGraph, read: ReadSource): Diagnosti
   }
 
   for (const [id, node] of Object.entries(graph.nodes)) {
-    if (node.origin) check(node.origin, originTokens(id), `node ${id}`, { node: id })
+    if (node.origin) {
+      // A component box's origin may be its instance line or its module declaration.
+      const tokens = node.kind === 'component' ? [...originTokens(id), node.module] : originTokens(id)
+      check(node.origin, tokens, `node ${id}`, { node: id })
+    }
     if (node.kind === 'control' && node.truthTable?.origin) {
       check(node.truthTable.origin, /\b(case[xz]?|if)\b/, `truth table of ${id}`, { node: id })
     }

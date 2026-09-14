@@ -88,7 +88,7 @@ function shapeOf(id: string, node: RtlNode, portSide: Side): Shape {
     return { w: Math.max(28, textWidth(displayName(id)) + 14), h: 18, titled: false, sides: new Map([[PORT_PIN, portSide]]) }
   }
   const sides = new Map<string, Side>()
-  const def = node.kind === 'control' ? undefined : lookupSymbol(node.module)
+  const def = node.kind === 'control' || node.kind === 'component' ? undefined : lookupSymbol(node.module)
   if (def) {
     for (const p of def.ports) if (Object.hasOwn(node.ports, p.name)) sides.set(p.name, p.side)
     for (const [name, dir] of Object.entries(node.ports)) if (!sides.has(name)) sides.set(name, dir === 'out' ? 'right' : 'left')
@@ -176,7 +176,7 @@ export function layoutComponent(graph: ComponentGraph): LayoutResult {
   const channelNet = (name: string) => routedNet(name) && !directNets.has(name)
 
   // ── rows ──
-  const isComb = (n: RtlNode) => n.kind !== 'port' && n.kind !== 'control' && n.time === 'comb'
+  const isComb = (n: RtlNode) => n.kind !== 'port' && n.kind !== 'control' && n.kind !== 'component' && n.time === 'comb'
   const level = new Map<string, number>()
   const visiting = new Set<string>()
   const levelOf = (id: string): number => {

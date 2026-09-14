@@ -18,7 +18,8 @@ test('the fixture is valid with no diagnostics', () => {
 
 test('rejects a non-object and a wrong kind', () => {
   expectError(42, 'schema')
-  expectError(mutated(g => { g.kind = 'system' }), 'schema')
+  expectError(mutated(g => { g.kind = 'fsm' }), 'schema')
+  expectError(mutated(g => { g.kind = 'system' }), 'system-logic') // a root file holds no logic
 })
 
 test('rejects bad node ids', () => {

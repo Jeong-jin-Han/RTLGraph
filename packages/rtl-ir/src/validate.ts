@@ -1,6 +1,7 @@
 import type { Diagnostic } from './types.ts'
 import { parseEndpoint } from './endpoint.ts'
 import { isInstancePath, isPortNodeId } from './ids.ts'
+import { SCHEMATIC_SUFFIX } from './files.ts'
 
 // Structural validation of a component graph. Problems are collected as
 // diagnostics instead of thrown, so a partially broken extraction can still be
@@ -43,7 +44,7 @@ export function validateComponentGraph(input: unknown): ValidationResult {
   const g = input
 
   if (typeof g.version !== 'string') error('schema', 'version must be a string')
-  if (g.kind !== 'component') error('schema', `kind must be "component", got ${JSON.stringify(g.kind)}`)
+  if (g.kind !== 'component' && g.kind !== 'system') error('schema', `kind must be "system" or "component", got ${JSON.stringify(g.kind)}`)
   for (const key of ['title', 'created', 'modified']) {
     if (typeof g[key] !== 'string') error('schema', `${key} must be a string`)
   }
@@ -61,6 +62,10 @@ export function validateComponentGraph(input: unknown): ValidationResult {
   const signals: Obj = isObj(g.signals) ? g.signals : {}
   const groups: Obj = isObj(g.groups) ? g.groups : {}
 
+  if (g.kind === 'system' && !Object.values(nodes).some(n => isObj(n) && n.kind === 'component')) {
+    warn('system-empty', 'the root file has no components')
+  }
+
   // ── nodes ──
   for (const [id, n] of Object.entries(nodes)) {
     const at = { node: id }
@@ -74,13 +79,20 @@ export function validateComponentGraph(input: unknown): ValidationResult {
       if (!inSet(SIGNAL_FLOWS, n.flow)) error('schema', 'port node flow must be data|control|clock|reset', at)
       continue
     }
-    if (!inSet(INSTANCE_KINDS, n.kind)) {
+    const isComponent = n.kind === 'component'
+    if (!isComponent && !inSet(INSTANCE_KINDS, n.kind)) {
       error('schema', `unknown node kind ${JSON.stringify(n.kind)}`, at)
       continue
     }
     if (!isInstancePath(id)) error('node-id', 'instance node id must be an instance path such as data_path.u_inc', at)
-    if (!inSet(FLOWS, n.flow)) error('schema', 'flow must be data|control', at)
-    if (!inSet(TIMES, n.time)) error('schema', 'time must be comb|seq', at)
+    if (isComponent) {
+      if (typeof n.name !== 'string' || !isInstancePath(n.name) || n.name.includes('.')) error('schema', 'component name must be an identifier', at)
+      if (typeof n.ref !== 'string' || !n.ref.endsWith(SCHEMATIC_SUFFIX)) error('schema', `ref must name a *${SCHEMATIC_SUFFIX} file`, at)
+    } else {
+      if (g.kind === 'system') error('system-logic', 'the root file only connects components; put logic in a component schematic', at)
+      if (!inSet(FLOWS, n.flow)) error('schema', 'flow must be data|control', at)
+      if (!inSet(TIMES, n.time)) error('schema', 'time must be comb|seq', at)
+    }
     if (typeof n.module !== 'string') error('schema', 'module must be a string', at)
     const ports: Obj = isObj(n.ports) ? n.ports : {}
     if (!isObj(n.ports) || !Object.values(ports).every(d => inSet(DIRS, d))) {

@@ -80,9 +80,10 @@ export function portWidth(def: SymbolDef, port: string, params: Record<string, n
 }
 
 // Registry modules whose ports, kind or time disagree with the symbol: a sign
-// that base/ and the registry have drifted apart.
+// that base/ and the registry have drifted apart. Component boxes are checked
+// against their own schematic file instead (see loadHierarchy).
 export function checkNodeAgainstRegistry(id: string, node: RtlNode): Diagnostic[] {
-  if (node.kind === 'port') return []
+  if (node.kind === 'port' || node.kind === 'component') return []
   const def = lookupSymbol(node.module)
   if (!def) return []
   const out: Diagnostic[] = []
@@ -108,7 +109,7 @@ export function checkSignalWidths(graph: ComponentGraph): Diagnostic[] {
     for (const ref of [signal.driver, ...signal.sinks]) {
       const { node: id, port } = parseEndpoint(ref)
       const node = graph.nodes[id]
-      if (!node || node.kind === 'port' || port === null) continue
+      if (!node || node.kind === 'port' || node.kind === 'component' || port === null) continue
       const def = lookupSymbol(node.module)
       const width = def && portWidth(def, port, node.params)
       if (width !== undefined && width !== signal.width) {

@@ -1,10 +1,16 @@
-// IR of a *.rtlgraph.json component file — the contract between the extractor
-// (an agent, or rtl-parse) and the renderer. Only semantics live here: anything
-// a renderer can derive (port widths from params, mux input order from the
-// registry) is deliberately left out so each fact has exactly one source.
+// IR of RTLGraph files — the contract between the extractor (an agent, or
+// rtl-parse) and the renderer. Only semantics live here: anything a renderer
+// can derive (port widths from params, mux input order from the registry) is
+// deliberately left out so each fact has exactly one source.
+//
+// Files (see files.ts):
+//   <top module>.rtlgraph.json               kind "system": the root, only connects components
+//   <component>.rtlgraph-schematic.json      kind "component": one component's schematic,
+//                                             which may contain child components (recursive)
 
 export const IR_VERSION = '0.1.0'
 
+export type GraphKind = 'system' | 'component'
 export type Flow = 'data' | 'control'
 export type Time = 'comb' | 'seq'
 export type SignalFlow = Flow | 'clock' | 'reset'
@@ -104,6 +110,19 @@ export interface ControlNode extends InstanceNode {
   equations?: { output: string; expr: string }[] // 1-bit boolean assigns
 }
 
+// A child component. Its inside lives in its own schematic file; a view can
+// draw it folded (one box) or unfolded (its schematic inside a frame).
+// Carries no flow/time — it holds both — and is never hidden by the filter.
+export interface ComponentNode extends NodeCommon {
+  kind: 'component'
+  name: string // the component (folder) name
+  module: string // the component's TOP module
+  ref: string // <name>.rtlgraph-schematic.json, relative to this JSON file
+  params?: Record<string, number>
+  ports: Record<string, PortDir>
+  consts?: Record<string, string>
+}
+
 // A port of the component itself. Ports carry no `time` and are never
 // hidden by the flow/time filter.
 export interface PortNode extends NodeCommon {
@@ -112,7 +131,7 @@ export interface PortNode extends NodeCommon {
   flow: SignalFlow
 }
 
-export type RtlNode = RegNode | OpNode | MuxNode | ModuleNode | BlackboxNode | ControlNode | PortNode
+export type RtlNode = RegNode | OpNode | MuxNode | ModuleNode | BlackboxNode | ControlNode | ComponentNode | PortNode
 export type NodeKind = RtlNode['kind']
 
 export interface Group {
@@ -138,9 +157,10 @@ export interface View {
   viewport?: { x: number; y: number; zoom: number }
 }
 
+// Named for history: describes both the root ("system") and component files.
 export interface ComponentGraph {
   version: string
-  kind: 'component'
+  kind: GraphKind
   title: string
   created: string
   modified: string
