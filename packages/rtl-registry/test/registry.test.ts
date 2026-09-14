@@ -54,13 +54,13 @@ test('registry check flags drifted ports, kind and time', () => {
 })
 
 test('golden D01-2 graph agrees with the registry', () => {
-  const graph = JSON.parse(readFileSync(join(DEMO, 'acc/acc_top.rtlgraph.json'), 'utf8')) as ComponentGraph
+  const graph = JSON.parse(readFileSync(join(DEMO, 'acc/acc/acc.rtlgraph-schematic.json'), 'utf8')) as ComponentGraph
   for (const [id, node] of Object.entries(graph.nodes)) assert.deepEqual(checkNodeAgainstRegistry(id, node), [], id)
   assert.deepEqual(checkSignalWidths(graph), [])
 })
 
 test('signal width check catches a mismatch', () => {
-  const graph = JSON.parse(readFileSync(join(DEMO, 'acc/acc_top.rtlgraph.json'), 'utf8')) as ComponentGraph
+  const graph = JSON.parse(readFileSync(join(DEMO, 'acc/acc/acc.rtlgraph-schematic.json'), 'utf8')) as ComponentGraph
   graph.signals.CNT_Q.width = 5
   const codes = checkSignalWidths(graph).map(d => `${d.code}:${d.node}`)
   assert.deepEqual(codes, ['width:CNT_FF', 'width:data_path.u_inc', 'width:data_path.u_add', 'width:data_path.u_sub'])

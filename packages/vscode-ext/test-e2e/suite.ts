@@ -63,10 +63,10 @@ export async function run(): Promise<void> {
   log('datapath preset leaves the 8 elements and 7 nets of slide p.31')
 
   // ── export the current (datapath) view ──
-  const outDir = join(dirname(graphFile), '.out-acc_top')
+  const outDir = join(dirname(graphFile), '.out-acc')
   try {
     const exported = await vscode.commands.executeCommand<string[]>('rtlgraph.export', ['svg', 'png', 'pdf'])
-    assert.deepEqual(exported, ['svg', 'png', 'pdf'].map(ext => join(outDir, `acc_top.datapath.${ext}`)))
+    assert.deepEqual(exported, ['svg', 'png', 'pdf'].map(ext => join(outDir, `acc.datapath.${ext}`)))
     const svg = readFileSync(exported[0], 'utf8')
     const [, , width, height] = /viewBox="(-?\d+) (-?\d+) (\d+) (\d+)"/.exec(svg)!.slice(1).map(Number)
     assert.ok(!svg.includes('data-node-id="control_path"'))
@@ -75,7 +75,7 @@ export async function run(): Promise<void> {
     assert.deepEqual([png.readUInt32BE(16), png.readUInt32BE(20)], [width * 2, height * 2])
     const pdf = readFileSync(exported[2], 'latin1')
     assert.ok(pdf.startsWith('%PDF-1.4') && pdf.includes(`/MediaBox [0 0 ${width} ${height}]`))
-    log(`Export wrote .out-acc_top/acc_top.datapath.{svg,png,pdf} (PNG ${width * 2}×${height * 2}, PDF ${width}×${height} pt)`)
+    log(`Export wrote .out-acc/acc.datapath.{svg,png,pdf} (PNG ${width * 2}×${height * 2}, PDF ${width}×${height} pt)`)
   } finally {
     rmSync(outDir, { recursive: true, force: true })
   }

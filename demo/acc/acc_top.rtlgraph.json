@@ -1,107 +1,32 @@
 {
   "version": "0.1.0",
-  "kind": "component",
+  "kind": "system",
   "title": "acc_top",
   "created": "2026-09-14T00:00:00.000Z",
   "modified": "2026-09-14T00:00:00.000Z",
   "source": {
     "root": ".",
-    "lib": "../base",
-    "files": ["seq/acc_top.v", "comb/data_path/acc_dp.v", "comb/control_path/acc_cp.v"],
-    "libFiles": ["DFF.v", "INC.v", "ADD.v", "SUB.v", "MUX2.v"],
+    "files": ["acc/seq/acc_top.v"],
     "top": "acc_top",
     "contractCheck": "partial"
   },
   "signals": {
-    "CLK": { "width": 1, "flow": "clock", "driver": "@CLK", "sinks": ["CNT_FF:CLK", "ACC_FF:CLK", "OUT_FF:CLK"], "hidden": true, "origin": { "file": "seq/acc_top.v", "line": 5 } },
-    "RST": { "width": 1, "flow": "reset", "driver": "@RST", "sinks": ["control_path:RST"], "origin": { "file": "seq/acc_top.v", "line": 6 } },
-    "SHOW": { "width": 1, "flow": "control", "driver": "@SHOW", "sinks": ["control_path:SHOW"], "origin": { "file": "seq/acc_top.v", "line": 9 } },
-    "MODE": { "width": 1, "flow": "control", "driver": "@MODE", "sinks": ["control_path:MODE"], "origin": { "file": "seq/acc_top.v", "line": 10 } },
-
-    "CNT_RST": { "width": 1, "flow": "control", "driver": "control_path:CNT_RST", "sinks": ["CNT_FF:RST"], "origin": { "file": "seq/acc_top.v", "line": 19 } },
-    "ACC_RST": { "width": 1, "flow": "control", "driver": "control_path:ACC_RST", "sinks": ["ACC_FF:RST"], "origin": { "file": "seq/acc_top.v", "line": 23 } },
-    "OUT_RST": { "width": 1, "flow": "control", "driver": "control_path:OUT_RST", "sinks": ["OUT_FF:RST"], "origin": { "file": "seq/acc_top.v", "line": 27 } },
-    "OUT_EN": { "width": 1, "flow": "control", "driver": "control_path:OUT_EN", "sinks": ["OUT_FF:EN"], "origin": { "file": "seq/acc_top.v", "line": 29 } },
-    "ACC_SEL": { "width": 1, "flow": "control", "driver": "control_path:ACC_SEL", "sinks": ["data_path.u_mux:sel"], "meaning": "0=덧셈(ADD), 1=뺄셈(SUB)", "origin": { "file": "seq/acc_top.v", "line": 30 } },
-
-    "CNT_Q": { "width": 6, "flow": "data", "driver": "CNT_FF:Q", "sinks": ["data_path.u_inc:a", "data_path.u_add:b", "data_path.u_sub:b"], "origin": { "file": "seq/acc_top.v", "line": 18 } },
-    "CNT_D": { "width": 6, "flow": "data", "driver": "data_path.u_inc:y", "sinks": ["CNT_FF:D"], "origin": { "file": "seq/acc_top.v", "line": 17 } },
-    "ACC_Q": { "width": 6, "flow": "data", "driver": "ACC_FF:Q", "sinks": ["data_path.u_add:a", "data_path.u_sub:a"], "origin": { "file": "seq/acc_top.v", "line": 22 } },
-    "ACC_D": { "width": 6, "flow": "data", "driver": "data_path.u_mux:y", "sinks": ["ACC_FF:D", "OUT_FF:D"], "aliases": ["OUT_D"], "origin": { "file": "seq/acc_top.v", "line": 21 } },
-    "OUT_Q": { "width": 6, "flow": "data", "driver": "OUT_FF:Q", "sinks": ["@ACC"], "aliases": ["ACC"], "origin": { "file": "seq/acc_top.v", "line": 26 } },
-    "data_path.ADD_OUT": { "width": 6, "flow": "data", "driver": "data_path.u_add:y", "sinks": ["data_path.u_mux:d0"], "origin": { "file": "comb/data_path/acc_dp.v", "line": 22 } },
-    "data_path.SUB_OUT": { "width": 6, "flow": "data", "driver": "data_path.u_sub:y", "sinks": ["data_path.u_mux:d1"], "origin": { "file": "comb/data_path/acc_dp.v", "line": 23 } }
+    "CLK": { "width": 1, "flow": "clock", "driver": "@CLK", "sinks": ["acc:CLK"], "hidden": true, "origin": { "file": "acc/seq/acc_top.v", "line": 5 } },
+    "RST": { "width": 1, "flow": "reset", "driver": "@RST", "sinks": ["acc:RST"], "origin": { "file": "acc/seq/acc_top.v", "line": 6 } },
+    "SHOW": { "width": 1, "flow": "control", "driver": "@SHOW", "sinks": ["acc:SHOW"], "origin": { "file": "acc/seq/acc_top.v", "line": 9 } },
+    "MODE": { "width": 1, "flow": "control", "driver": "@MODE", "sinks": ["acc:MODE"], "origin": { "file": "acc/seq/acc_top.v", "line": 10 } },
+    "ACC": { "width": 6, "flow": "data", "driver": "acc:ACC", "sinks": ["@ACC"], "origin": { "file": "acc/seq/acc_top.v", "line": 13 } }
   },
   "nodes": {
-    "@CLK": { "kind": "port", "dir": "in", "flow": "clock", "origin": { "file": "seq/acc_top.v", "line": 5 } },
-    "@RST": { "kind": "port", "dir": "in", "flow": "reset", "origin": { "file": "seq/acc_top.v", "line": 6 } },
-    "@SHOW": { "kind": "port", "dir": "in", "flow": "control", "origin": { "file": "seq/acc_top.v", "line": 9 } },
-    "@MODE": { "kind": "port", "dir": "in", "flow": "control", "origin": { "file": "seq/acc_top.v", "line": 10 } },
-    "@ACC": { "kind": "port", "dir": "out", "flow": "data", "origin": { "file": "seq/acc_top.v", "line": 13 } },
-
-    "CNT_FF": {
-      "kind": "reg", "flow": "data", "time": "seq", "module": "DFF", "params": { "BW": 5 },
-      "ports": { "CLK": "in", "RST": "in", "EN": "in", "D": "in", "Q": "out" },
-      "consts": { "EN": "1'b1" },
-      "rstKind": "sync", "rstPriority": "rst>en", "rstValue": "0",
-      "origin": { "file": "seq/acc_top.v", "line": 54 }
-    },
-    "ACC_FF": {
-      "kind": "reg", "flow": "data", "time": "seq", "module": "DFF", "params": { "BW": 5 },
-      "ports": { "CLK": "in", "RST": "in", "EN": "in", "D": "in", "Q": "out" },
-      "consts": { "EN": "1'b1" },
-      "rstKind": "sync", "rstPriority": "rst>en", "rstValue": "0",
-      "origin": { "file": "seq/acc_top.v", "line": 62 }
-    },
-    "OUT_FF": {
-      "kind": "reg", "flow": "data", "time": "seq", "module": "DFF", "params": { "BW": 5 },
-      "ports": { "CLK": "in", "RST": "in", "EN": "in", "D": "in", "Q": "out" },
-      "rstKind": "sync", "rstPriority": "rst>en", "rstValue": "0",
-      "origin": { "file": "seq/acc_top.v", "line": 70 }
-    },
-
-    "data_path.u_inc": {
-      "kind": "op", "flow": "data", "time": "comb", "module": "INC", "params": { "BW": 5 },
-      "ports": { "a": "in", "y": "out" },
-      "origin": { "file": "comb/data_path/acc_dp.v", "line": 26 }
-    },
-    "data_path.u_add": {
-      "kind": "op", "flow": "data", "time": "comb", "module": "ADD", "params": { "BW": 5 },
-      "ports": { "a": "in", "b": "in", "y": "out" },
-      "origin": { "file": "comb/data_path/acc_dp.v", "line": 29 }
-    },
-    "data_path.u_sub": {
-      "kind": "op", "flow": "data", "time": "comb", "module": "SUB", "params": { "BW": 5 },
-      "ports": { "a": "in", "b": "in", "y": "out" },
-      "origin": { "file": "comb/data_path/acc_dp.v", "line": 30 }
-    },
-    "data_path.u_mux": {
-      "kind": "mux", "flow": "data", "time": "comb", "module": "MUX2", "params": { "BW": 5 },
-      "ports": { "sel": "in", "d0": "in", "d1": "in", "y": "out" },
-      "origin": { "file": "comb/data_path/acc_dp.v", "line": 31 }
-    },
-
-    "control_path": {
-      "kind": "control", "flow": "control", "time": "comb", "module": "acc_cp",
-      "ports": { "RST": "in", "SHOW": "in", "MODE": "in", "CNT_RST": "out", "ACC_RST": "out", "OUT_RST": "out", "OUT_EN": "out", "ACC_SEL": "out" },
-      "truthTable": {
-        "inputs": ["RST", "SHOW", "MODE"],
-        "outputs": ["CNT_RST", "ACC_RST", "OUT_RST", "OUT_EN", "ACC_SEL"],
-        "rows": [
-          { "in": ["1", "x", "x"], "out": ["1", "1", "1", "x", "x"] },
-          { "in": ["0", "0", "0"], "out": ["0", "0", "0", "0", "0"] },
-          { "in": ["0", "0", "1"], "out": ["0", "0", "0", "0", "1"] },
-          { "in": ["0", "1", "0"], "out": ["0", "0", "0", "1", "0"] },
-          { "in": ["0", "1", "1"], "out": ["0", "0", "0", "1", "1"] }
-        ],
-        "default": { "out": ["1", "1", "1", "x", "x"] },
-        "origin": { "file": "comb/control_path/acc_cp.v", "line": 27 }
-      },
-      "origin": { "file": "seq/acc_top.v", "line": 42 }
+    "@CLK": { "kind": "port", "dir": "in", "flow": "clock", "origin": { "file": "acc/seq/acc_top.v", "line": 5 } },
+    "@RST": { "kind": "port", "dir": "in", "flow": "reset", "origin": { "file": "acc/seq/acc_top.v", "line": 6 } },
+    "@SHOW": { "kind": "port", "dir": "in", "flow": "control", "origin": { "file": "acc/seq/acc_top.v", "line": 9 } },
+    "@MODE": { "kind": "port", "dir": "in", "flow": "control", "origin": { "file": "acc/seq/acc_top.v", "line": 10 } },
+    "@ACC": { "kind": "port", "dir": "out", "flow": "data", "origin": { "file": "acc/seq/acc_top.v", "line": 13 } },
+    "acc": {
+      "kind": "component", "name": "acc", "module": "acc_top", "ref": "acc/acc.rtlgraph-schematic.json",
+      "ports": { "CLK": "in", "RST": "in", "SHOW": "in", "MODE": "in", "ACC": "out" },
+      "origin": { "file": "acc/seq/acc_top.v", "line": 3 }
     }
-  },
-  "diagnostics": [
-    { "severity": "warn", "code": "C7", "file": "seq/acc_top.v", "line": 1, "msg": "`default_nettype none is missing" },
-    { "severity": "warn", "code": "C7", "file": "comb/control_path/acc_cp.v", "line": 1, "msg": "`default_nettype none is missing" }
-  ]
+  }
 }

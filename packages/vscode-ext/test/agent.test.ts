@@ -9,7 +9,7 @@ import { AGENT_FILES, PROMPT_KINDS, PROMPT_LANGUAGES, VALIDATOR_BUNDLE } from '.
 import { buildEnvironmentReport } from '../src/agent/environment.ts'
 
 const ROOT = join(import.meta.dirname, '..')
-const GOLDEN = join(ROOT, '../../demo/acc/acc_top.rtlgraph.json')
+const GOLDEN = join(ROOT, '../../demo/acc/acc/acc.rtlgraph-schematic.json')
 const read = (path: string) => readFileSync(join(ROOT, path), 'utf8')
 const flat = (text: string) => text.replace(/\s+/g, ' ')
 const spec = read('assets/agent/RTLGRAPH_SPEC.md')

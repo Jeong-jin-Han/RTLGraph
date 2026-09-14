@@ -4,10 +4,10 @@ import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { validateComponentGraph, type ComponentGraph, type Origin } from '../src/index.ts'
 
-// demo/acc is the D01-2 accumulator: the M0 golden case, hand-written from the
-// real sources copied next to it.
-const DEMO = join(import.meta.dirname, '../../../demo/acc')
-const graph = JSON.parse(readFileSync(join(DEMO, 'acc_top.rtlgraph.json'), 'utf8')) as ComponentGraph
+// demo/acc/acc is the D01-2 accumulator's main component: the M0 golden case,
+// hand-written from the real sources next to it.
+const DEMO = join(import.meta.dirname, '../../../demo/acc/acc')
+const graph = JSON.parse(readFileSync(join(DEMO, 'acc.rtlgraph-schematic.json'), 'utf8')) as ComponentGraph
 
 const lineAt = (origin: Origin): string => {
   const lines = readFileSync(join(DEMO, graph.source.root, origin.file), 'utf8').split('\n')

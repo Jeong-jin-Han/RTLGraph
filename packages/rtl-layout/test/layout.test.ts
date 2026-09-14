@@ -6,7 +6,7 @@ import { parseEndpoint, type ComponentGraph } from '@rtlgraph/ir'
 import { layoutComponent, onSegment, PORT_PIN, type NodeBox, type Segment } from '../src/index.ts'
 
 const graph = JSON.parse(
-  readFileSync(join(import.meta.dirname, '../../../demo/acc/acc_top.rtlgraph.json'), 'utf8'),
+  readFileSync(join(import.meta.dirname, '../../../demo/acc/acc/acc.rtlgraph-schematic.json'), 'utf8'),
 ) as ComponentGraph
 const layout = layoutComponent(graph)
 const box = (id: string) => layout.nodes[id]

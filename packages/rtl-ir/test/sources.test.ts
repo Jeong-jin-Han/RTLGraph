@@ -4,8 +4,8 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { checkSources, originTokens, type ComponentGraph } from '../src/index.ts'
 
-const DEMO = join(import.meta.dirname, '../../../demo/acc')
-const graph = JSON.parse(readFileSync(join(DEMO, 'acc_top.rtlgraph.json'), 'utf8')) as ComponentGraph
+const DEMO = join(import.meta.dirname, '../../../demo/acc/acc')
+const graph = JSON.parse(readFileSync(join(DEMO, 'acc.rtlgraph-schematic.json'), 'utf8')) as ComponentGraph
 const read = (path: string) => {
   try {
     return readFileSync(join(DEMO, path), 'utf8')

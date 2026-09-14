@@ -32,7 +32,10 @@ test('custom editor view type is consistent across manifest and provider', () =>
   assert.equal(viewType, 'rtlgraph.editor')
   assert.deepEqual(manifest.contributes.customEditors.map((e: { viewType: string }) => e.viewType), [viewType])
   assert.ok(manifest.activationEvents.includes(`onCustomEditor:${viewType}`))
-  assert.deepEqual(manifest.contributes.customEditors[0].selector, [{ filenamePattern: '*.rtlgraph.json' }])
+  assert.deepEqual(manifest.contributes.customEditors[0].selector, [
+    { filenamePattern: '*.rtlgraph.json' },
+    { filenamePattern: '*.rtlgraph-schematic.json' },
+  ])
 })
 
 test('webview html locks scripts and styles to a nonce', () => {

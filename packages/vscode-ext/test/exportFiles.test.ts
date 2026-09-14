@@ -5,11 +5,12 @@ import { join } from 'node:path'
 import { FILTER_PRESETS } from '@rtlgraph/ir'
 import { DEFAULT_EXPORT_FOLDER, exportFileName, exportFolderName, graphBaseName, viewName } from '../src/exportFiles.ts'
 
-test('the graph name drops the .rtlgraph.json suffix', () => {
+test('the graph name drops the RTLGraph suffix', () => {
   assert.equal(graphBaseName('/work/acc/acc_top.rtlgraph.json'), 'acc_top')
+  assert.equal(graphBaseName('/work/acc/acc/acc.rtlgraph-schematic.json'), 'acc')
   assert.equal(graphBaseName('C:\\work\\sys.RTLGRAPH.JSON'), 'sys')
   assert.equal(graphBaseName('plain.json'), 'plain')
-  assert.equal(graphBaseName('.rtlgraph.json'), 'rtlgraph')
+  assert.equal(graphBaseName('.rtlgraph.json'), '.rtlgraph.json')
 })
 
 test('export folder: default, custom patterns, and nothing outside the graph directory', () => {

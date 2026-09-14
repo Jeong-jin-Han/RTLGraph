@@ -5,8 +5,8 @@ import { join } from 'node:path'
 import { FILTER_PRESETS, type ComponentGraph, type FilterPreset } from '@rtlgraph/ir'
 import { renderSvg } from '../src/index.ts'
 
-const DEMO = join(import.meta.dirname, '../../../demo/acc')
-const graph = JSON.parse(readFileSync(join(DEMO, 'acc_top.rtlgraph.json'), 'utf8')) as ComponentGraph
+const DEMO = join(import.meta.dirname, '../../../demo/acc/acc')
+const graph = JSON.parse(readFileSync(join(DEMO, 'acc.rtlgraph-schematic.json'), 'utf8')) as ComponentGraph
 const render = (preset: FilterPreset) => renderSvg(graph, { filter: FILTER_PRESETS[preset] })
 const nodeIds = (svg: string) => [...svg.matchAll(/data-node-id="([^"]+)"/g)].map(m => m[1]).sort()
 const signalIds = (svg: string) => [...svg.matchAll(/data-signal="([^"]+)"/g)].map(m => m[1]).sort()
@@ -50,7 +50,7 @@ test('text is escaped', () => {
 // Golden SVGs: regenerate with `npm run golden` after an intended visual change.
 for (const preset of ['all', 'datapath'] as const) {
   test(`matches the golden ${preset} SVG`, () => {
-    const file = join(DEMO, preset === 'all' ? 'acc_top.svg' : `acc_top.${preset}.svg`)
+    const file = join(DEMO, preset === 'all' ? 'acc.svg' : `acc.${preset}.svg`)
     const svg = render(preset)
     if (process.env.UPDATE_GOLDEN) writeFileSync(file, svg)
     assert.equal(svg, readFileSync(file, 'utf8'))

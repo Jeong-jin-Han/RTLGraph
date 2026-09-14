@@ -5,7 +5,7 @@ import { join } from 'node:path'
 import { FILTER_PRESETS, visibleElements, type ComponentGraph, type FilterPreset } from '../src/index.ts'
 
 const graph = JSON.parse(
-  readFileSync(join(import.meta.dirname, '../../../demo/acc/acc_top.rtlgraph.json'), 'utf8'),
+  readFileSync(join(import.meta.dirname, '../../../demo/acc/acc/acc.rtlgraph-schematic.json'), 'utf8'),
 ) as ComponentGraph
 
 const visible = (preset: FilterPreset) => {

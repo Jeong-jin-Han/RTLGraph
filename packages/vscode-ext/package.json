@@ -29,6 +29,9 @@
         "selector": [
           {
             "filenamePattern": "*.rtlgraph.json"
+          },
+          {
+            "filenamePattern": "*.rtlgraph-schematic.json"
           }
         ],
         "priority": "default"

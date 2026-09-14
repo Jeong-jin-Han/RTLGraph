@@ -7,8 +7,8 @@ import { join } from 'node:path'
 import { FILTER_PRESETS, type ComponentGraph } from '@rtlgraph/ir'
 import { buildScene, renderPdf, renderSvg } from '../src/index.ts'
 
-const DEMO = join(import.meta.dirname, '../../../demo/acc')
-const graph = JSON.parse(readFileSync(join(DEMO, 'acc_top.rtlgraph.json'), 'utf8')) as ComponentGraph
+const DEMO = join(import.meta.dirname, '../../../demo/acc/acc')
+const graph = JSON.parse(readFileSync(join(DEMO, 'acc.rtlgraph-schematic.json'), 'utf8')) as ComponentGraph
 const latin1 = (bytes: Uint8Array) => Array.from(bytes, b => String.fromCharCode(b)).join('')
 
 test('PDF has a valid cross-reference table', () => {
