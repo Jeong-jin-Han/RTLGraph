@@ -71,14 +71,19 @@ function wireStyle(s: Signal): { color: string; width: number; dash?: string } {
   return { color: PALETTE.control, width: 1.25, dash: '5 3' }
 }
 
-// The fold marker in a component's title bar: a boxed "+" when folded, "−" when open.
+// The fold marker in a component's title bar: a boxed "+" when folded, "−" when
+// open. One click on it opens or closes that component, so it carries a class the
+// editor can look for, and a transparent square around it to click at.
+export const FOLD_MARKER_CLASS = 'fold'
+
 function foldMarker(b: NodeBox, titleH: number, folded: boolean): Item[] {
   const [x, y] = [b.x + b.w - 18, b.y + (titleH - 10) / 2]
   const bars = [{ x1: x + 2, y1: y + 5, x2: x + 8, y2: y + 5 }]
   if (folded) bars.push({ x1: x + 5, y1: y + 2, x2: x + 5, y2: y + 8 })
   return [
-    { kind: 'rect', x, y, w: 10, h: 10, fill: PALETTE.background, stroke: PALETTE.muted },
-    { kind: 'lines', segments: bars, fill: 'none', stroke: PALETTE.ink, strokeWidth: 1.25 },
+    { kind: 'rect', x: x - 5, y: y - 5, w: 20, h: 20, fill: 'transparent', className: FOLD_MARKER_CLASS },
+    { kind: 'rect', x, y, w: 10, h: 10, fill: PALETTE.background, stroke: PALETTE.muted, className: FOLD_MARKER_CLASS },
+    { kind: 'lines', segments: bars, fill: 'none', stroke: PALETTE.ink, strokeWidth: 1.25, className: FOLD_MARKER_CLASS },
   ]
 }
 

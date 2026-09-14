@@ -1,4 +1,4 @@
-import { test, before } from 'node:test'
+import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
@@ -13,11 +13,6 @@ const GOLDEN = join(ROOT, '../../demo/acc/acc/acc.rtlgraph-schematic.json')
 const read = (path: string) => readFileSync(join(ROOT, path), 'utf8')
 const flat = (text: string) => text.replace(/\s+/g, ' ')
 const spec = read('assets/agent/RTLGRAPH_SPEC.md')
-
-before(() => {
-  const build = spawnSync(process.execPath, ['esbuild.mjs'], { cwd: ROOT, encoding: 'utf8' })
-  assert.equal(build.status, 0, build.stderr)
-})
 
 test('every file the command copies exists in the extension', () => {
   for (const { from } of AGENT_FILES) assert.ok(existsSync(join(ROOT, from)), from)

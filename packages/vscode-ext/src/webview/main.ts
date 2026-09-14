@@ -265,14 +265,13 @@ canvas.addEventListener('wheel', event => {
 
 const componentAt = (target: EventTarget | null) =>
   (target instanceof Element ? target.closest('g.component')?.getAttribute('data-node-id') : undefined) ?? undefined
+const markerAt = (target: EventTarget | null) => target instanceof Element && target.closest('.fold') !== null
 
 const CLICK_SLOP = 4
-const DOUBLE_CLICK_MS = 400
-let lastClick: { instance?: string; at: number } | undefined
 
 // Pointer capture retargets later events to the canvas, so what was clicked is
-// taken from the press. A click selects a component box (or clears the
-// selection); a second click on the same box folds or unfolds just that box.
+// taken from the press. Clicking a component's fold marker selects it and opens
+// or closes it; clicking anywhere else on it only selects.
 canvas.addEventListener('pointerdown', event => {
   if (event.button !== 0) return
   const start = { px: event.clientX, py: event.clientY, v: viewport ?? { x: 0, y: 0, zoom: 1 }, target: event.target }
@@ -289,14 +288,8 @@ canvas.addEventListener('pointerdown', event => {
       viewport = start.v
       applyViewport()
       const instance = componentAt(start.target)
-      const now = performance.now()
-      if (instance !== undefined && lastClick?.instance === instance && now - lastClick.at < DOUBLE_CLICK_MS) {
-        lastClick = undefined
-        fold(isUnfolded(instance) ? 'fold' : 'unfold', 'node', instance)
-      } else {
-        lastClick = { instance, at: now }
-        select(instance)
-      }
+      select(instance)
+      if (instance !== undefined && markerAt(start.target)) fold(isUnfolded(instance) ? 'fold' : 'unfold', 'node', instance)
     }
     persist()
   }

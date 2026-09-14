@@ -6,7 +6,7 @@
     "packages/*"
   ],
   "scripts": {
-    "test": "node --test \"packages/*/test/*.test.ts\"",
+    "test": "npm run build -w rtlgraph --silent && node --test \"packages/*/test/*.test.ts\"",
     "typecheck": "tsc -p tsconfig.json && tsc -p packages/vscode-ext",
     "check": "npm run typecheck && npm test",
     "e2e": "npm run e2e -w rtlgraph",

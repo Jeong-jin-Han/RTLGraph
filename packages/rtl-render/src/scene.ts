@@ -9,6 +9,7 @@ export interface Paint {
   stroke?: string
   strokeWidth?: number
   dash?: string // SVG dasharray syntax, e.g. "5 3"
+  className?: string // for parts the editor treats on their own, e.g. the fold marker
 }
 
 export type Item =
@@ -21,6 +22,7 @@ export type Item =
       x: number
       y: number
       text: string
+      className?: string
       size?: number // default: the scene font size
       anchor?: 'start' | 'middle' | 'end' // default: start
       central?: boolean // vertically centred on y instead of sitting on it
@@ -46,6 +48,7 @@ const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replac
 
 function itemToSvg(item: Item): string {
   const paint = (p: Paint) =>
+    `${p.className !== undefined ? ` class="${esc(p.className)}"` : ''}` +
     `${p.fill !== undefined ? ` fill="${p.fill}"` : ''}${p.stroke !== undefined ? ` stroke="${p.stroke}"` : ''}` +
     `${p.strokeWidth !== undefined ? ` stroke-width="${p.strokeWidth}"` : ''}${p.dash !== undefined ? ` stroke-dasharray="${p.dash}"` : ''}`
   switch (item.kind) {

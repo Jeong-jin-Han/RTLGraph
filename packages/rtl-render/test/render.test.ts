@@ -80,6 +80,14 @@ test('unfolded, the child is drawn inside the frame under prefixed ids', () => {
   assert.equal([...svg.matchAll(/class="wire connector /g)].length, 4) // RST SHOW MODE ACC; CLK is hidden
 })
 
+test('the fold marker is one clickable part of the component group', () => {
+  const svg = renderHierarchySvg(root, { controls: true })
+  const group = /<g class="node component folded" data-node-id="acc">(.*?)<\/g>/s.exec(svg)![1]
+  const marked = [...group.matchAll(/class="fold"/g)].length
+  assert.equal(marked, 3) // the box, its bars, and a transparent square to click at
+  assert.match(group, /<rect [^>]*fill="transparent"[^>]*class="fold"|<rect [^>]*class="fold"[^>]*fill="transparent"/)
+})
+
 test('fold markers are drawn for the editor only, never in an export', () => {
   const marker = (svg: string) => (svg.match(/width="10" height="10"/g) ?? []).length // the marker box
   const folded = renderHierarchySvg(root)

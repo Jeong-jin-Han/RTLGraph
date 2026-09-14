@@ -1,6 +1,5 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { spawnSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { webviewHtml } from '../src/webview/html.ts'
@@ -46,9 +45,7 @@ test('webview html locks scripts and styles to a nonce', () => {
   assert.doesNotMatch(html, /unsafe-inline|unsafe-eval/)
 })
 
-test('both bundles build; only the host bundle loads vscode', () => {
-  const build = spawnSync(process.execPath, ['esbuild.mjs'], { cwd: ROOT, encoding: 'utf8' })
-  assert.equal(build.status, 0, build.stderr)
+test('both bundles are built; only the host bundle loads vscode', () => {
   const host = readFileSync(join(ROOT, 'dist/extension.cjs'), 'utf8')
   const webview = readFileSync(join(ROOT, 'dist/webview.js'), 'utf8')
   assert.match(host, /require\("vscode"\)/)
