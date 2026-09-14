@@ -1,7 +1,7 @@
 import type { Diagnostic } from './types.ts'
 import { parseEndpoint } from './endpoint.ts'
 import { isInstancePath, isPortNodeId } from './ids.ts'
-import { SCHEMATIC_SUFFIX } from './files.ts'
+import { FSM_SUFFIX, SCHEMATIC_SUFFIX } from './files.ts'
 
 // Structural validation of a component graph. Problems are collected as
 // diagnostics instead of thrown, so a partially broken extraction can still be
@@ -14,7 +14,8 @@ const TIMES = new Set(['comb', 'seq'])
 const SIGNAL_FLOWS = new Set(['data', 'control', 'clock', 'reset'])
 const DIRS = new Set(['in', 'out', 'inout'])
 const INSTANCE_KINDS = new Set(['reg', 'op', 'mux', 'module', 'blackbox', 'control'])
-const TRUTH_VALUES = new Set(['0', '1', 'x'])
+// One bit is 0/1/x; a wider signal carries the value as written ("2'd1", "IDLE").
+const isCell = (v: unknown): boolean => typeof v === 'string' && v.trim() !== ''
 
 const isObj = (v: unknown): v is Obj => typeof v === 'object' && v !== null && !Array.isArray(v)
 const isStrArr = (v: unknown): v is string[] => Array.isArray(v) && v.every(s => typeof s === 'string')
@@ -108,6 +109,9 @@ export function validateComponentGraph(input: unknown): ValidationResult {
       error('group', `node refers to unknown group ${JSON.stringify(n.group)}`, at)
     }
     if (n.kind === 'control' && n.truthTable !== undefined) checkTruthTable(n.truthTable, ports, at)
+    if (n.fsm !== undefined && !(typeof n.fsm === 'string' && n.fsm.endsWith(FSM_SUFFIX))) {
+      error('schema', `fsm must name a *${FSM_SUFFIX} file`, at)
+    }
   }
 
   function checkTruthTable(t: unknown, ports: Obj, at: Partial<Diagnostic>) {
@@ -120,14 +124,14 @@ export function validateComponentGraph(input: unknown): ValidationResult {
     for (const p of inputs) if (ports[p] !== 'in') error('truth-table', `truth table input "${p}" is not an input port`, at)
     for (const p of outputs) if (ports[p] !== 'out') error('truth-table', `truth table output "${p}" is not an output port`, at)
     const isRow = (values: unknown, width: number) =>
-      Array.isArray(values) && values.length === width && values.every(v => inSet(TRUTH_VALUES, v))
+      Array.isArray(values) && values.length === width && values.every(isCell)
     t.rows.forEach((r: unknown, i: number) => {
       if (!isObj(r) || !isRow(r.in, inputs.length) || !isRow(r.out, outputs.length)) {
-        error('truth-table', `row ${i} must have ${inputs.length} inputs and ${outputs.length} outputs of 0|1|x`, at)
+        error('truth-table', `row ${i} must have ${inputs.length} input and ${outputs.length} output values`, at)
       }
     })
     if (t.default !== undefined && !(isObj(t.default) && isRow(t.default.out, outputs.length))) {
-      error('truth-table', `default must have ${outputs.length} outputs of 0|1|x`, at)
+      error('truth-table', `default must have ${outputs.length} output values`, at)
     }
   }
 
@@ -249,6 +253,139 @@ export function validateComponentGraph(input: unknown): ValidationResult {
           if (!own(groups, c)) warn('layout-stale', `layout collapses unknown group "${c}"`)
         }
       }
+    }
+  }
+
+  return result()
+}
+
+// ── state machines: <component>.rtlgraph-fsm.json ──
+// The file is only worth having if it says what the machine means, so a state
+// without a meaning, or a transition without the condition in words, is an error.
+export function validateFsmGraph(input: unknown): ValidationResult {
+  const diagnostics: Diagnostic[] = []
+  const error = (code: string, msg: string, at: Partial<Diagnostic> = {}) =>
+    diagnostics.push({ severity: 'error', code, msg, ...at })
+  const warn = (code: string, msg: string, at: Partial<Diagnostic> = {}) =>
+    diagnostics.push({ severity: 'warn', code, msg, ...at })
+  const result = (): ValidationResult => ({ ok: !diagnostics.some(d => d.severity === 'error'), diagnostics })
+  const said = (v: unknown) => typeof v === 'string' && v.trim() !== ''
+
+  if (!isObj(input)) {
+    error('schema', 'state machine must be a JSON object')
+    return result()
+  }
+  const g = input
+  if (typeof g.version !== 'string') error('schema', 'version must be a string')
+  if (g.kind !== 'fsm') error('schema', `kind must be "fsm", got ${JSON.stringify(g.kind)}`)
+  for (const key of ['title', 'created', 'modified']) {
+    if (typeof g[key] !== 'string') error('schema', `${key} must be a string`)
+  }
+  if (!isObj(g.source)) {
+    error('schema', 'source must be an object')
+  } else {
+    if (typeof g.source.root !== 'string') error('schema', 'source.root must be a string')
+    if (typeof g.source.top !== 'string') error('schema', 'source.top must be a string')
+    if (!isStrArr(g.source.files)) error('schema', 'source.files must be a string array')
+  }
+
+  const machine: Obj = isObj(g.machine) ? g.machine : {}
+  if (!isObj(g.machine)) error('schema', 'machine must be an object')
+  else {
+    if (typeof machine.name !== 'string') error('schema', 'machine.name must be a string')
+    if (machine.style !== 'moore' && machine.style !== 'mealy') {
+      error('fsm-style', `machine.style must say "moore" or "mealy", got ${JSON.stringify(machine.style)}`)
+    }
+  }
+  const declared = new Set<string>()
+  for (const key of ['inputs', 'outputs']) {
+    const list = machine[key]
+    if (list === undefined) continue
+    if (!Array.isArray(list) || !list.every(p => isObj(p) && typeof p.name === 'string')) {
+      error('schema', `machine.${key} must be a list of { name, meaning? }`)
+      continue
+    }
+    if (key === 'outputs') for (const p of list as Obj[]) declared.add(p.name as string)
+  }
+
+  const states: Obj = isObj(g.states) ? g.states : {}
+  if (!isObj(g.states) || Object.keys(states).length === 0) error('schema', 'states must be an object with at least one state')
+  const checkOutputs = (outputs: unknown, at: Partial<Diagnostic>, what: string) => {
+    if (outputs === undefined) return
+    if (!isObj(outputs) || !Object.values(outputs).every(v => typeof v === 'string')) {
+      error('schema', `${what} outputs must map a signal name to the value it takes`, at)
+      return
+    }
+    for (const name of Object.keys(outputs)) {
+      if (declared.size > 0 && !declared.has(name)) warn('fsm-output', `${what} drives "${name}", which machine.outputs does not list`, at)
+    }
+  }
+
+  for (const [id, st] of Object.entries(states)) {
+    const at = { node: id }
+    if (!isObj(st)) {
+      error('schema', 'state must be an object', at)
+      continue
+    }
+    if (!said(st.meaning)) error('fsm-meaning', `state "${id}" must say what the design is doing in it`, at)
+    if (st.label !== undefined && typeof st.label !== 'string') error('schema', 'state label must be a string', at)
+    if (st.encoding !== undefined && typeof st.encoding !== 'string') error('schema', 'state encoding must be a string', at)
+    checkOutputs(st.outputs, at, `state "${id}"`)
+    if (machine.style === 'mealy' && st.outputs !== undefined && Object.keys(st.outputs as Obj).length > 0) {
+      warn('fsm-style', `state "${id}" drives outputs, which a Mealy machine usually does on its transitions`, at)
+    }
+  }
+
+  const transitions = Array.isArray(g.transitions) ? g.transitions : []
+  if (!Array.isArray(g.transitions)) error('schema', 'transitions must be an array')
+  const leaves = new Set<string>()
+  const edges = new Map<string, string[]>()
+  transitions.forEach((t: unknown, i: number) => {
+    const at = { node: `transition ${i}` }
+    if (!isObj(t)) {
+      error('schema', `transition ${i} must be an object`, at)
+      return
+    }
+    for (const end of ['from', 'to'] as const) {
+      if (typeof t[end] !== 'string' || !own(states, t[end] as string)) {
+        error('fsm-state', `transition ${i} ${end} "${String(t[end])}" is not a state`, at)
+      }
+    }
+    if (!said(t.when)) error('fsm-when', `transition ${i} must say in words when it is taken`, at)
+    if (t.guard !== undefined && typeof t.guard !== 'string') error('schema', `transition ${i} guard must be a string`, at)
+    checkOutputs(t.outputs, at, `transition ${i}`)
+    if (machine.style === 'moore' && t.outputs !== undefined && Object.keys(t.outputs as Obj).length > 0) {
+      error('fsm-style', `transition ${i} drives outputs; a Moore machine drives from its states`, at)
+    }
+    if (typeof t.from === 'string' && typeof t.to === 'string') {
+      leaves.add(t.from)
+      edges.set(t.from, [...(edges.get(t.from) ?? []), t.to])
+    }
+  })
+
+  // ── reachability from the reset state ──
+  const reset = machine.reset
+  if (typeof reset !== 'string' || !own(states, reset)) {
+    error('fsm-reset', `machine.reset "${String(reset)}" is not a state`)
+  } else {
+    const seen = new Set([reset])
+    const queue = [reset]
+    while (queue.length > 0) {
+      for (const next of edges.get(queue.shift()!) ?? []) if (!seen.has(next)) seen.add(next), queue.push(next)
+    }
+    for (const id of Object.keys(states)) {
+      if (!seen.has(id)) warn('fsm-unreachable', `state "${id}" cannot be reached from "${reset}"`, { node: id })
+    }
+  }
+  for (const id of Object.keys(states)) {
+    if (!leaves.has(id)) warn('fsm-dead-end', `state "${id}" has no transition out of it`, { node: id })
+  }
+
+  if (g.layout !== undefined) {
+    if (!isObj(g.layout) || !isObj(g.layout.nodes)) error('schema', 'layout.nodes must be an object')
+    else for (const [id, p] of Object.entries(g.layout.nodes)) {
+      if (!own(states, id)) warn('layout-stale', `layout has a position for unknown state "${id}"`, { node: id })
+      else if (!isObj(p) || typeof p.x !== 'number' || typeof p.y !== 'number') error('schema', 'layout position needs numeric x and y', { node: id })
     }
   }
 

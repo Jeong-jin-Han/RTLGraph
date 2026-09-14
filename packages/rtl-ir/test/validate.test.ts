@@ -67,7 +67,9 @@ test('truth tables must match the node ports and row widths', () => {
   })
   assert.equal(validateComponentGraph(withControl(() => {})).ok, true)
   expectError(withControl(t => { t.rows[0].in = ['1', '0'] }), 'truth-table')
-  expectError(withControl(t => { t.rows[0].out = ['z'] }), 'truth-table')
+  expectError(withControl(t => { t.rows[0].out = [''] }), 'truth-table')
+  // A wider input or output carries the value as the code writes it.
+  assert.equal(validateComponentGraph(withControl(t => { t.rows[0] = { in: ["2'd1"], out: ['IDLE'] } })).ok, true)
   expectError(withControl(t => { t.outputs = ['I'] }), 'truth-table')
   expectError(withControl(t => { t.default = { out: [] } }), 'truth-table')
 })

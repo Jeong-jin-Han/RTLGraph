@@ -67,6 +67,7 @@ interface InstanceNode extends NodeCommon {
   params?: Record<string, number>
   ports: Record<string, PortDir>
   consts?: Record<string, string> // input port -> literal, e.g. EN: "1'b1"
+  fsm?: string // <name>.rtlgraph-fsm.json for the machine this box runs, relative to this file
 }
 
 export interface RegNode extends InstanceNode {
@@ -74,6 +75,8 @@ export interface RegNode extends InstanceNode {
   rstKind?: 'sync' | 'async'
   rstPriority?: 'rst>en' | 'en>rst'
   rstValue?: string
+  rstActive?: 'high' | 'low' // "low" for a reset like `if (!rst_n)`; drawn as a bubble
+  enActive?: 'high' | 'low'
 }
 
 export interface OpNode extends InstanceNode {
@@ -94,12 +97,14 @@ export interface BlackboxNode extends InstanceNode {
   rdelay?: number
 }
 
-export type TruthValue = '0' | '1' | 'x'
+// A cell of a truth table. One bit is "0", "1" or "x"; a wider input or output
+// carries the value as the code writes it ("2'd1", "IDLE").
+export type TruthValue = string
 
 export interface TruthTable {
   inputs: string[]
   outputs: string[]
-  rows: { in: TruthValue[]; out: TruthValue[]; note?: string }[]
+  rows: { in: TruthValue[]; out: TruthValue[]; note?: string }[] // note: one line saying what the row means
   default?: { out: TruthValue[] }
   origin?: Origin // the casex statement
 }
@@ -107,7 +112,7 @@ export interface TruthTable {
 export interface ControlNode extends InstanceNode {
   kind: 'control'
   truthTable?: TruthTable
-  equations?: { output: string; expr: string }[] // 1-bit boolean assigns
+  equations?: { output: string; expr: string; origin?: Origin }[] // boolean assigns, when no table fits
 }
 
 // A child component. Its inside lives in its own schematic file; a view can
@@ -155,6 +160,55 @@ export interface View {
   filter?: ViewFilter
   hiddenEdges?: 'hide' | 'bridge'
   viewport?: { x: number; y: number; zoom: number }
+}
+
+// ── State machines: <component>.rtlgraph-fsm.json ──
+// A component gets one only when it has a machine worth drawing. The point is
+// what the machine *means*: every state says what the design is doing while it
+// is there, and every transition says when it is taken — in words, not as the
+// condition's syntax (`guard` keeps that for reference).
+
+export type FsmStyle = 'moore' | 'mealy'
+
+export interface FsmState {
+  meaning: string // what the design is doing in this state
+  label?: string // short name for the diagram; the state id by default
+  encoding?: string // the value in the code, e.g. "2'd1"
+  outputs?: Record<string, string> // Moore: what this state drives
+  origin?: Origin
+}
+
+export interface FsmTransition {
+  from: string
+  to: string
+  when: string // in words: "a full sample has arrived"
+  guard?: string // the condition as the code writes it, e.g. "cnt == 9 && ~stall"
+  outputs?: Record<string, string> // Mealy: what taking it drives
+  origin?: Origin
+}
+
+export interface FsmMachine {
+  name: string // what the code calls the machine (its state register or module)
+  style: FsmStyle // stated, never guessed
+  reset: string // the state after reset
+  node?: string // the node in the schematic that holds it
+  inputs?: { name: string; meaning?: string }[]
+  outputs?: { name: string; meaning?: string }[]
+}
+
+export interface FsmGraph {
+  version: string
+  kind: 'fsm'
+  title: string // the component name
+  created: string
+  modified: string
+  source: SourceInfo
+  machine: FsmMachine
+  states: Record<string, FsmState>
+  transitions: FsmTransition[]
+  layout?: Layout
+  view?: View
+  diagnostics?: Diagnostic[]
 }
 
 // Named for history: describes both the root ("system") and component files.
