@@ -54,6 +54,9 @@ export interface HierarchyRenderOptions {
   // For a figure: when the root only wraps one open component, draw that component
   // itself. The frame around everything and the doubled port pills say nothing.
   unwrap?: boolean
+  // Draw the frame around an open component — its panel, title and marker. The
+  // editor needs it to show what is open; a figure is just the schematic.
+  frames?: boolean
   layout?: NestedLayout // must have been laid out with the same isUnfolded
 }
 
@@ -80,7 +83,8 @@ function foldMarker(b: NodeBox, titleH: number, folded: boolean): Item[] {
 }
 
 // An open component: a frame whose body is drawn by the child's own level.
-function frameItems(node: ComponentNode, b: NodeBox, controls: boolean): Item[] {
+function frameItems(node: ComponentNode, b: NodeBox, controls: boolean, frames: boolean): Item[] {
+  if (!frames) return [] // the wires still cross where its edge was
   return [
     { kind: 'rect', x: b.x, y: b.y, w: b.w, h: b.h, rx: 4, fill: PALETTE.componentFill, stroke: PALETTE.frameStroke, strokeWidth: 1.5 },
     { kind: 'lines', segments: [{ x1: b.x, y1: b.y + FRAME_TITLE_H, x2: b.x + b.w, y2: b.y + FRAME_TITLE_H }], fill: 'none', stroke: PALETTE.frameStroke },
@@ -163,6 +167,7 @@ function translate(item: Item, dx: number, dy: number): Item {
 interface Canvas {
   filter: ViewFilter
   controls: boolean
+  frames: boolean
   groups: Group[]
   xs: number[] // extent of what is visible, for cropping
   ys: number[]
@@ -212,7 +217,7 @@ function drawLevel(
     const node = graph.nodes[id]
     const open = node.kind === 'component' && id in children
     const className = node.kind !== 'component' ? `node ${node.kind}` : `node component ${open ? 'unfolded' : 'folded'}`
-    const items = open ? frameItems(node as ComponentNode, b, canvas.controls) : nodeItems(id, node, b, canvas.controls)
+    const items = open ? frameItems(node as ComponentNode, b, canvas.controls, canvas.frames) : nodeItems(id, node, b, canvas.controls)
     groups.push({ className, attribute: { name: 'data-node-id', value: prefix + id }, items: place(items) })
   }
 
@@ -247,7 +252,7 @@ function sceneOf(canvas: Canvas, width: number, height: number, crop: boolean): 
 
 export function buildScene(graph: ComponentGraph, options: RenderOptions = {}): Scene {
   const layout = options.layout ?? layoutComponent(graph)
-  const canvas: Canvas = { filter: options.filter ?? FILTER_PRESETS.all, controls: false, groups: [], xs: [], ys: [] }
+  const canvas: Canvas = { filter: options.filter ?? FILTER_PRESETS.all, controls: false, frames: true, groups: [], xs: [], ys: [] }
   drawLevel(canvas, graph, layout, {}, {}, 0, 0, '')
   return sceneOf(canvas, layout.width, layout.height, options.crop ?? true)
 }
@@ -261,7 +266,12 @@ export function buildHierarchyScene(root: HierarchyEntry, options: HierarchyRend
   // The unwrapped component keeps the arrangement it has inside its frame — ports on
   // the boundary — so the figure is what the editor shows, minus the frame.
   const layout = (inner ? undefined : options.layout) ?? layoutHierarchy(entry, isUnfolded, inner !== undefined)
-  const canvas: Canvas = { filter: options.filter ?? FILTER_PRESETS.all, controls: options.controls === true, groups: [], xs: [], ys: [] }
+  const canvas: Canvas = {
+    filter: options.filter ?? FILTER_PRESETS.all,
+    controls: options.controls === true,
+    frames: options.frames !== false,
+    groups: [], xs: [], ys: [],
+  }
   drawLevel(canvas, entry.graph, layout, layout.children, entry.children, 0, 0, '')
   return sceneOf(canvas, layout.width, layout.height, options.crop ?? true)
 }

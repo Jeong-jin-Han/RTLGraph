@@ -29,7 +29,12 @@ export async function exportSchematic(source: ExportSource, formats: readonly Ex
 
   // unwrap: a figure of a design with one main component shows that component,
   // not a frame drawn around the whole picture.
-  const options = { filter: source.filter, isUnfolded: (instance: string) => source.unfolded.includes(instance), unwrap: true }
+  const options = {
+    filter: source.filter,
+    isUnfolded: (instance: string) => source.unfolded.includes(instance),
+    unwrap: true, // a design with one main component shows that component
+    frames: false, // and no panels around the components: a figure is the schematic
+  }
   const files: vscode.Uri[] = []
   const warnings: string[] = []
   for (const format of formats) {

@@ -101,6 +101,17 @@ test('an export leaves out a root that only wraps one component', () => {
   assert.ok(renderHierarchySvg(sysRoot, { isUnfolded: () => true, unwrap: true }).includes('data-node-id="u_host"'))
 })
 
+test('an export draws no frame around an open component', () => {
+  const open = { isUnfolded: () => true }
+  const editor = renderHierarchySvg(sysRoot, open)
+  const figure = renderHierarchySvg(sysRoot, { ...open, frames: false })
+  for (const name of ['host', 'dev', 'inbuf']) assert.ok(editor.includes(`>${name}</text>`), `the editor titles ${name}`)
+  for (const name of ['host', 'dev', 'inbuf']) assert.ok(!figure.includes(`>${name}</text>`), `the figure drops the ${name} panel`)
+  // The boxes and wires inside them stay, and so do the connectors across the edge.
+  assert.deepEqual(nodeIds(figure), nodeIds(editor))
+  assert.deepEqual(signalIds(figure), signalIds(editor))
+})
+
 test('the filter applies inside frames, connectors included', () => {
   const svg = renderHierarchySvg(root, { isUnfolded: () => true, filter: FILTER_PRESETS.datapath })
   assert.ok(!svg.includes('stroke-dasharray'))

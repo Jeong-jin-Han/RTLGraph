@@ -7,8 +7,9 @@ import { renderHierarchyPdf, renderHierarchySvg } from './index.ts'
 // rtlgraph-render <file> [preset] [--format svg|pdf] [--unfold] [--keep-root] [-o file]
 // <file> is a root *.rtlgraph.json or a *.rtlgraph-schematic.json; the component
 // schematics it refers to are loaded too, and --unfold opens every one of them. A
-// root that only wraps one open component is left out of the picture; --keep-root
-// draws it as the editor does.
+// root that only wraps one open component is left out of the picture, and open
+// components are drawn without their frames; --keep-root draws both as the editor
+// does.
 // Writes to stdout unless -o is given. PNG needs a browser canvas; use the extension.
 
 const usage = () => {
@@ -45,7 +46,7 @@ for (const d of diagnostics) {
 }
 if (!root || diagnostics.some(d => d.severity === 'error')) process.exit(1)
 
-const options = { filter: FILTER_PRESETS[preset as FilterPreset], isUnfolded: () => unfold, unwrap: !keepRoot }
+const options = { filter: FILTER_PRESETS[preset as FilterPreset], isUnfolded: () => unfold, unwrap: !keepRoot, frames: keepRoot }
 let bytes: string | Uint8Array
 if (format === 'pdf') {
   const pdf = renderHierarchyPdf(root, options)
