@@ -196,9 +196,9 @@ function fold(action: FoldAction, scope: FoldScope, instance?: string) {
   foldChosenHere = true
   if (selected !== undefined && !isInstanceShown(selected, unfolded)) selected = undefined
   layout = layoutHierarchy(root, isUnfolded)
-  persist()
   vscode.postMessage({ type: 'setFold', unfolded })
   render()
+  fit() // what opened or closed changes the size a lot; NodeGraph refits the same way
 }
 
 function select(instance: string | undefined) {
