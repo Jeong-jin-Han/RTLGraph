@@ -297,10 +297,19 @@ export function layoutComponent(graph: ComponentGraph): LayoutResult {
   // ── routing plan (x only): accesses, risers, trunks ──
   // All drops on one side of a box leave in the same direction: up to the channel
   // above, or down to the one below when most of what they connect to lies lower.
+  // A pin whose other ends sit in its own row votes for the nearer channel — boxes
+  // stand on the bottom of their row, so that is usually the one below, and a net
+  // between two such pins then needs no riser at all.
   const verticalRank = (ref: string) => {
     const r = row.get(nodeOf(ref))!
     const side = sideAt(ref)
     return side === 'top' ? r - 0.5 : side === 'bottom' ? r + 0.5 : r
+  }
+  const nearerBelow = (id: string, pin: string) => {
+    const shape = shapes.get(id)!
+    const rowH = Math.max(20, ...rows[row.get(id)!].map(member => shapes.get(member)!.h))
+    const pinY = rowH - shape.h + pinsOf(0, 0, shape)[pin].y
+    return rowH - pinY < pinY
   }
   const dropsDown = (id: string, side: 'left' | 'right') => {
     let vote = 0
@@ -309,7 +318,8 @@ export function layoutComponent(graph: ComponentGraph): LayoutResult {
       const net = signals[netAt.get(ref)!]
       const others = [net.driver, ...net.sinks].filter(other => other !== ref)
       const mean = others.reduce((sum, other) => sum + verticalRank(other), 0) / others.length
-      vote += mean > row.get(id)! ? 1 : -1
+      const r = row.get(id)!
+      vote += mean > r ? 1 : mean < r ? -1 : nearerBelow(id, pin) ? 1 : -1
     }
     return vote > 0
   }
@@ -330,12 +340,17 @@ export function layoutComponent(graph: ComponentGraph): LayoutResult {
     return { ref, ax: drop, ch: down ? r + 1 : r, drop, down }
   }
 
-  const boxObs: Interval[][] = Array.from({ length: rowCount + 1 }, () => [])
-  const dropUpObs: Interval[][] = Array.from({ length: rowCount + 1 }, () => [])
-  const dropDownObs: Interval[][] = Array.from({ length: rowCount + 1 }, () => [])
-  const topPinObs: Interval[][] = Array.from({ length: rowCount + 1 }, () => [])
-  const bottomPinObs: Interval[][] = Array.from({ length: rowCount + 1 }, () => [])
-  const riserObs: Interval[][] = Array.from({ length: rowCount + 1 }, () => [])
+  // [lo, hi, owner]: the net that put the obstacle there (none for boxes). A riser
+  // is never blocked by its own net's stubs — see `runsBack` below for the one case
+  // where it must still avoid them.
+  type Obstacle = [number, number, string?]
+  const obstacles = () => Array.from({ length: rowCount + 1 }, (): Obstacle[] => [])
+  const boxObs = obstacles()
+  const dropUpObs = obstacles()
+  const dropDownObs = obstacles()
+  const topPinObs = obstacles()
+  const bottomPinObs = obstacles()
+  const riserObs = obstacles()
   for (const [id, left] of x) boxObs[row.get(id)!].push([left - BOX_PAD, left + W(id) + BOX_PAD])
 
   interface Plan { accesses: Access[]; riser?: { x: number; a: number; b: number }; trunks: Map<number, Interval> }
@@ -348,17 +363,17 @@ export function layoutComponent(graph: ComponentGraph): LayoutResult {
     for (const a of accesses) {
       const r = row.get(nodeOf(a.ref))!
       const side = shapes.get(nodeOf(a.ref))!.sides.get(pinOf(a.ref))
-      if (a.drop !== undefined) (a.down ? dropDownObs : dropUpObs)[r].push([a.drop - 3, a.drop + 3])
-      else (side === 'top' ? topPinObs : bottomPinObs)[r].push([a.ax - 4, a.ax + 4])
+      if (a.drop !== undefined) (a.down ? dropDownObs : dropUpObs)[r].push([a.drop - 3, a.drop + 3, name])
+      else (side === 'top' ? topPinObs : bottomPinObs)[r].push([a.ax - 4, a.ax + 4, name])
     }
   }
   for (const [id, hug] of directPort) {
     const side = sideAt(hug)
-    if (side === 'bottom') topPinObs[row.get(id)!].push([pinX(hug) - 4, pinX(hug) + 4])
+    if (side === 'bottom') topPinObs[row.get(id)!].push([pinX(hug) - 4, pinX(hug) + 4, portNets.get(id)![0]])
   }
 
-  const blocked = (xv: number, a: number, b: number) => {
-    const hit = (list: Interval[] | undefined) => !!list?.some(([lo, hi]) => xv >= lo && xv <= hi)
+  const blocked = (xv: number, a: number, b: number, owner: string) => {
+    const hit = (list: Obstacle[] | undefined) => !!list?.some(([lo, hi, by]) => by !== owner && xv >= lo && xv <= hi)
     for (let r = a; r < b; r++) if (hit(boxObs[r]) || hit(dropUpObs[r]) || hit(dropDownObs[r])) return true
     if (hit(dropUpObs[b]) || hit(dropDownObs[a - 1]) || hit(bottomPinObs[a - 1]) || hit(topPinObs[b])) return true
     for (let r = Math.max(0, a - 1); r <= Math.min(rowCount, b); r++) if (hit(riserObs[r])) return true
@@ -374,18 +389,27 @@ export function layoutComponent(graph: ComponentGraph): LayoutResult {
       const b = channels[channels.length - 1]
       const far = plan.accesses.filter(acc => acc.ch !== driver.ch)
       const farMean = far.reduce((sum, acc) => sum + acc.ax, 0) / far.length
+      // A riser sharing x with one of its own stubs is fine when it simply continues
+      // that stub (the stub enters the riser's end channel from outside the span),
+      // but not when it would run back along it.
+      const entersFromAbove = (acc: Access) =>
+        acc.drop !== undefined ? !!acc.down : shapes.get(nodeOf(acc.ref))!.sides.get(pinOf(acc.ref)) === 'bottom'
+      const runsBack = (c: number) =>
+        plan.accesses.some(acc => acc.ax === c && !((acc.ch === a && entersFromAbove(acc)) || (acc.ch === b && !entersFromAbove(acc))))
       const candidates = new Set<number>([driver.ax, Math.round(farMean), ...far.map(acc => acc.ax)])
       const lists = [...boxObs, ...dropUpObs, ...dropDownObs, ...topPinObs, ...bottomPinObs, ...riserObs]
       for (const list of lists) for (const [lo, hi] of list) { candidates.add(Math.floor(lo) - 1); candidates.add(Math.ceil(hi) + 1) }
       let best: { x: number; cost: number } | undefined
       for (const c of candidates) {
-        if (c < MARGIN / 2 || blocked(c, a, b)) continue
-        const cost = Math.abs(c - driver.ax) + Math.abs(c - farMean)
+        if (c < MARGIN / 2 || blocked(c, a, b, name) || runsBack(c)) continue
+        // Prefer continuing a stub straight on: every x that does not saves a bend.
+        const aligned = plan.accesses.some(acc => acc.ax === c)
+        const cost = Math.abs(c - driver.ax) + Math.abs(c - farMean) + (aligned ? 0 : PITCH)
         if (!best || cost < best.cost || (cost === best.cost && c < best.x)) best = { x: c, cost }
       }
       riserX = best?.x ?? Math.max(...boxObs.flat().map(([, hi]) => hi)) + PITCH
       plan.riser = { x: riserX, a, b }
-      for (let r = Math.max(0, a - 1); r <= Math.min(rowCount, b); r++) riserObs[r].push([riserX - PITCH + 1, riserX + PITCH - 1])
+      for (let r = Math.max(0, a - 1); r <= Math.min(rowCount, b); r++) riserObs[r].push([riserX - PITCH + 1, riserX + PITCH - 1, name])
     }
     for (const ch of channels) {
       const xs = plan.accesses.filter(acc => acc.ch === ch).map(acc => acc.ax)
