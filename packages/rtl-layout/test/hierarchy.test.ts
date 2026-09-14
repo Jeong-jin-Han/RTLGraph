@@ -189,6 +189,25 @@ test('lays out three levels of real files, each level clean', () => {
   assert.ok(hostOnly.nodes.sys.w < layout.nodes.sys.w)
 })
 
+// Two boxes of one row used to leave through different channels — one up, one
+// down — so the net climbed back with a riser right beside its own stub.
+test('a net between two boxes of one row takes one channel, not two', () => {
+  const project = join(import.meta.dirname, '../../../demo/sys')
+  const read = (path: string) => {
+    try {
+      return readFileSync(join(project, path), 'utf8')
+    } catch {
+      return undefined
+    }
+  }
+  const root = loadHierarchy('sys_top.rtlgraph.json', read).root!
+  const { layout } = layoutHierarchy(root, i => i === 'sys').children.sys // host and dev stay boxes
+  for (const name of ['DATA', 'VALID', 'SUM']) {
+    const verticals = layout.wires[name].segments.filter(s => s.x1 === s.x2)
+    assert.ok(verticals.length <= 2, `${name} drops once at each end, no riser: ${verticals.length} verticals`)
+  }
+})
+
 test('fold state is per instance, and layout is deterministic', () => {
   const root = synthetic()
   const onlyTop = layoutHierarchy(root, instance => instance === 'u_top')

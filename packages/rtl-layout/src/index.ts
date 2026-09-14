@@ -460,12 +460,6 @@ export function layoutComponent(graph: ComponentGraph, options: LayoutOptions = 
     const side = sideAt(ref)
     return side === 'top' ? r - 0.5 : side === 'bottom' ? r + 0.5 : r
   }
-  const nearerBelow = (id: string, pin: string) => {
-    const shape = shapes.get(id)!
-    const rowH = Math.max(20, ...rows[row.get(id)!].map(heightInRow))
-    const pinY = topInRow(id, rowH) + pinsOf(0, 0, shape)[pin].y
-    return rowH - pinY < pinY
-  }
   const dropsDown = (id: string, side: 'left' | 'right') => {
     let vote = 0
     for (const ref of dropRefs(id, side)) {
@@ -474,7 +468,9 @@ export function layoutComponent(graph: ComponentGraph, options: LayoutOptions = 
       const others = [net.driver, ...net.sinks].filter(other => other !== ref)
       const mean = others.reduce((sum, other) => sum + verticalRank(other), 0) / others.length
       const r = row.get(id)!
-      vote += mean > r ? 1 : mean < r ? -1 : nearerBelow(nodeOf(ref), pin) ? 1 : -1
+      // Everything in this row leaves through the channel below it: both ends of a
+      // net between two boxes of one row then meet there, with no riser between them.
+      vote += mean < r ? -1 : 1
     }
     return vote > 0
   }
