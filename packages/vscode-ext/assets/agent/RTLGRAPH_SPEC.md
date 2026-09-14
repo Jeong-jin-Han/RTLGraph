@@ -71,9 +71,20 @@ The project **conforms** when it follows the RTLGraph authoring contract (Workfl
 | C7 | `` `default_nettype none `` in every file |
 
 Both kinds of code are supported. Conforming code maps mechanically (Step 4a). Other code needs
-inference (Step 4b), and every inferred element gets an `info` diagnostic. Record each contract
-violation you see as a `warn` diagnostic with `code` `"C1"`…`"C7"`, `file` and `line`, and set
-`source.contractCheck` to `"pass"` (none), `"partial"` (only C3/C4/C5/C7) or `"fail"` (C1, C2 or C6).
+inference (Step 4b), and every node inferred from an expression or an `always` block gets an `info`
+diagnostic with `code` `"inferred"`. Record each contract violation you see as a `warn` diagnostic
+with `code` `"C1"`…`"C7"`, `file` and `line` (line 1 for a file-level violation such as C3 or C7),
+and set `source.contractCheck` to `"pass"` (none), `"partial"` (only C3/C4/C5/C7) or `"fail"`
+(C1, C2 or C6).
+
+- **Primitive definitions** (a `DFF`, `ADD`, … module defined inside the project) go in
+  `source.files` and are exempt from C1 and C3 — their `posedge` is expected.
+- **Code that does not compile** (missing `;`, trailing commas, undeclared names): still extract what
+  the code clearly means, and add one `error` diagnostic with `code` `"syntax"`, `file` and `line` per
+  problem. If ENVIRONMENT.md lists a compiler, run it to find them. Put this first in your final
+  report — the user's RTL is broken, not the graph.
+- A module that clearly plays the data-path or control-path role maps as in Step 4a even outside the
+  contract folders (the folder problem is already a C3 diagnostic); no `inferred` diagnostic for it.
 
 ### Step 4a — Map conforming code
 Walk the hierarchy from the component top. **Node ids are instance paths from the component top**,
@@ -107,19 +118,30 @@ ids stay stable when the code is edited:
 
 `<scope>` is the instance path of the module containing the code; omit it (no leading dot) in the
 top. For each inferred node add `{ "severity": "info", "code": "inferred", "msg": "...", "node": id,
-"file": ..., "line": ... }`.
+"file": ..., "line": ... }`. An inferred registry node gets `params: { "BW": <width - 1> }` from the
+declared width of the net it drives (`[5:0]` → `{ "BW": 5 }`).
 
 ### Step 5 — Nets (`signals`)
 - One entry per electrical net. Key = the name in the component top; a net that exists only inside a
   flattened instance gets the instance path prefix (`data_path.ADD_OUT`).
 - `width` from the declaration (`[5:0]` → 6), evaluating parameters.
-- `driver`: exactly one endpoint. `sinks`: every other endpoint. Endpoint syntax: `"<nodeId>:<port>"`,
-  or `"@NAME"` for a component port (no `:port`). A top input port drives; a top output port sinks.
+- `driver`: exactly one endpoint. `sinks`: every other endpoint (`[]` when nothing reads the net).
+  Endpoint syntax: `"<nodeId>:<port>"`, or `"@NAME"` for a component port (no `:port`). A top input
+  port drives; a top output port sinks.
+- **A net nothing drives is not written.** Leave the pins it would reach unconnected (the validator
+  reports them as `undriven` warnings, which stay) and add a `C6` diagnostic naming the net, with the
+  line where it is declared. A net with several drivers: keep the first driver, add a `C6` diagnostic.
 - `aliases`: other names of the same net (from `assign X = Y` wiring).
-- `flow`: `"clock"` for the clock input net, `"reset"` for the primary reset input net, `"control"`
-  for nets produced by control logic (including register reset/enable controls), `"data"` otherwise.
+- `flow`:
+  - `"clock"` — the clock input net; `"reset"` — the primary reset input net;
+  - `"control"` — nets produced by control logic (including register reset/enable controls), and
+    input nets that only reach control logic or `sel`/`EN`/`RST` pins;
+  - `"data"` — everything else.
 - `hidden: true` on clock nets.
-- `meaning`: copy from `// @sch: meaning="..."` (on the declaration line or the line just before).
+- `meaning`: copy `// @sch: meaning="..."` verbatim (on the declaration line or the line just before).
+  Without an annotation, write a meaning only when the code makes it certain — for example the select
+  of a `MUX2` whose `d0`/`d1` come from `ADD`/`SUB` gets `"0=ADD, 1=SUB"` — and add an `info`
+  diagnostic with `code` `"meaning-derived"`. Otherwise leave `meaning` out; never guess intent.
 - `origin`: the declaration line of the net (for a top port, its port line).
 
 ### Step 6 — Tags on nodes
@@ -320,7 +342,8 @@ Never use line numbers or counters in ids — the user's layout is matched by id
 ## Language rules
 - Ids, net names, module names, pin names, literals: exactly as in the code, never translated.
 - `meaning`, `label`, `note`, diagnostic `msg`: in the language the user asked for. In Korean, add the
-  English term in parentheses the first time a technical term appears, e.g. "누산기(accumulator)".
+  English term in parentheses the first time a technical term appears **within each string** (each is
+  shown on its own), e.g. "누산기(accumulator)".
 - `meaning` copied from an `@sch` comment stays verbatim.
 
 ---
