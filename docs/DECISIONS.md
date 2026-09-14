@@ -82,6 +82,20 @@
 | E8 | 명령 `RTLGraph: Fit View`, `RTLGraph: Set View Preset`. 내부 명령 `rtlgraph._renderState` 는 팔레트에 올리지 않는다 | 선언과 등록이 같은 집합인지 테스트한다(NodeGraph 의 "command not found") |
 | E9 | **실제 VS Code 로 e2e** — 설치된 VS Code 를 격리 프로필(`.vscode-test/`)·`xvfb-run` 으로 띄워, 기본 에디터로 열림 · 웹뷰가 그린 노드·넷 수 · 프리셋 · 재오픈 후 필터 유지 · 문서 비수정을 확인 | NodeGraph 는 테스트가 없었다. 웹뷰 안은 호스트에서 못 보므로 웹뷰가 그린 결과를 `rendered` 메시지로 보고한다 |
 
+## 에이전트 연동 — 기존 RTL 이 주 입력
+
+| # | 결정 | 이유 |
+|---|---|---|
+| A1 | **핵심 사용 사례는 이미 있는 RTL → RTLGraph.** 3층 계약을 따르지 않는 코드도 추출한다: `assign`/`always` 에서 base 심볼(ADD/SUB/INC/MUX2/CMP_EQ/DFF)을 추론하고, 추론한 요소와 계약 위반은 `diagnostics` 로 남긴다 | 사용자 결정(2026-09-14). RTL 작성은 부차적 |
+| A2 | 추론 노드 ID — 조합 논리 `<scope>.op_<구동하는 넷>`, 레지스터 `<scope>.<Q 넷>_reg` | 인스턴스 이름이 없어도 이름 기반을 유지(D1). origin 검사가 그 넷 이름으로 줄을 대조한다 |
+| A3 | `RTLGraph: Copy Agent Spec to Workspace`(명령 팔레트 + 폴더 우클릭)가 `.agent/RTLGRAPH_SPEC.md`, `.agent/ENVIRONMENT.md`, `.agent/rtlgraph-validate.mjs`, `.prompt/{rtlgraph,rtl}/{korean,english}.md` 를 쓴다. **명령으로만** 실행 | NodeGraph 와 같은 흐름. NodeGraph 는 ENVIRONMENT.md 를 활성화마다 워크스페이스에 몰래 썼다 |
+| A4 | 프롬프트 2종 — `rtlgraph`(기존 RTL → 회로도, RTL 수정 금지)와 `rtl`(사양 → 3층 RTL, 마지막에 회로도까지) — 각각 한국어·영어 | 사용자 요구 |
+| A5 | **에이전트용 검증기**를 의존성 없는 단일 파일로 번들해 같이 복사: 스키마 + 레지스트리 포트·폭 + 소스 파일 존재 + `origin` 줄 대조. 에러 0 이 될 때까지 돌리게 한다 | NodeGraph 는 체크리스트뿐이라 결과를 사람이 확인했다 |
+| A6 | 스펙은 영어. 사용자에게 보이는 문구(`meaning`, `label`, 진단)의 언어는 프롬프트가 정하고, ID·넷·모듈 이름은 번역하지 않는다 | |
+| A7 | 여러 컴포넌트면 컴포넌트마다 파일 하나. 시스템 파일은 아직 없음 | 시스템 뷰는 M6.5 |
+| A8 | Workflow B 의 테스트벤치는 negedge 에 입력을 바꾸고 posedge 에 샘플 | D01-2·sys-example 기준선이 같은 엣지 경합 때문에 시뮬레이터마다 달랐다 |
+| A9 | 프롬프트가 스펙의 워크플로 제목을 정확히 가리키는지, 스펙의 레지스트리 표가 실제 레지스트리와 같은지 테스트 | 문서와 코드가 어긋나던 NodeGraph 교훈 |
+
 ## 개발 환경
 
 - Node 22 의 타입 스트리핑 + `node:test`. 의존성은 `typescript`, `@types/node` 뿐.
