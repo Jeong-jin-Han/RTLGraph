@@ -1,13 +1,14 @@
 # RTLGraph — Agent Specification
 
-> **If you are an AI agent creating or editing a `*.rtlgraph.json` file, or writing RTL for an
-> RTLGraph project, read this whole document first.** Also read `.agent/ENVIRONMENT.md` (which
-> simulators and tools exist on this machine). Validate every file you write with
-> `node .agent/rtlgraph-validate.mjs <file>`.
+> **If you are an AI agent creating or editing RTLGraph files (`*.rtlgraph.json`,
+> `*.rtlgraph-schematic.json`), or writing RTL for an RTLGraph project, read this whole document
+> first.** Also read `.agent/ENVIRONMENT.md` (which simulators and tools exist on this machine).
+> Validate what you write with `node .agent/rtlgraph-validate.mjs <top>.rtlgraph.json`.
 
 RTLGraph is a VS Code extension that draws a high-level schematic — registers, `+1`/`ADD`/`SUB`
-boxes, MUXes, a control block with its truth table — from a `*.rtlgraph.json` file. The JSON is
-written by you from the RTL code. The extension only renders it; it never changes the RTL.
+boxes, MUXes, a control block with its truth table, component boxes that open into their own
+schematics — from JSON files written by you from the RTL code. The extension only renders them;
+it never changes the RTL.
 
 ---
 
@@ -15,7 +16,7 @@ written by you from the RTL code. The extension only renders it; it never change
 
 | The user gives you | Workflow | Result |
 |---|---|---|
-| A folder of **existing** RTL, asks for a schematic ("apply RTLGraph", "RTLGraph 만들어줘") | **Workflow A — RTL → RTLGraph** | `<top>.rtlgraph.json`, RTL untouched |
+| A folder of **existing** RTL, asks for a schematic ("apply RTLGraph", "RTLGraph 만들어줘") | **Workflow A — RTL → RTLGraph** | `<top>.rtlgraph.json` + one `<name>.rtlgraph-schematic.json` per component, RTL untouched |
 | A spec or a request to **write or restructure** RTL | **Workflow B — Spec → RTL** | RTL in the three-layer layout, then Workflow A |
 
 Run the chosen workflow end to end without asking for clarification.
@@ -37,7 +38,7 @@ cannot be recovered with confidence, record a diagnostic instead of guessing.
 ### Step 0 — Setup
 1. Read `.agent/ENVIRONMENT.md`.
 2. `PROJECT_FOLDER` is the folder the user named. **Do not modify any `.v`/`.sv` file.**
-3. If a `*.rtlgraph.json` already exists for the top, read it first (see Step 9).
+3. If RTLGraph files already exist for this project, read them first (see Step 9).
 
 ### Step 1 — Read the code
 - Read every `.v`/`.sv` file under `PROJECT_FOLDER`, plus any shared primitive library it
@@ -46,16 +47,34 @@ cannot be recovered with confidence, record a diagnostic instead of guessing.
 - For each module record: parameters, ports (direction, width), nets (width), instances with their
   port connections, `assign`s, `always` blocks, `case`/`casex` statements, and `// @sch:` comments.
 
-### Step 2 — Find the top and the components
+### Step 2 — Find the top, the components and the files to write
 - **Top** = a non-testbench module that no other module instantiates. If several remain, use the
   one whose name matches the project (or that instantiates the most), and mention the others in
   your final report.
-- **Component** = a directory that has its own `seq/` folder. Component names are whatever the
-  project uses; nothing is special about any name.
-  - Single component (layers at the project root, or a flat project): one file, `<top>.rtlgraph.json`
-    in `PROJECT_FOLDER`.
-  - Several components: one file per component, `<component>/<component top>.rtlgraph.json`, each
-    describing that component's own top. (A system-level overview file is not supported yet.)
+- **Component** = a directory that has its own `seq/` folder; its **component top** is the module in
+  that `seq/`. Component names are whatever the project uses; nothing is special about any name.
+  A component's **name** is its folder's name. In a project without component folders (layers at the
+  project root, or a flat project) the whole project is one component named after the top module
+  without a trailing `_top` (`acc_top` → `acc`). A name must be a Verilog identifier.
+- **Main component** = the component whose top is the top.
+- **Files** — always this hierarchy, even for a single component:
+
+  | File | Where | Holds |
+  |---|---|---|
+  | `<top>.rtlgraph.json` | `PROJECT_FOLDER` | the **root** (`kind: "system"`): the top's ports and component boxes only — no logic |
+  | `<name>.rtlgraph-schematic.json` | the component's folder | that component's **schematic** (`kind: "component"`), Steps 4–7 |
+
+  - **The root.** When the top only instantiates components and wires them together, the root
+    describes the top itself: one `component` box per component instance, one net per wire. Otherwise
+    (the usual case: the top has its own registers or logic) the top *is* the main component, and the
+    root holds the top's ports, one `component` box for the main component (`module` = the top,
+    `origin` = its `module` line) and one net per port.
+  - **A component inside a component** is a `component` box in the parent's schematic (Step 4a); its
+    schematic sits in its own folder, nested inside the parent's folder, and may contain boxes again.
+  - **No component folder in the code** (layers at the project root, or a flat project): create
+    `PROJECT_FOLDER/<name>/` holding only `<name>.rtlgraph-schematic.json`, with `source.root` `".."`.
+    Never move code.
+  - `*.rtlgraph-fsm.json` (state machines) is reserved; do not write it yet.
 
 ### Step 3 — Decide how conforming the code is
 The project **conforms** when it follows the RTLGraph authoring contract (Workflow B):
@@ -64,7 +83,7 @@ The project **conforms** when it follows the RTLGraph authoring contract (Workfl
 |---|---|
 | C1 | Clock edges only inside `DFF` instances in the component top (the only `posedge` is in the `DFF` primitive) |
 | C2 | All port connections by name `.port(sig)` |
-| C3 | Files in `comb/data_path/`, `comb/control_path/`, `seq/` (nested under a component folder when there are several) |
+| C3 | Files in `comb/data_path/`, `comb/control_path/`, `seq/` inside a component folder — the main component has one too |
 | C4 | Register nets come in `_D` / `_Q` pairs |
 | C5 | `assign` in the top is plain wiring (right-hand side is one identifier) |
 | C6 | Every net has exactly one driver |
@@ -88,12 +107,14 @@ and set `source.contractCheck` to `"pass"` (none), `"partial"` (only C3/C4/C5/C7
 
 ### Step 4a — Map conforming code
 Walk the hierarchy from the component top. **Node ids are instance paths from the component top**,
-joined with `.` (`CNT_FF`, `data_path.u_inc`, `data_path.u_ch0.u_add`).
+joined with `.` (`CNT_FF`, `data_path.u_inc`, `data_path.u_ch0.u_add`). Each component has its own
+schematic, so ids never reach into another component.
 
 | Code | Becomes |
 |---|---|
 | A port of the component top | port node `"@NAME"` |
 | Instance of a registry primitive (table below) | a node with that `module`, `kind` from the table, `params` from `#(...)` |
+| Instance of another component's top | **one** `component` node (id = instance path): `name` = that component's name, `module`, `ref` = its schematic's path relative to this file (`u_dev/dev.rtlgraph-schematic.json`), `ports` = the module's ports with directions, `params`/`consts` as for primitives. Not flattened |
 | Instance of a `comb/data_path` module, or any other project module | **not a node** — flatten: its contents become nodes with the instance name prefixed |
 | Instance of a `comb/control_path` module | **one** `control` node (id = instance path) with `truthTable` from its `casex` |
 | Vendor macro / IP you cannot read (`// @sch: blackbox`) | `blackbox` node, `rdelay` if given |
@@ -154,7 +175,8 @@ Every non-port node needs `flow` and `time`:
 | `control` | `comb` | `control` |
 | `blackbox` | `seq` if it has a read delay, else `comb` | `data` |
 
-Port nodes carry `dir` (`in`/`out`) and `flow` (same rule as nets), no `time`.
+Port nodes carry `dir` (`in`/`out`) and `flow` (same rule as nets), no `time`. `component` nodes carry
+neither `flow` nor `time` — what is inside them is tagged in their own schematic.
 
 ### Step 7 — Origins
 Every node gets `origin: { "file": <path relative to source.root>, "line": <1-based> }`:
@@ -166,18 +188,21 @@ checks that the line mentions the node's name (or, for `op_y`/`y_reg`, the net `
 ```bash
 node .agent/rtlgraph-validate.mjs <top>.rtlgraph.json
 ```
-Fix every **error** and every `origin-mismatch` / `registry-*` / `width` warning, then run it again,
-until it reports `0 errors`. `undriven` warnings that reflect real unconnected pins in the code stay,
+Run it on the root: it checks every schematic the root reaches, and that each `component` box has
+exactly the ports (and directions) of the schematic it points at (`hierarchy-ports`). Fix every
+**error** and every `origin-mismatch` / `registry-*` / `width` / `hierarchy-*` warning, then run it
+again, until it reports `0 errors`. `undriven` warnings that reflect real unconnected pins in the code stay,
 with a matching diagnostic in the file.
 
 ### Step 9 — Re-extraction
-When the file already exists: keep its `layout`, `view` and `created` untouched, regenerate
+For every file that already exists: keep its `layout`, `view` and `created` untouched, regenerate
 everything else, and update `modified`. Because node ids are names from the code, the user's
 placement survives.
 
 ### Step 10 — Finish
-Tell the user the file path(s), the validator summary, the contract check result, and that opening the
-file in VS Code shows the schematic (it refreshes automatically when the file changes).
+Tell the user the file paths, the validator summary, the contract check result, and that opening the
+root in VS Code shows the schematic with its components as boxes that fold and unfold (it refreshes
+automatically when any of the files changes).
 
 ---
 
@@ -191,15 +216,19 @@ Use when writing new RTL or restructuring existing RTL so it conforms (C1–C7 a
    edge is a race whose result differs between simulators). Save its output as `tb/baseline.txt`
    before changing anything. The refactor is done only when the new output is identical (`diff` empty).
    A behaviour change is not a refactor — never mix the two.
-3. **Create the main component skeleton before writing code:**
+3. **Create the main component folder before writing code** — always, even when it will be the only
+   component:
    ```
    <project>/
-   ├── comb/data_path/      combinational data logic — no clock
-   ├── comb/control_path/   combinational control logic — no clock
-   ├── seq/                 the top: DFF instances + wiring only — the only clock boundary
-   └── tb/                  testbenches, baseline.txt
+   ├── <top>.rtlgraph.json         root (Workflow A writes it)
+   └── <main>/                     the main component, named after what the design is
+       ├── comb/data_path/         combinational data logic — no clock
+       ├── comb/control_path/      combinational control logic — no clock
+       ├── seq/                    the component top: DFF instances + wiring only — the only clock boundary
+       ├── tb/                     testbenches, baseline.txt
+       └── <main>.rtlgraph-schematic.json   (Workflow A writes it)
    ```
-   Add a component folder (with its own `comb/`, `seq/`, `tb/`) only when the design really has a
+   Add a sub-component folder (with its own `comb/`, `seq/`, `tb/`) only when the design really has a
    separately clocked part; nest it inside the component that owns it. Name it after what it is.
 4. **Describe the datapath first**: the registers, and the boxes between them using the primitives
    below. Then write the control signal table (inputs → outputs, one row per case); that table becomes
@@ -220,7 +249,7 @@ Use when writing new RTL or restructuring existing RTL so it conforms (C1–C7 a
 7. **Shared primitives** stay in the shared library (`base/`). Move a project module there only when a
    *different* project needs the same thing with the same meaning; repetition inside one project is
    not a reason.
-8. **Run Workflow A** to produce or refresh the `*.rtlgraph.json`, and validate it.
+8. **Run Workflow A** to produce or refresh the root and the schematics, and validate the root.
 
 ---
 
@@ -243,18 +272,48 @@ is drawn as a generic box — that is normal, not an error.
 
 ---
 
-## File format — `*.rtlgraph.json`
+## File formats
+
+### Root — `<top>.rtlgraph.json`
+
+```jsonc
+{
+  "version": "0.1.0",
+  "kind": "system",
+  "title": "acc_top",                          // the top module
+  "created": "2026-09-14T00:00:00.000Z",
+  "modified": "2026-09-14T00:00:00.000Z",
+  "source": { "root": ".", "files": ["acc/seq/acc_top.v"], "top": "acc_top", "contractCheck": "partial" },
+  "signals": {
+    "CLK": { "width": 1, "flow": "clock", "driver": "@CLK", "sinks": ["acc:CLK"], "hidden": true, "origin": { "file": "acc/seq/acc_top.v", "line": 5 } },
+    "ACC": { "width": 6, "flow": "data", "driver": "acc:ACC", "sinks": ["@ACC"], "origin": { "file": "acc/seq/acc_top.v", "line": 13 } }
+    // ... one net per port
+  },
+  "nodes": {
+    "@CLK": { "kind": "port", "dir": "in", "flow": "clock", "origin": { "file": "acc/seq/acc_top.v", "line": 5 } },
+    "@ACC": { "kind": "port", "dir": "out", "flow": "data", "origin": { "file": "acc/seq/acc_top.v", "line": 13 } },
+    "acc": {
+      "kind": "component", "name": "acc", "module": "acc_top",
+      "ref": "acc/acc.rtlgraph-schematic.json",  // relative to this file
+      "ports": { "CLK": "in", "RST": "in", "SHOW": "in", "MODE": "in", "ACC": "out" },
+      "origin": { "file": "acc/seq/acc_top.v", "line": 3 }
+    }
+  }
+}
+```
+
+### Schematic — `<name>.rtlgraph-schematic.json`
 
 ```jsonc
 {
   "version": "0.1.0",
   "kind": "component",
-  "title": "acc_top",                          // the component top module
+  "title": "acc",                              // the component name
   "created": "2026-09-14T00:00:00.000Z",       // set once
   "modified": "2026-09-14T00:00:00.000Z",      // update on every write
   "source": {
-    "root": ".",                               // project root, relative to this JSON file
-    "lib": "../base",                          // shared primitives, relative to root (omit if none)
+    "root": ".",                               // the component's code folder, relative to this JSON file
+    "lib": "../../base",                       // shared primitives, relative to root (omit if none)
     "files": ["seq/acc_top.v", "comb/data_path/acc_dp.v", "comb/control_path/acc_cp.v"],
     "libFiles": ["DFF.v", "INC.v", "ADD.v", "SUB.v", "MUX2.v"],
     "top": "acc_top",
@@ -311,10 +370,12 @@ is drawn as a generic box — that is normal, not an error.
 
 | Field | Rule |
 |---|---|
-| top level | required: `version` (`"0.1.0"`), `kind` (`"component"`), `title`, `created`, `modified`, `source`, `signals`, `nodes`. Optional: `groups`, `layout`, `view`, `diagnostics` |
+| top level | required: `version` (`"0.1.0"`), `kind` (`"system"` for the root, `"component"` for a schematic), `title`, `created`, `modified`, `source`, `signals`, `nodes`. Optional: `groups`, `layout`, `view`, `diagnostics` |
+| root | only `port` and `component` nodes (a logic node there is the error `system-logic`) |
 | `source` | required `root`, `files`, `top`; optional `lib`, `libFiles`, `contractCheck` |
-| node `kind` | `port` · `reg` · `op` · `mux` · `control` · `module` · `blackbox` |
-| non-port node | required `flow` (`data`/`control`), `time` (`comb`/`seq`), `module`, `ports` (`{ pin: "in"/"out"/"inout" }`). Optional `params`, `consts`, `label`, `group`, `origin` |
+| node `kind` | `port` · `reg` · `op` · `mux` · `control` · `module` · `blackbox` · `component` |
+| logic node (not `port`/`component`) | required `flow` (`data`/`control`), `time` (`comb`/`seq`), `module`, `ports` (`{ pin: "in"/"out"/"inout" }`). Optional `params`, `consts`, `label`, `group`, `origin` |
+| `component` node | required `name` (identifier), `module`, `ref` (a `*.rtlgraph-schematic.json` path relative to this file), `ports` — exactly the ports of that schematic, same directions. Optional `params`, `consts`, `label`, `origin`. No `flow`/`time` |
 | `reg` extras | `rstKind` (`sync`/`async`), `rstPriority` (`rst>en`/`en>rst`), `rstValue` |
 | `control` extras | `truthTable` { `inputs`, `outputs`, `rows`: [{ `in`, `out`, `note?` }], `default?`: { `out` }, `origin` } with values `"0"`/`"1"`/`"x"`; or `equations`: [{ `output`, `expr` }] |
 | `blackbox` extras | `rdelay` |
@@ -329,6 +390,7 @@ is drawn as a generic box — that is normal, not an error.
 | Thing | Format | Example |
 |---|---|---|
 | Instance node | instance path from the component top | `CNT_FF`, `data_path.u_inc` |
+| Component node | instance path; in a root wrapping the main component, its name | `u_dev`, `acc` |
 | Inferred logic | `<scope>.op_<net it drives>` | `data_path.op_CNT_D` |
 | Inferred register | `<scope>.<Q net>_reg` | `ACC_Q_reg` |
 | Port node | `@` + port name | `@ACC` |
@@ -350,6 +412,8 @@ Never use line numbers or counters in ids — the user's layout is matched by id
 
 ## Checklist
 - [ ] RTL files untouched (Workflow A)
+- [ ] Root `<top>.rtlgraph.json` in the project folder; one `<name>.rtlgraph-schematic.json` per component in its folder (a folder of its own when the code has none)
+- [ ] Every component box's `ports` match its schematic's port nodes; `ref` resolves
 - [ ] Every register in the code is a `reg` node; every clock boundary is visible
 - [ ] Every primitive instance / inferred operation is a node; nothing drawn twice
 - [ ] Every net has exactly one `driver`; every input pin is a sink of one net or in `consts`
@@ -358,4 +422,4 @@ Never use line numbers or counters in ids — the user's layout is matched by id
 - [ ] Every node and net has an exact `origin`; control nodes have `truthTable.origin`
 - [ ] Contract violations and inferred elements listed in `diagnostics`; `contractCheck` set
 - [ ] Existing `layout`, `view`, `created` preserved; `modified` updated
-- [ ] `node .agent/rtlgraph-validate.mjs <file>` reports `0 errors`
+- [ ] `node .agent/rtlgraph-validate.mjs <top>.rtlgraph.json` reports `0 errors`

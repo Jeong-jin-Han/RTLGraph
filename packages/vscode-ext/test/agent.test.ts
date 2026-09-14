@@ -1,7 +1,7 @@
 import { test, before } from 'node:test'
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
-import { existsSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, relative } from 'node:path'
 import { BASE_REGISTRY } from '@rtlgraph/registry'
@@ -90,4 +90,34 @@ test('the bundled validator passes the golden graph and fails a broken one', () 
   assert.match(warned.stdout, /warn  origin-mismatch \(seq\/acc_top\.v:62, node CNT_FF\)/)
 
   assert.equal(run(join(dir, 'missing.json')).status, 1)
+})
+
+test('the bundled validator follows a root into its component schematics', () => {
+  const run = (file: string) => spawnSync(process.execPath, [join(ROOT, VALIDATOR_BUNDLE), file], { encoding: 'utf8' })
+  const PROJECT = join(ROOT, '../../demo/acc')
+  const ok = run(join(PROJECT, 'acc_top.rtlgraph.json'))
+  assert.equal(ok.status, 0, ok.stdout + ok.stderr)
+  assert.match(ok.stdout, /\+ acc\/acc\.rtlgraph-schematic\.json \(component acc\)/)
+  assert.match(ok.stdout, /0 errors, 0 warnings \(plus 2 diagnostics recorded in the files\)/)
+
+  // A copy whose child schematic is broken: the error names the file and the instance.
+  const dir = mkdtempSync(join(tmpdir(), 'rtlgraph-hierarchy-'))
+  const rootGraph = JSON.parse(readFileSync(join(PROJECT, 'acc_top.rtlgraph.json'), 'utf8'))
+  rootGraph.source.root = relative(dir, PROJECT)
+  writeFileSync(join(dir, 'acc_top.rtlgraph.json'), JSON.stringify(rootGraph))
+  const child = JSON.parse(readFileSync(GOLDEN, 'utf8'))
+  mkdirSync(join(dir, 'acc'))
+  child.source.root = relative(join(dir, 'acc'), join(PROJECT, 'acc'))
+  child.signals.CNT_D.driver = 'data_path.u_inc:a'
+  writeFileSync(join(dir, 'acc/acc.rtlgraph-schematic.json'), JSON.stringify(child))
+  const bad = run(join(dir, 'acc_top.rtlgraph.json'))
+  assert.equal(bad.status, 1)
+  assert.match(bad.stdout, /error endpoint \(node acc[^)]*net CNT_D\): acc\/acc\.rtlgraph-schematic\.json: /)
+
+  // A box whose ports disagree with its (valid again) schematic.
+  child.signals.CNT_D.driver = 'data_path.u_inc:y'
+  writeFileSync(join(dir, 'acc/acc.rtlgraph-schematic.json'), JSON.stringify(child))
+  rootGraph.nodes.acc.ports.EXTRA = 'in'
+  writeFileSync(join(dir, 'acc_top.rtlgraph.json'), JSON.stringify(rootGraph))
+  assert.match(run(join(dir, 'acc_top.rtlgraph.json')).stdout, /error hierarchy-ports \(node acc\)/)
 })
