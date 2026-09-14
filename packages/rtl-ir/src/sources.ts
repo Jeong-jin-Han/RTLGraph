@@ -13,15 +13,33 @@ const mentions = (text: string, token: string) =>
   new RegExp(`(^|[^A-Za-z0-9_$])${escapeRegExp(token)}(?!${IDENT_CHAR})`).test(text)
 const lastSegment = (name: string) => name.replace(/^@/, '').split('.').pop()!
 
-// Inferred nodes are named after the net they produce: "op_<net>" for logic
+// Inferred elements are named after the net they produce: "op_<net>" for logic
 // recovered from an expression, "<net>_reg" for a register recovered from an
-// always block. Their origin line mentions that net rather than the id.
+// always block, "<net>__t1" for a step of a split expression, "<net>_D" for the
+// value going into a register. None of those spellings is in the code, so the
+// origin line is allowed to mention the net they are derived from.
 export function originTokens(id: string): string[] {
   const seg = lastSegment(id)
-  const tokens = [seg]
-  if (seg.startsWith('op_') && seg.length > 3) tokens.push(seg.slice(3))
-  if (seg.endsWith('_reg') && seg.length > 4) tokens.push(seg.slice(0, -4))
-  return tokens
+  const tokens = new Set([seg])
+  let base = seg
+  const peel = (next: string | undefined) => {
+    if (next === undefined || next === '') return
+    base = next
+    tokens.add(next)
+  }
+  if (base.startsWith('op_')) peel(base.slice(3))
+  if (base.endsWith('_reg')) peel(base.slice(0, -4))
+  peel(/^(.+?)__t\d+$/.exec(base)?.[1])
+  return [...tokens]
+}
+
+// A net an extractor had to name itself — the value going into a register it
+// recovered ("q_D" for the code's "q"), or a step of a split expression — is
+// declared nowhere, so its origin line may name what it came from.
+const signalTokens = (name: string): string[] => {
+  const tokens = originTokens(name)
+  const paired = /^(.+)_[DQ]$/.exec(tokens[tokens.length - 1])?.[1]
+  return paired ? [...tokens, paired] : tokens
 }
 
 export function checkSources(graph: ComponentGraph, read: ReadSource): Diagnostic[] {
@@ -68,9 +86,16 @@ export function checkSources(graph: ComponentGraph, read: ReadSource): Diagnosti
     if (node.kind === 'control' && node.truthTable?.origin) {
       check(node.truthTable.origin, /\b(case[xz]?|if)\b/, `truth table of ${id}`, { node: id })
     }
+    if (node.kind === 'control') {
+      for (const eq of node.equations ?? []) {
+        if (eq.origin) check(eq.origin, originTokens(eq.output), `equation ${eq.output} of ${id}`, { node: id })
+      }
+    }
   }
   for (const [name, signal] of Object.entries(graph.signals)) {
-    if (signal.origin) check(signal.origin, [name, ...(signal.aliases ?? [])].map(lastSegment), `signal ${name}`, { signal: name })
+    if (signal.origin) {
+      check(signal.origin, [name, ...(signal.aliases ?? [])].flatMap(signalTokens), `signal ${name}`, { signal: name })
+    }
   }
   return out
 }

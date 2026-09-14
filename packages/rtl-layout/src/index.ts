@@ -243,7 +243,16 @@ export function layoutComponent(graph: ComponentGraph, options: LayoutOptions = 
   }
 
   // A port wired to exactly one pin that faces it is drawn as a straight stub
-  // right next to that pin instead of being routed through channels.
+  // right next to that pin instead of being routed through channels. That only
+  // works when the pin has room: two port boxes beside pins 8px apart overlap.
+  const pinRoom = (ref: string) => {
+    const shape = shapes.get(nodeOf(ref))!
+    const side = shape.sides.get(pinOf(ref))
+    if (side !== 'left' && side !== 'right') return true
+    const pins = pinsOf(0, 0, shape)
+    const ys = [...shape.sides].filter(([, s]) => s === side).map(([pin]) => pins[pin].y).sort((a, b) => a - b)
+    return ys.every((y, i) => i === 0 || y - ys[i - 1] >= PORT_H + 2)
+  }
   const directPort = new Map<string, string>() // port id -> the instance ref it hugs
   for (const [id, nets] of portNets) {
     const port = nodes[id] as PortNode
@@ -254,7 +263,7 @@ export function layoutComponent(graph: ComponentGraph, options: LayoutOptions = 
       shapes.set(id, shapeOf(id, port, port.dir === 'out' ? 'left' : 'right'))
       const s = signals[nets[0]]
       const sink = s.sinks[0]
-      if (port.dir === 'in' && nets.length === 1 && s.sinks.length === 1 && nodes[nodeOf(sink)].kind === 'control' && sideAt(sink) === 'left') {
+      if (port.dir === 'in' && nets.length === 1 && s.sinks.length === 1 && nodes[nodeOf(sink)].kind === 'control' && sideAt(sink) === 'left' && pinRoom(sink)) {
         directPort.set(id, sink)
       }
       continue
@@ -264,12 +273,15 @@ export function layoutComponent(graph: ComponentGraph, options: LayoutOptions = 
     if (port.dir === 'out') {
       const ds = nodes[nodeOf(s.driver)].kind === 'port' ? undefined : sideAt(s.driver)
       side = ds ? OPPOSITE[ds] : 'left'
-      if (nets.length === 1 && (ds === 'bottom' || ds === 'right')) directPort.set(id, s.driver)
+      // Only when this port is all the net feeds: another reader needs the channels.
+      if (nets.length === 1 && s.sinks.length === 1 && (ds === 'bottom' || ds === 'right') && pinRoom(s.driver)) {
+        directPort.set(id, s.driver)
+      }
     } else {
       const sink = s.sinks.find(ref => nodes[nodeOf(ref)].kind !== 'port')
       const ss = sink && sideAt(sink)
       side = ss ? OPPOSITE[ss] : 'right'
-      if (nets.length === 1 && s.sinks.length === 1 && ss === 'left') directPort.set(id, sink!)
+      if (nets.length === 1 && s.sinks.length === 1 && ss === 'left' && pinRoom(sink!)) directPort.set(id, sink!)
     }
     shapes.set(id, shapeOf(id, port, side))
   }
@@ -655,10 +667,13 @@ export function layoutComponent(graph: ComponentGraph, options: LayoutOptions = 
     }
     const plan = plans.get(name)
     if (!plan) {
+      // A hugging port: a straight stub. Bend once if the two pins do not line up.
       const s = signals[name]
       const a = pinAt(s.driver)
       const b = pinAt(s.sinks[0])
-      seg(a.x, a.y, b.x, b.y)
+      const corner = a.side === 'left' || a.side === 'right' ? { x: b.x, y: a.y } : { x: a.x, y: b.y }
+      seg(a.x, a.y, corner.x, corner.y)
+      seg(corner.x, corner.y, b.x, b.y)
     } else {
       for (const acc of plan.accesses) {
         const p = pinAt(acc.ref)
