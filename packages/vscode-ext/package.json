@@ -36,6 +36,10 @@
     ],
     "commands": [
       {
+        "command": "rtlgraph.copyAgentSpec",
+        "title": "RTLGraph: Copy Agent Spec to Workspace"
+      },
+      {
         "command": "rtlgraph.fitView",
         "title": "RTLGraph: Fit View"
       },
@@ -43,7 +47,16 @@
         "command": "rtlgraph.setPreset",
         "title": "RTLGraph: Set View Preset"
       }
-    ]
+    ],
+    "menus": {
+      "explorer/context": [
+        {
+          "command": "rtlgraph.copyAgentSpec",
+          "when": "explorerResourceIsFolder",
+          "group": "rtlgraph"
+        }
+      ]
+    }
   },
   "scripts": {
     "build": "node esbuild.mjs",

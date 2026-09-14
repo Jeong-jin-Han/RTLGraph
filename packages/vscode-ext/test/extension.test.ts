@@ -7,7 +7,7 @@ import { webviewHtml } from '../src/webview/html.ts'
 
 const ROOT = join(import.meta.dirname, '..')
 const manifest = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8'))
-const source = ['src/extension.ts', 'src/editorProvider.ts'].map(f => readFileSync(join(ROOT, f), 'utf8')).join('\n')
+const source = ['src/extension.ts', 'src/editorProvider.ts', 'src/agent/copyAgentSpec.ts'].map(f => readFileSync(join(ROOT, f), 'utf8')).join('\n')
 
 // NodeGraph once declared commands it never registered ("command not found").
 test('contributed commands and registered commands are the same set', () => {
@@ -17,6 +17,14 @@ test('contributed commands and registered commands are the same set', () => {
     .filter(id => !id.startsWith('rtlgraph._')) // internal commands stay out of the palette
     .sort()
   assert.deepEqual(declared, registered)
+})
+
+test('menus only reference contributed commands', () => {
+  const declared = new Set(manifest.contributes.commands.map((c: { command: string }) => c.command))
+  const menus = Object.values(manifest.contributes.menus).flat() as { command: string }[]
+  assert.ok(menus.length > 0)
+  for (const item of menus) assert.ok(declared.has(item.command), item.command)
+  assert.deepEqual(manifest.contributes.menus['explorer/context'].map((m: { command: string }) => m.command), ['rtlgraph.copyAgentSpec'])
 })
 
 test('custom editor view type is consistent across manifest and provider', () => {

@@ -1,6 +1,11 @@
 import * as vscode from 'vscode'
 import assert from 'node:assert/strict'
+import { spawnSync } from 'node:child_process'
+import { existsSync, mkdtempSync, readFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import type { RenderState } from '../src/protocol.ts'
+import { AGENT_FILES, ENVIRONMENT_FILE } from '../src/agent/files.ts'
 
 // Loaded by VS Code via --extensionTestsPath; resolves on success, throws on failure.
 
@@ -20,8 +25,23 @@ const renderState = () => vscode.commands.executeCommand<RenderState | undefined
 const log = (msg: string) => console.log(`[e2e] ✓ ${msg}`)
 
 export async function run(): Promise<void> {
-  const uri = vscode.Uri.file(process.env.RTLGRAPH_E2E_FILE!)
+  const graphFile = process.env.RTLGRAPH_E2E_FILE!
+  const uri = vscode.Uri.file(graphFile)
 
+  // ── Copy Agent Spec to Workspace ──
+  const folder = mkdtempSync(join(tmpdir(), 'rtlgraph-e2e-'))
+  const written = await vscode.commands.executeCommand<string[]>('rtlgraph.copyAgentSpec', vscode.Uri.file(folder))
+  const expected = [...AGENT_FILES.map(f => f.to), ENVIRONMENT_FILE].sort()
+  assert.deepEqual([...(written ?? [])].sort(), expected)
+  for (const file of expected) assert.ok(existsSync(join(folder, file)), file)
+  assert.match(readFileSync(join(folder, ENVIRONMENT_FILE), 'utf8'), /^# RTLGraph — Agent Environment Report/)
+  log(`Copy Agent Spec wrote ${expected.length} files: spec, validator, environment report, 4 prompts`)
+
+  const validate = spawnSync('node', [join(folder, '.agent/rtlgraph-validate.mjs'), graphFile], { encoding: 'utf8' })
+  assert.equal(validate.status, 0, validate.stdout + validate.stderr)
+  log('the copied validator runs on its own: ' + validate.stdout.trim().split('\n').pop()!.trim())
+
+  // ── custom editor ──
   await vscode.commands.executeCommand('vscode.open', uri)
   const tab = await until('the custom editor tab', () => {
     const active = vscode.window.tabGroups.activeTabGroup.activeTab

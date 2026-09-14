@@ -1,0 +1,93 @@
+import { test, before } from 'node:test'
+import assert from 'node:assert/strict'
+import { spawnSync } from 'node:child_process'
+import { existsSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join, relative } from 'node:path'
+import { BASE_REGISTRY } from '@rtlgraph/registry'
+import { AGENT_FILES, PROMPT_KINDS, PROMPT_LANGUAGES, VALIDATOR_BUNDLE } from '../src/agent/files.ts'
+import { buildEnvironmentReport } from '../src/agent/environment.ts'
+
+const ROOT = join(import.meta.dirname, '..')
+const GOLDEN = join(ROOT, '../../demo/acc/acc_top.rtlgraph.json')
+const read = (path: string) => readFileSync(join(ROOT, path), 'utf8')
+const flat = (text: string) => text.replace(/\s+/g, ' ')
+const spec = read('assets/agent/RTLGRAPH_SPEC.md')
+
+before(() => {
+  const build = spawnSync(process.execPath, ['esbuild.mjs'], { cwd: ROOT, encoding: 'utf8' })
+  assert.equal(build.status, 0, build.stderr)
+})
+
+test('every file the command copies exists in the extension', () => {
+  for (const { from } of AGENT_FILES) assert.ok(existsSync(join(ROOT, from)), from)
+  assert.equal(AGENT_FILES.filter(f => f.to.startsWith('.prompt/')).length, PROMPT_KINDS.length * PROMPT_LANGUAGES.length)
+})
+
+test('prompts: two kinds in two languages, each pointing at a workflow the spec defines', () => {
+  const workflows = [...spec.matchAll(/^## (Workflow [AB] — .+)$/gm)].map(m => m[1])
+  assert.equal(workflows.length, 2)
+  const expected = { rtlgraph: workflows[0], rtl: workflows[1] }
+  for (const kind of PROMPT_KINDS) {
+    for (const language of PROMPT_LANGUAGES) {
+      const prompt = flat(read(`assets/prompt/${kind}/${language}.md`))
+      assert.ok(prompt.includes(`"${expected[kind]}"`), `${kind}/${language} names "${expected[kind]}"`)
+      for (const needle of ['.agent/RTLGRAPH_SPEC.md', '.agent/ENVIRONMENT.md', 'rtlgraph-validate.mjs', '<PROJECT_ROOT_ABSOLUTE_PATH>']) {
+        assert.ok(prompt.includes(needle), `${kind}/${language} mentions ${needle}`)
+      }
+    }
+  }
+  assert.ok(flat(read('assets/prompt/rtlgraph/korean.md')).includes('절대 수정하지 마'))
+  assert.ok(read('assets/prompt/rtl/english.md').includes('REQUEST ='))
+})
+
+test('the spec registry table matches the real registry', () => {
+  for (const def of Object.values(BASE_REGISTRY)) {
+    const row = spec.split('\n').find(line => line.startsWith(`| \`${def.module}\` |`))
+    assert.ok(row, `spec lists ${def.module}`)
+    assert.ok(row.includes(`\`${def.kind}\``), `${def.module} kind`)
+    for (const port of def.ports) assert.ok(row.includes(`\`${port.name}\``), `${def.module}.${port.name}`)
+  }
+})
+
+test('environment report recommends the validator and the simulator that exists', () => {
+  const found = buildEnvironmentReport({
+    generated: '2026-09-14T00:00:00.000Z', platform: 'linux', node: 'v22.22.1',
+    verilator: 'Verilator 5.020', vivadoSettings: ['/tools/Xilinx/Vivado/2024.2/settings64.sh'],
+  })
+  assert.match(found, /\| Node\.js \| ✅ `v22\.22\.1` \|/)
+  assert.match(found, /\| Icarus Verilog \| ❌ \| Install: `sudo apt install iverilog` \|/)
+  assert.match(found, /source \/tools\/Xilinx\/Vivado\/2024\.2\/settings64\.sh/)
+  assert.match(found, /verilator --lint-only -Wall/)
+
+  const bare = buildEnvironmentReport({ generated: 'x', platform: 'win32', vivadoSettings: [] })
+  assert.match(bare, /Node\.js not found/)
+  assert.match(bare, /No Verilog simulator found/)
+})
+
+test('the bundled validator passes the golden graph and fails a broken one', () => {
+  const run = (file: string) => spawnSync(process.execPath, [join(ROOT, VALIDATOR_BUNDLE), file], { encoding: 'utf8' })
+  const ok = run(GOLDEN)
+  assert.equal(ok.status, 0, ok.stdout + ok.stderr)
+  assert.match(ok.stdout, /0 errors, 0 warnings \(plus 2 diagnostics recorded in the file\)/)
+
+  const dir = mkdtempSync(join(tmpdir(), 'rtlgraph-validate-'))
+  const graph = JSON.parse(readFileSync(GOLDEN, 'utf8'))
+  graph.source.root = relative(dir, join(GOLDEN, '..'))
+  graph.signals.CNT_D.driver = 'data_path.u_inc:a'
+  graph.nodes.CNT_FF.origin.line = 62
+  const broken = join(dir, 'acc_top.rtlgraph.json')
+  writeFileSync(broken, JSON.stringify(graph))
+  const bad = run(broken)
+  assert.equal(bad.status, 1)
+  assert.match(bad.stdout, /error endpoint \(net CNT_D\)/)
+  assert.doesNotMatch(bad.stdout, /origin-mismatch/) // source checks run only on structurally valid graphs
+
+  graph.signals.CNT_D.driver = 'data_path.u_inc:y'
+  writeFileSync(broken, JSON.stringify(graph))
+  const warned = run(broken)
+  assert.equal(warned.status, 0)
+  assert.match(warned.stdout, /warn  origin-mismatch \(seq\/acc_top\.v:62, node CNT_FF\)/)
+
+  assert.equal(run(join(dir, 'missing.json')).status, 1)
+})

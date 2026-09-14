@@ -26,6 +26,17 @@ const configs = [
     external: ['vscode'],
   },
   {
+    // Copied alone into a user's .agent/ folder, so no source map beside it.
+    ...common,
+    sourcemap: false,
+    entryPoints: ['src/agent/validate-cli.ts'],
+    outfile: 'dist/agent/rtlgraph-validate.mjs',
+    platform: 'node',
+    format: 'esm',
+    target: 'node18',
+    banner: { js: '#!/usr/bin/env node' },
+  },
+  {
     ...common,
     entryPoints: ['src/webview/main.ts'],
     outfile: 'dist/webview.js',
