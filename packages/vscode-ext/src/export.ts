@@ -27,7 +27,9 @@ export async function exportSchematic(source: ExportSource, formats: readonly Ex
   const folder = vscode.Uri.joinPath(source.document.uri, '..', exportFolderName(pattern, name))
   await vscode.workspace.fs.createDirectory(folder)
 
-  const options = { filter: source.filter, isUnfolded: (instance: string) => source.unfolded.includes(instance) }
+  // unwrap: a figure of a design with one main component shows that component,
+  // not a frame drawn around the whole picture.
+  const options = { filter: source.filter, isUnfolded: (instance: string) => source.unfolded.includes(instance), unwrap: true }
   const files: vscode.Uri[] = []
   const warnings: string[] = []
   for (const format of formats) {

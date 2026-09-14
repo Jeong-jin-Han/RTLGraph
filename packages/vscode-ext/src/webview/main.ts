@@ -142,7 +142,8 @@ function render() {
 // a canvas at `scale` and return it base64-encoded.
 async function rasterize(scale: number): Promise<string> {
   if (!root || !layout) throw new Error('nothing is drawn yet')
-  const scene = buildHierarchyScene(root, { filter, layout, isUnfolded })
+  // The PNG is an export like the others: same scene, wrapper root left out.
+  const scene = buildHierarchyScene(root, { filter, isUnfolded, unwrap: true })
   const url = URL.createObjectURL(new Blob([sceneToSvg(scene)], { type: 'image/svg+xml' }))
   try {
     const image = new Image()

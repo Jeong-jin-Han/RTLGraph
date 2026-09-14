@@ -4,13 +4,15 @@ import { basename, dirname, join } from 'node:path'
 import { FILTER_PRESETS, loadHierarchy, type FilterPreset } from '@rtlgraph/ir'
 import { renderHierarchyPdf, renderHierarchySvg } from './index.ts'
 
-// rtlgraph-render <file> [preset] [--format svg|pdf] [--unfold] [-o file]
+// rtlgraph-render <file> [preset] [--format svg|pdf] [--unfold] [--keep-root] [-o file]
 // <file> is a root *.rtlgraph.json or a *.rtlgraph-schematic.json; the component
-// schematics it refers to are loaded too, and --unfold opens every one of them.
+// schematics it refers to are loaded too, and --unfold opens every one of them. A
+// root that only wraps one open component is left out of the picture; --keep-root
+// draws it as the editor does.
 // Writes to stdout unless -o is given. PNG needs a browser canvas; use the extension.
 
 const usage = () => {
-  process.stderr.write(`usage: rtlgraph-render <file> [${Object.keys(FILTER_PRESETS).join('|')}] [--format svg|pdf] [--unfold] [-o file]\n`)
+  process.stderr.write(`usage: rtlgraph-render <file> [${Object.keys(FILTER_PRESETS).join('|')}] [--format svg|pdf] [--unfold] [--keep-root] [-o file]\n`)
   process.exit(2)
 }
 
@@ -18,11 +20,13 @@ const args = process.argv.slice(2)
 let format = 'svg'
 let output: string | undefined
 let unfold = false
+let keepRoot = false
 const positional: string[] = []
 for (let i = 0; i < args.length; i++) {
   if (args[i] === '--format') format = args[++i] ?? ''
   else if (args[i] === '-o') output = args[++i]
   else if (args[i] === '--unfold') unfold = true
+  else if (args[i] === '--keep-root') keepRoot = true
   else positional.push(args[i])
 }
 const [file, preset = 'all'] = positional
@@ -41,7 +45,7 @@ for (const d of diagnostics) {
 }
 if (!root || diagnostics.some(d => d.severity === 'error')) process.exit(1)
 
-const options = { filter: FILTER_PRESETS[preset as FilterPreset], isUnfolded: () => unfold }
+const options = { filter: FILTER_PRESETS[preset as FilterPreset], isUnfolded: () => unfold, unwrap: !keepRoot }
 let bytes: string | Uint8Array
 if (format === 'pdf') {
   const pdf = renderHierarchyPdf(root, options)

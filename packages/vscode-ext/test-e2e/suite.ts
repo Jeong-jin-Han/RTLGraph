@@ -74,8 +74,9 @@ export async function run(): Promise<void> {
     assert.deepEqual(exported, ['svg', 'png', 'pdf'].map(ext => join(outDir, `acc_top.datapath.${ext}`)))
     const svg = readFileSync(exported[0], 'utf8')
     const [, , width, height] = /viewBox="(-?\d+) (-?\d+) (\d+) (\d+)"/.exec(svg)!.slice(1).map(Number)
-    assert.ok(svg.includes('data-node-id="acc/data_path.u_mux"'))
-    assert.ok(!svg.includes('data-node-id="acc/control_path"'))
+    // the wrapper root is left out of a figure: ids are the component's own
+    assert.ok(svg.includes('data-node-id="data_path.u_mux"'))
+    assert.ok(!svg.includes('data-node-id="acc"') && !svg.includes('data-node-id="control_path"'))
     const png = readFileSync(exported[1])
     assert.deepEqual([...png.subarray(0, 8)], [137, 80, 78, 71, 13, 10, 26, 10])
     assert.deepEqual([png.readUInt32BE(16), png.readUInt32BE(20)], [width * 2, height * 2])

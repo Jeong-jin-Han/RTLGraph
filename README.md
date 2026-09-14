@@ -47,12 +47,17 @@ acc/.out-acc_top/acc_top.datapath.png   2× image; slides, chat
 acc/.out-acc_top/acc_top.datapath.pdf   vector; papers, reports
 ```
 
+A figure holds the schematic and nothing else: the fold markers stay in the editor, and a root that
+only wraps one main component is left out — the export draws that component, laid out as in its
+frame, without the frame or the doubled port pills.
+
 The file name carries the view (`all`, `datapath`, `controlpath`, `comb`, `seq`, or the raw filter).
 The folder is the `rtlgraph.export.folder` setting, default `.out-${name}` — hidden, like NodeGraph's
 `.<name>-imgs`; set it to `out-${name}` for a visible folder. PDF text uses the built-in Helvetica font, so non-Latin labels
 (e.g. Hangul) show as `?` there — you are warned, and SVG/PNG show them correctly.
 
-Without VS Code: `node packages/rtl-render/src/cli.ts <graph> datapath --unfold --format pdf -o out.pdf`.
+Without VS Code: `node packages/rtl-render/src/cli.ts <graph> datapath --unfold --format pdf -o out.pdf`
+(add `--keep-root` to draw the wrapper root as the editor does).
 
 ### Files
 

@@ -51,6 +51,9 @@ export interface HierarchyRenderOptions {
   // Draw the fold markers a reader can click. They belong to the editor, not to an
   // exported figure, so this is off by default.
   controls?: boolean
+  // For a figure: when the root only wraps one open component, draw that component
+  // itself. The frame around everything and the doubled port pills say nothing.
+  unwrap?: boolean
   layout?: NestedLayout // must have been laid out with the same isUnfolded
 }
 
@@ -252,10 +255,29 @@ export function buildScene(graph: ComponentGraph, options: RenderOptions = {}): 
 // A loaded hierarchy, with the open components drawn as frames around their schematics.
 export function buildHierarchyScene(root: HierarchyEntry, options: HierarchyRenderOptions = {}): Scene {
   const isUnfolded = options.isUnfolded ?? (() => false)
-  const layout = options.layout ?? layoutHierarchy(root, isUnfolded)
+  const inner = options.unwrap ? wrappedComponent(root, isUnfolded) : undefined
+  const entry = inner ?? root
+  // A passed layout belongs to the root that was asked for, not to the one inside it.
+  // The unwrapped component keeps the arrangement it has inside its frame — ports on
+  // the boundary — so the figure is what the editor shows, minus the frame.
+  const layout = (inner ? undefined : options.layout) ?? layoutHierarchy(entry, isUnfolded, inner !== undefined)
   const canvas: Canvas = { filter: options.filter ?? FILTER_PRESETS.all, controls: options.controls === true, groups: [], xs: [], ys: [] }
-  drawLevel(canvas, root.graph, layout, layout.children, root.children, 0, 0, '')
+  drawLevel(canvas, entry.graph, layout, layout.children, entry.children, 0, 0, '')
   return sceneOf(canvas, layout.width, layout.height, options.crop ?? true)
+}
+
+// The one component an otherwise empty root wraps: ports, one box, and nets that
+// only carry a port to it. Undefined when the root says anything of its own.
+function wrappedComponent(root: HierarchyEntry, isUnfolded: (instance: string) => boolean): HierarchyEntry | undefined {
+  if (root.graph.kind !== 'system') return undefined
+  const boxes = Object.entries(root.graph.nodes).filter(([, n]) => n.kind === 'component')
+  if (boxes.length !== 1) return undefined
+  const [id] = boxes[0]
+  const child = root.children[id]
+  if (!child || !isUnfolded(child.instance)) return undefined
+  const wiringOnly = Object.values(root.graph.signals)
+    .every(s => [s.driver, ...s.sinks].every(ref => ref.startsWith('@') || parseEndpoint(ref).node === id))
+  return wiringOnly ? child : undefined
 }
 
 export function renderSvg(graph: ComponentGraph, options: RenderOptions = {}): string {

@@ -90,6 +90,17 @@ test('fold markers are drawn for the editor only, never in an export', () => {
   assert.ok(marker(renderHierarchySvg(root, { isUnfolded: () => true, controls: true })) > 0)
 })
 
+test('an export leaves out a root that only wraps one component', () => {
+  const figure = renderHierarchySvg(root, { isUnfolded: () => true, unwrap: true })
+  assert.deepEqual(nodeIds(figure), nodeIds(render('all'))) // exactly the component's own schematic
+  assert.ok(!figure.includes('data-node-id="acc"'))
+  assert.equal(figure.match(/>ACC<\/text>/g)?.length, 1) // one port pill, not the doubled pair
+
+  // Folded, or with something of its own in the root, the root stays.
+  assert.ok(renderHierarchySvg(root, { unwrap: true }).includes('data-node-id="acc"'))
+  assert.ok(renderHierarchySvg(sysRoot, { isUnfolded: () => true, unwrap: true }).includes('data-node-id="u_host"'))
+})
+
 test('the filter applies inside frames, connectors included', () => {
   const svg = renderHierarchySvg(root, { isUnfolded: () => true, filter: FILTER_PRESETS.datapath })
   assert.ok(!svg.includes('stroke-dasharray'))
