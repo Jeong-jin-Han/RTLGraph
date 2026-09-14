@@ -710,6 +710,8 @@ export function layoutComponent(graph: ComponentGraph, options: LayoutOptions = 
     wires[name] = { segments, junctions: junctionsOf(segments) }
   }
 
+  tidyWires(signals, boxes, wires, pinAt)
+
   const width = Math.max(...Object.values(boxes).map(b => b.x + b.w), ...Object.values(wires).flatMap(w => w.segments.map(s => Math.max(s.x1, s.x2)))) + MARGIN
   return { width, height, nodes: boxes, wires }
 }
@@ -753,4 +755,117 @@ export function onSegment(p: Point, s: Segment): boolean {
     p.y >= Math.min(s.y1, s.y2) && p.y <= Math.max(s.y1, s.y2) &&
     (s.x1 === s.x2 ? p.x === s.x1 : p.y === s.y1)
   )
+}
+
+// A wire between two pins that face each other should run straight across, or
+// step once when they are a little apart — not dive down to a channel and climb
+// back. The channel router cannot see that, so the detour is undone afterwards,
+// and only when the simpler path stays clear of every box and every other net.
+function tidyWires(
+  signals: ComponentGraph['signals'],
+  boxes: Record<string, NodeBox>,
+  wires: Record<string, Wire>,
+  pinAt: (ref: string) => Pin,
+): void {
+  const spans = (s: Segment, t: Segment) => {
+    const vertical = s.x1 === s.x2 && t.x1 === t.x2 && s.x1 === t.x1
+    const horizontal = s.y1 === s.y2 && t.y1 === t.y2 && s.y1 === t.y1
+    if (!vertical && !horizontal) return false
+    const [p1, p2, q1, q2] = vertical
+      ? [Math.min(s.y1, s.y2), Math.max(s.y1, s.y2), Math.min(t.y1, t.y2), Math.max(t.y1, t.y2)]
+      : [Math.min(s.x1, s.x2), Math.max(s.x1, s.x2), Math.min(t.x1, t.x2), Math.max(t.x1, t.x2)]
+    return Math.min(p2, q2) - Math.max(p1, q1) > 0
+  }
+  const throughBox = (s: Segment) =>
+    Object.values(boxes).some(b =>
+      Math.min(s.x1, s.x2) < b.x + b.w - 1 && Math.max(s.x1, s.x2) > b.x + 1 &&
+      Math.min(s.y1, s.y2) < b.y + b.h - 1 && Math.max(s.y1, s.y2) > b.y + 1)
+  const overlapsAnother = (name: string, s: Segment) =>
+    Object.entries(wires).some(([other, w]) => other !== name && w.segments.some(t => spans(s, t)))
+
+  for (const [name, wire] of Object.entries(wires)) {
+    const signal = signals[name]
+    if (signal.sinks.length !== 1 || wire.segments.length < 2) continue
+    const a = pinAt(signal.driver)
+    const b = pinAt(signal.sinks[0])
+    const sideways = (p: Pin) => p.side === 'left' || p.side === 'right'
+    const facing = sideways(a) && sideways(b) &&
+      (a.x < b.x ? a.side === 'right' && b.side === 'left' : b.side === 'right' && a.side === 'left')
+    if (!facing || Math.abs(a.x - b.x) < 2 * PITCH) continue
+
+    const step = (xm: number): Segment[] => [
+      { x1: a.x, y1: a.y, x2: xm, y2: a.y },
+      { x1: xm, y1: a.y, x2: xm, y2: b.y },
+      { x1: xm, y1: b.y, x2: b.x, y2: b.y },
+    ].filter(s => s.x1 !== s.x2 || s.y1 !== s.y2)
+    const middle = Math.round((a.x + b.x) / 2)
+    const tries = [middle, ...Array.from({ length: 12 }, (_, k) => [middle + (k + 1) * PITCH, middle - (k + 1) * PITCH]).flat()]
+      .filter(xm => xm > Math.min(a.x, b.x) + 1 && xm < Math.max(a.x, b.x) - 1)
+      .map(step)
+    const better = tries.find(segs => segs.length < wire.segments.length && segs.every(s => !throughBox(s) && !overlapsAnother(name, s)))
+    if (better) wires[name] = { segments: better, junctions: [] }
+  }
+
+  // A step of a few pixels between two long parallel runs reads as a wobble. Push
+  // it to one end of the run, where it merges with the turn that is already there.
+  for (const [name, wire] of Object.entries(wires)) {
+    if (signals[name].sinks.length !== 1) continue
+    let points = pathOf(wire.segments, pinAt(signals[name].driver))
+    if (!points) continue
+    for (let pass = 0; pass < 4; pass++) {
+      const next = unwobble(points, segs => segs.every(s => !throughBox(s) && !overlapsAnother(name, s)))
+      if (!next) break
+      points = next
+    }
+    const segments = segmentsOf(points)
+    if (segments.length < wire.segments.length) wires[name] = { segments, junctions: [] }
+  }
+}
+
+const merged = (points: Point[]): Point[] => {
+  const out = [points[0]]
+  for (const p of points.slice(1)) {
+    const last = out[out.length - 1]
+    if (p.x === last.x && p.y === last.y) continue
+    const before = out[out.length - 2]
+    if (before && ((before.x === last.x && p.x === last.x) || (before.y === last.y && p.y === last.y))) out.pop()
+    out.push(p)
+  }
+  return out
+}
+
+const segmentsOf = (points: Point[]): Segment[] =>
+  points.slice(1).map((p, i) => ({ x1: points[i].x, y1: points[i].y, x2: p.x, y2: p.y }))
+
+// The vertices of a wire that runs from one pin to one other, in order.
+function pathOf(segments: Segment[], from: Pin): Point[] | undefined {
+  const left = [...segments]
+  const points: Point[] = [{ x: from.x, y: from.y }]
+  while (left.length > 0) {
+    const here = points[points.length - 1]
+    const i = left.findIndex(s => (s.x1 === here.x && s.y1 === here.y) || (s.x2 === here.x && s.y2 === here.y))
+    if (i < 0) return undefined // a fork or a gap: not a simple path
+    const s = left.splice(i, 1)[0]
+    points.push(s.x1 === here.x && s.y1 === here.y ? { x: s.x2, y: s.y2 } : { x: s.x1, y: s.y1 })
+  }
+  return merged(points)
+}
+
+// Moves the first short step it finds to either end of its run; undefined when
+// none is left or neither way is clear.
+function unwobble(points: Point[], clear: (segments: Segment[]) => boolean): Point[] | undefined {
+  for (let i = 1; i + 2 < points.length; i++) {
+    const [before, a, b, after] = points.slice(i - 1, i + 3)
+    if (Math.abs(b.x - a.x) + Math.abs(b.y - a.y) > PITCH) continue
+    const vertical = before.x === a.x && b.x === after.x
+    const horizontal = before.y === a.y && b.y === after.y
+    if (!vertical && !horizontal) continue
+    const early = vertical ? { x: b.x, y: before.y } : { x: before.x, y: b.y }
+    const late = vertical ? { x: a.x, y: after.y } : { x: after.x, y: a.y }
+    for (const corner of [late, early]) {
+      const candidate = merged([...points.slice(0, i), corner, ...points.slice(i + 2)])
+      if (candidate.length < merged(points).length && clear(segmentsOf(candidate))) return candidate
+    }
+  }
+  return undefined
 }
