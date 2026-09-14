@@ -187,7 +187,7 @@ function shapeOf(id: string, node: RtlNode, portSide: Side, frame?: Frame): Shap
   const left = [...sides.values()].filter(s => s === 'left').length
   const longest = Math.max(0, ...Object.keys(node.ports).map(textWidth))
   return {
-    w: Math.max(110, textWidth(node.module) + 24, longest * 2 + 30),
+    w: Math.max(110, textWidth(node.kind === 'component' ? node.label ?? node.name : node.module) + 24 + (node.kind === 'component' ? 20 : 0), longest * 2 + 30),
     h: TITLE_H + Math.max(left, sides.size - left, 1) * PIN_STEP + 6,
     titled: true,
     sides,
@@ -249,7 +249,14 @@ export function layoutComponent(graph: ComponentGraph, options: LayoutOptions = 
     const port = nodes[id] as PortNode
     if (boundary) {
       // Inside a frame a port meets the frame edge: inputs face right, outputs left.
+      // An input can still sit next to a pin of the control block, which leads its
+      // row, so nothing lies between the edge and the port (checked below).
       shapes.set(id, shapeOf(id, port, port.dir === 'out' ? 'left' : 'right'))
+      const s = signals[nets[0]]
+      const sink = s.sinks[0]
+      if (port.dir === 'in' && nets.length === 1 && s.sinks.length === 1 && nodes[nodeOf(sink)].kind === 'control' && sideAt(sink) === 'left') {
+        directPort.set(id, sink)
+      }
       continue
     }
     const s = signals[nets[0]]
@@ -265,6 +272,15 @@ export function layoutComponent(graph: ComponentGraph, options: LayoutOptions = 
       if (nets.length === 1 && s.sinks.length === 1 && ss === 'left') directPort.set(id, sink!)
     }
     shapes.set(id, shapeOf(id, port, side))
+  }
+  if (boundary) {
+    // That holds only for a single control block with no other input port in its row.
+    const controls = ids.filter(id => nodes[id].kind === 'control')
+    const crowded = [...portNets.keys()].some(id => {
+      if (directPort.has(id) || (nodes[id] as PortNode).dir === 'out') return false
+      return signals[portNets.get(id)![0]].sinks.some(ref => nodes[nodeOf(ref)].kind === 'control')
+    })
+    if (controls.length !== 1 || crowded) directPort.clear()
   }
   const directNets = new Set<string>()
   for (const id of directPort.keys()) directNets.add(portNets.get(id)![0])
@@ -330,6 +346,7 @@ export function layoutComponent(graph: ComponentGraph, options: LayoutOptions = 
   if (boundary) {
     const groups = new Map<string, string[]>()
     for (const id of portNets.keys()) {
+      if (directPort.has(id)) continue
       const key = `${row.get(id)}:${(nodes[id] as PortNode).dir}`
       groups.set(key, [...(groups.get(key) ?? []), id])
     }

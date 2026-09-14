@@ -2,8 +2,8 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { FILTER_PRESETS, type ComponentGraph, type FilterPreset } from '@rtlgraph/ir'
-import { renderSvg } from '../src/index.ts'
+import { FILTER_PRESETS, loadHierarchy, type ComponentGraph, type FilterPreset } from '@rtlgraph/ir'
+import { renderHierarchySvg, renderSvg } from '../src/index.ts'
 
 const DEMO = join(import.meta.dirname, '../../../demo/acc/acc')
 const graph = JSON.parse(readFileSync(join(DEMO, 'acc.rtlgraph-schematic.json'), 'utf8')) as ComponentGraph
@@ -47,6 +47,46 @@ test('text is escaped', () => {
   assert.ok(renderSvg(g).includes('>a&lt;b &amp; &quot;c&quot;</text>'))
 })
 
+// ── hierarchy ──
+const PROJECT = join(DEMO, '..')
+const fromDisk = (path: string) => {
+  try {
+    return readFileSync(join(PROJECT, path), 'utf8')
+  } catch {
+    return undefined
+  }
+}
+const root = loadHierarchy('acc_top.rtlgraph.json', fromDisk).root!
+const classOf = (svg: string, id: string) => new RegExp(`<g class="([^"]+)" data-node-id="${id}"`).exec(svg)?.[1]
+
+test('a flat schematic draws the same through the hierarchy renderer', () => {
+  const flat = loadHierarchy('acc/acc.rtlgraph-schematic.json', fromDisk).root!
+  assert.equal(renderHierarchySvg(flat), renderSvg(graph))
+})
+
+test('folded, the root shows its ports and one component box', () => {
+  const svg = renderHierarchySvg(root)
+  assert.deepEqual(nodeIds(svg), ['@ACC', '@MODE', '@RST', '@SHOW', 'acc'])
+  assert.equal(classOf(svg, 'acc'), 'node component folded')
+  assert.ok(svg.includes('>acc</text>'))
+})
+
+test('unfolded, the child is drawn inside the frame under prefixed ids', () => {
+  const svg = renderHierarchySvg(root, { isUnfolded: () => true })
+  assert.equal(classOf(svg, 'acc'), 'node component unfolded')
+  const inner = nodeIds(svg).filter(id => id.startsWith('acc/'))
+  assert.deepEqual(inner, nodeIds(render('all')).map(id => `acc/${id}`).sort())
+  for (const name of ['acc/ACC_D', 'acc/RST', 'acc/SHOW', 'acc/MODE', 'acc/OUT_Q']) assert.ok(signalIds(svg).includes(name), name)
+  assert.equal([...svg.matchAll(/class="wire connector /g)].length, 4) // RST SHOW MODE ACC; CLK is hidden
+})
+
+test('the filter applies inside frames, connectors included', () => {
+  const svg = renderHierarchySvg(root, { isUnfolded: () => true, filter: FILTER_PRESETS.datapath })
+  assert.ok(!svg.includes('stroke-dasharray'))
+  assert.ok(nodeIds(svg).includes('acc/data_path.u_mux'))
+  assert.ok(!nodeIds(svg).includes('acc/control_path'))
+})
+
 // Golden SVGs: regenerate with `npm run golden` after an intended visual change.
 for (const preset of ['all', 'datapath'] as const) {
   test(`matches the golden ${preset} SVG`, () => {
@@ -56,3 +96,10 @@ for (const preset of ['all', 'datapath'] as const) {
     assert.equal(svg, readFileSync(file, 'utf8'))
   })
 }
+
+test('matches the golden unfolded root SVG', () => {
+  const file = join(PROJECT, 'acc_top.svg')
+  const svg = renderHierarchySvg(root, { isUnfolded: () => true })
+  if (process.env.UPDATE_GOLDEN) writeFileSync(file, svg)
+  assert.equal(svg, readFileSync(file, 'utf8'))
+})

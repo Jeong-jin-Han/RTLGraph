@@ -1,7 +1,10 @@
-import type { ComponentGraph, RtlNode, Signal, ViewFilter } from '@rtlgraph/ir'
+import type { ComponentGraph, ComponentNode, HierarchyEntry, RtlNode, Signal, ViewFilter } from '@rtlgraph/ir'
 import { FILTER_PRESETS, parseEndpoint, visibleElements } from '@rtlgraph/ir'
 import { lookupSymbol } from '@rtlgraph/registry'
-import { displayName, layoutComponent, PORT_PIN, TITLE_H, type LayoutResult, type NodeBox } from '@rtlgraph/layout'
+import {
+  displayName, FRAME_TITLE_H, layoutComponent, layoutHierarchy, PORT_PIN, TITLE_H,
+  type ChildPlacement, type LayoutResult, type NestedLayout, type NodeBox,
+} from '@rtlgraph/layout'
 import { sceneToSvg, type Group, type Item, type Scene } from './scene.ts'
 import { renderScenePdf, type PdfResult } from './pdf.ts'
 
@@ -24,6 +27,8 @@ export const PALETTE = {
   muxFill: '#f3f4f6',
   controlFill: '#eef2ff',
   controlStroke: '#4f46e5',
+  componentFill: '#f8fafc',
+  frameStroke: '#94a3b8',
   data: '#111827',
   control: '#2563eb',
   reset: '#dc2626',
@@ -38,6 +43,14 @@ export interface RenderOptions {
   crop?: boolean
 }
 
+export interface HierarchyRenderOptions {
+  filter?: ViewFilter
+  crop?: boolean
+  // Which component instances ("u_host", "u_host/u_dma") are drawn open. Default: none.
+  isUnfolded?: (instance: string) => boolean
+  layout?: NestedLayout // must have been laid out with the same isUnfolded
+}
+
 const CROP_MARGIN = 24
 const FONT_FAMILY = 'Arial, Helvetica, sans-serif'
 const FONT_SIZE = 12
@@ -47,6 +60,27 @@ function wireStyle(s: Signal): { color: string; width: number; dash?: string } {
   if (s.flow === 'reset') return { color: PALETTE.reset, width: 1.25, dash: '5 3' }
   if (s.flow === 'clock') return { color: PALETTE.clock, width: 1, dash: '2 2' }
   return { color: PALETTE.control, width: 1.25, dash: '5 3' }
+}
+
+// The fold marker in a component's title bar: a boxed "+" when folded, "−" when open.
+function foldMarker(b: NodeBox, titleH: number, folded: boolean): Item[] {
+  const [x, y] = [b.x + b.w - 18, b.y + (titleH - 10) / 2]
+  const bars = [{ x1: x + 2, y1: y + 5, x2: x + 8, y2: y + 5 }]
+  if (folded) bars.push({ x1: x + 5, y1: y + 2, x2: x + 5, y2: y + 8 })
+  return [
+    { kind: 'rect', x, y, w: 10, h: 10, fill: PALETTE.background, stroke: PALETTE.muted },
+    { kind: 'lines', segments: bars, fill: 'none', stroke: PALETTE.ink, strokeWidth: 1.25 },
+  ]
+}
+
+// An open component: a frame whose body is drawn by the child's own level.
+function frameItems(node: ComponentNode, b: NodeBox): Item[] {
+  return [
+    { kind: 'rect', x: b.x, y: b.y, w: b.w, h: b.h, rx: 4, fill: PALETTE.componentFill, stroke: PALETTE.frameStroke, strokeWidth: 1.5 },
+    { kind: 'lines', segments: [{ x1: b.x, y1: b.y + FRAME_TITLE_H, x2: b.x + b.w, y2: b.y + FRAME_TITLE_H }], fill: 'none', stroke: PALETTE.frameStroke },
+    { kind: 'text', x: b.x + 8, y: b.y + FRAME_TITLE_H / 2, text: node.label ?? node.name, anchor: 'start', central: true, bold: true, fill: PALETTE.ink },
+    ...foldMarker(b, FRAME_TITLE_H, false),
+  ]
 }
 
 function nodeItems(id: string, node: RtlNode, b: NodeBox): Item[] {
@@ -85,15 +119,17 @@ function nodeItems(id: string, node: RtlNode, b: NodeBox): Item[] {
     ]
   }
   const control = node.kind === 'control'
+  const component = node.kind === 'component'
   const items: Item[] = [
     {
       kind: 'rect', x: b.x, y: b.y, w: b.w, h: b.h, rx: 3,
-      fill: control ? PALETTE.controlFill : PALETTE.nodeFill,
+      fill: control ? PALETTE.controlFill : component ? PALETTE.componentFill : PALETTE.nodeFill,
       stroke: control ? PALETTE.controlStroke : PALETTE.ink,
       strokeWidth: 1.5,
       ...(node.kind === 'blackbox' ? { dash: '6 3' } : {}),
     },
-    { kind: 'text', x: cx, y: b.y + TITLE_H / 2, text: node.label ?? node.module, anchor: 'middle', central: true, bold: true, fill: PALETTE.ink },
+    { kind: 'text', x: cx, y: b.y + TITLE_H / 2, text: node.label ?? (component ? node.name : node.module), anchor: 'middle', central: true, bold: true, fill: PALETTE.ink },
+    ...(component ? foldMarker(b, TITLE_H, true) : []),
   ]
   for (const [name, pin] of Object.entries(b.pins)) {
     if (name === PORT_PIN) continue
@@ -103,28 +139,52 @@ function nodeItems(id: string, node: RtlNode, b: NodeBox): Item[] {
   return items
 }
 
-export function buildScene(graph: ComponentGraph, options: RenderOptions = {}): Scene {
-  const layout = options.layout ?? layoutComponent(graph)
-  const visible = visibleElements(graph, options.filter ?? FILTER_PRESETS.all)
+function translate(item: Item, dx: number, dy: number): Item {
+  if (dx === 0 && dy === 0) return item
+  switch (item.kind) {
+    case 'rect':
+    case 'text':
+      return { ...item, x: item.x + dx, y: item.y + dy }
+    case 'circle':
+      return { ...item, cx: item.cx + dx, cy: item.cy + dy }
+    case 'polygon':
+      return { ...item, points: item.points.map(([x, y]): [number, number] => [x + dx, y + dy]) }
+    case 'lines':
+      return { ...item, segments: item.segments.map(s => ({ x1: s.x1 + dx, y1: s.y1 + dy, x2: s.x2 + dx, y2: s.y2 + dy })) }
+  }
+}
 
-  let view = { x: 0, y: 0, w: layout.width, h: layout.height }
-  if (options.crop ?? true) {
-    const xs: number[] = []
-    const ys: number[] = []
-    for (const id of visible.nodes) {
-      const b = layout.nodes[id]
-      if (b) xs.push(b.x, b.x + b.w), ys.push(b.y, b.y + b.h)
-    }
-    for (const name of visible.signals) {
-      for (const s of layout.wires[name]?.segments ?? []) xs.push(s.x1, s.x2), ys.push(s.y1, s.y2)
-    }
-    if (xs.length > 0) {
-      const [x0, y0] = [Math.min(...xs) - CROP_MARGIN, Math.min(...ys) - CROP_MARGIN]
-      view = { x: x0, y: y0, w: Math.max(...xs) + CROP_MARGIN - x0, h: Math.max(...ys) + CROP_MARGIN - y0 }
-    }
+interface Canvas {
+  filter: ViewFilter
+  groups: Group[]
+  xs: number[] // extent of what is visible, for cropping
+  ys: number[]
+}
+
+// Draws one schematic at (dx, dy), then every open child inside its frame. Ids of
+// a child's elements are prefixed with its instance path: "u_host/CNT_FF".
+function drawLevel(
+  canvas: Canvas,
+  graph: ComponentGraph,
+  layout: LayoutResult,
+  children: Record<string, ChildPlacement>,
+  entries: Record<string, HierarchyEntry>,
+  dx: number,
+  dy: number,
+  prefix: string,
+) {
+  const { groups, xs, ys } = canvas
+  const visible = visibleElements(graph, canvas.filter)
+  const place = (items: Item[]) => items.map(item => translate(item, dx, dy))
+
+  for (const id of visible.nodes) {
+    const b = layout.nodes[id]
+    if (b) xs.push(b.x + dx, b.x + b.w + dx), ys.push(b.y + dy, b.y + b.h + dy)
+  }
+  for (const name of visible.signals) {
+    for (const s of layout.wires[name]?.segments ?? []) xs.push(s.x1 + dx, s.x2 + dx), ys.push(s.y1 + dy, s.y2 + dy)
   }
 
-  const groups: Group[] = []
   for (const [name, wire] of Object.entries(layout.wires)) {
     if (!visible.signals.has(name)) continue
     const s = graph.signals[name]
@@ -138,14 +198,60 @@ export function buildScene(graph: ComponentGraph, options: RenderOptions = {}): 
       const pin = layout.nodes[node]?.pins[port ?? PORT_PIN]
       if (pin) items.push({ kind: 'text', x: pin.x + 4, y: pin.side === 'top' ? pin.y - 4 : pin.y + 12, text: String(s.width), size: 9, fill: PALETTE.muted })
     }
-    groups.push({ className: `wire ${s.flow}`, attribute: { name: 'data-signal', value: name }, items })
+    groups.push({ className: `wire ${s.flow}`, attribute: { name: 'data-signal', value: prefix + name }, items: place(items) })
   }
   for (const [id, b] of Object.entries(layout.nodes)) {
     if (!visible.nodes.has(id)) continue
-    groups.push({ className: `node ${graph.nodes[id].kind}`, attribute: { name: 'data-node-id', value: id }, items: nodeItems(id, graph.nodes[id], b) })
+    const node = graph.nodes[id]
+    const open = node.kind === 'component' && id in children
+    const className = node.kind !== 'component' ? `node ${node.kind}` : `node component ${open ? 'unfolded' : 'folded'}`
+    const items = open ? frameItems(node as ComponentNode, b) : nodeItems(id, node, b)
+    groups.push({ className, attribute: { name: 'data-node-id', value: prefix + id }, items: place(items) })
   }
 
-  return { view, background: PALETTE.background, fontFamily: FONT_FAMILY, fontSize: FONT_SIZE, groups }
+  for (const [id, child] of Object.entries(children)) {
+    const entry = entries[id]
+    if (!entry) continue
+    const childPrefix = `${prefix}${id}/`
+    const childVisible = visibleElements(entry.graph, canvas.filter)
+    for (const [port, segment] of Object.entries(child.connectors)) {
+      const ref = `@${port}`
+      const name = Object.keys(entry.graph.signals).find(n => {
+        const s = entry.graph.signals[n]
+        return s.driver === ref || s.sinks.includes(ref)
+      })
+      if (name === undefined || !childVisible.signals.has(name)) continue
+      const style = wireStyle(entry.graph.signals[name])
+      const line: Item = { kind: 'lines', segments: [segment], fill: 'none', stroke: style.color, strokeWidth: style.width, ...(style.dash ? { dash: style.dash } : {}) }
+      groups.push({ className: `wire connector ${entry.graph.signals[name].flow}`, attribute: { name: 'data-signal', value: childPrefix + name }, items: place([line]) })
+    }
+    drawLevel(canvas, entry.graph, child.layout, child.layout.children, entry.children, dx + child.x, dy + child.y, childPrefix)
+  }
+}
+
+function sceneOf(canvas: Canvas, width: number, height: number, crop: boolean): Scene {
+  let view = { x: 0, y: 0, w: width, h: height }
+  if (crop && canvas.xs.length > 0) {
+    const [x0, y0] = [Math.min(...canvas.xs) - CROP_MARGIN, Math.min(...canvas.ys) - CROP_MARGIN]
+    view = { x: x0, y: y0, w: Math.max(...canvas.xs) + CROP_MARGIN - x0, h: Math.max(...canvas.ys) + CROP_MARGIN - y0 }
+  }
+  return { view, background: PALETTE.background, fontFamily: FONT_FAMILY, fontSize: FONT_SIZE, groups: canvas.groups }
+}
+
+export function buildScene(graph: ComponentGraph, options: RenderOptions = {}): Scene {
+  const layout = options.layout ?? layoutComponent(graph)
+  const canvas: Canvas = { filter: options.filter ?? FILTER_PRESETS.all, groups: [], xs: [], ys: [] }
+  drawLevel(canvas, graph, layout, {}, {}, 0, 0, '')
+  return sceneOf(canvas, layout.width, layout.height, options.crop ?? true)
+}
+
+// A loaded hierarchy, with the open components drawn as frames around their schematics.
+export function buildHierarchyScene(root: HierarchyEntry, options: HierarchyRenderOptions = {}): Scene {
+  const isUnfolded = options.isUnfolded ?? (() => false)
+  const layout = options.layout ?? layoutHierarchy(root, isUnfolded)
+  const canvas: Canvas = { filter: options.filter ?? FILTER_PRESETS.all, groups: [], xs: [], ys: [] }
+  drawLevel(canvas, root.graph, layout, layout.children, root.children, 0, 0, '')
+  return sceneOf(canvas, layout.width, layout.height, options.crop ?? true)
 }
 
 export function renderSvg(graph: ComponentGraph, options: RenderOptions = {}): string {
@@ -154,4 +260,12 @@ export function renderSvg(graph: ComponentGraph, options: RenderOptions = {}): s
 
 export function renderPdf(graph: ComponentGraph, options: RenderOptions = {}): PdfResult {
   return renderScenePdf(buildScene(graph, options))
+}
+
+export function renderHierarchySvg(root: HierarchyEntry, options: HierarchyRenderOptions = {}): string {
+  return sceneToSvg(buildHierarchyScene(root, options))
+}
+
+export function renderHierarchyPdf(root: HierarchyEntry, options: HierarchyRenderOptions = {}): PdfResult {
+  return renderScenePdf(buildHierarchyScene(root, options))
 }
