@@ -1,0 +1,12 @@
+{
+  "name": "@rtlgraph/registry",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@rtlgraph/ir": "0.1.0"
+  }
+}
