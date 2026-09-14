@@ -51,29 +51,37 @@ cannot be recovered with confidence, record a diagnostic instead of guessing.
 - **Top** = a non-testbench module that no other module instantiates. If several remain, use the
   one whose name matches the project (or that instantiates the most), and mention the others in
   your final report.
-- **Component** = a directory that has its own `seq/` folder; its **component top** is the module in
-  that `seq/`. Component names are whatever the project uses; nothing is special about any name.
-  A component's **name** is its folder's name. In a project without component folders (layers at the
-  project root, or a flat project) the whole project is one component named after the top module
-  without a trailing `_top` (`acc_top` → `acc`). A name must be a Verilog identifier.
+- **Component** = a part of the design drawn as a box that opens into its own schematic.
+  - In code **with component folders**: a directory that has its own `seq/` folder. Its **component
+    top** is the module in that `seq/`; its **name** is the folder's name.
+  - In code **without them** (layers at the project root, or a flat project): the top, plus every
+    project module that **holds state** — a register anywhere inside it (`always @(posedge …)` or a
+    `DFF` instance, directly or in a module it instantiates) — and is instantiated by another
+    component. Its name is the module name without a trailing `_top` (`acc_top` → `acc`,
+    `bcd_counter` → `bcd_counter`). A project module without state is not a component: it is
+    flattened, or becomes a `control` node (Step 4a).
+
+  A name must be a Verilog identifier. Nothing is special about any name.
 - **Main component** = the component whose top is the top.
 - **Files** — always this hierarchy, even for a single component:
 
   | File | Where | Holds |
   |---|---|---|
-  | `<top>.rtlgraph.json` | `PROJECT_FOLDER` | the **root** (`kind: "system"`): the top's ports and component boxes only — no logic |
+  | `<top>.rtlgraph.json` | `PROJECT_FOLDER` | the **root** (`kind: "system"`) |
   | `<name>.rtlgraph-schematic.json` | the component's folder | that component's **schematic** (`kind: "component"`), Steps 4–7 |
 
-  - **The root.** When the top only instantiates components and wires them together, the root
-    describes the top itself: one `component` box per component instance, one net per wire. Otherwise
-    (the usual case: the top has its own registers or logic) the top *is* the main component, and the
-    root holds the top's ports, one `component` box for the main component (`module` = the top,
-    `origin` = its `module` line) and one net per port.
-  - **A component inside a component** is a `component` box in the parent's schematic (Step 4a); its
-    schematic sits in its own folder, nested inside the parent's folder, and may contain boxes again.
-  - **No component folder in the code** (layers at the project root, or a flat project): create
-    `PROJECT_FOLDER/<name>/` holding only `<name>.rtlgraph-schematic.json`, with `source.root` `".."`.
-    Never move code.
+  - **The root** holds the top's ports, exactly **one** `component` box — the main component
+    (`module` = the top, `origin` = its `module` line) — and one net per port. Nothing else, even when
+    the top only wires other components together: those are boxes in the main component's schematic.
+  - **A component inside a component** is a `component` box in the parent's schematic (Step 4a). Its
+    schematic goes in its own folder inside the parent's folder, and may contain boxes again. Several
+    instances of one module share one schematic — in the folder under the first parent that
+    instantiates it (in file order) — and every box's `ref` points at it.
+  - **Folders the code does not have** are created to hold only the schematic: `PROJECT_FOLDER/<main>/`,
+    `<main>/<child>/`, and so on. Never move or copy code.
+  - **`source.root`** is the path from the schematic's folder to the folder its `source.files` are
+    relative to: `"."` when the code sits in that folder, `".."` for `PROJECT_FOLDER/<main>/` over a
+    flat project, `"../.."` one level deeper.
   - `*.rtlgraph-fsm.json` (state machines) is reserved; do not write it yet.
 
 ### Step 3 — Decide how conforming the code is
@@ -114,8 +122,8 @@ schematic, so ids never reach into another component.
 |---|---|
 | A port of the component top | port node `"@NAME"` |
 | Instance of a registry primitive (table below) | a node with that `module`, `kind` from the table, `params` from `#(...)` |
-| Instance of another component's top | **one** `component` node (id = instance path): `name` = that component's name, `module`, `ref` = its schematic's path relative to this file (`u_dev/dev.rtlgraph-schematic.json`), `ports` = the module's ports with directions, `params`/`consts` as for primitives. Not flattened |
-| Instance of a `comb/data_path` module, or any other project module | **not a node** — flatten: its contents become nodes with the instance name prefixed |
+| Instance of a component (Step 2) | **one** `component` node (id = instance path): `name` = that component's name, `module`, `ref` = its schematic's path relative to this file (`dev/dev.rtlgraph-schematic.json`), `ports` = the module's ports with directions, `params`/`consts` as for primitives. Not flattened, in conforming and non-conforming code alike |
+| Instance of a `comb/data_path` module, or any other project module that is not a component | **not a node** — flatten: its contents become nodes with the instance name prefixed |
 | Instance of a `comb/control_path` module | **one** `control` node (id = instance path) with `truthTable` from its `casex` |
 | Vendor macro / IP you cannot read (`// @sch: blackbox`) | `blackbox` node, `rdelay` if given |
 | `assign X = Y;` in the top | no node: `X` becomes an alias of net `Y` |
@@ -229,7 +237,8 @@ Use when writing new RTL or restructuring existing RTL so it conforms (C1–C7 a
        └── <main>.rtlgraph-schematic.json   (Workflow A writes it)
    ```
    Add a sub-component folder (with its own `comb/`, `seq/`, `tb/`) only when the design really has a
-   separately clocked part; nest it inside the component that owns it. Name it after what it is.
+   separately clocked part; nest it inside the component that owns it and instantiate its top from the
+   owner's `seq/` top. Name it after what it is.
 4. **Describe the datapath first**: the registers, and the boxes between them using the primitives
    below. Then write the control signal table (inputs → outputs, one row per case); that table becomes
    the `casex` in the control path.
@@ -390,7 +399,7 @@ is drawn as a generic box — that is normal, not an error.
 | Thing | Format | Example |
 |---|---|---|
 | Instance node | instance path from the component top | `CNT_FF`, `data_path.u_inc` |
-| Component node | instance path; in a root wrapping the main component, its name | `u_dev`, `acc` |
+| Component node | instance path; in the root, the main component's name | `u_dev`, `acc` |
 | Inferred logic | `<scope>.op_<net it drives>` | `data_path.op_CNT_D` |
 | Inferred register | `<scope>.<Q net>_reg` | `ACC_Q_reg` |
 | Port node | `@` + port name | `@ACC` |

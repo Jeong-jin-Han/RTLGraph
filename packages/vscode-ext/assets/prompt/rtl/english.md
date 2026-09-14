@@ -19,5 +19,5 @@ Finally, build the RTLGraph files with Workflow A (root <top>.rtlgraph.json plus
 <name>.rtlgraph-schematic.json per component) and validate the root with
 node PROJECT_FOLDER/.agent/rtlgraph-validate.mjs until it reports 0 errors. Follow
 the spec exactly and run end to end without asking me anything. When done, tell me
-which files changed, the simulation and baseline comparison, and the RTLGraph
-validator summary.
+which files changed, the simulation and baseline comparison, the RTLGraph
+validator summary, and which file to open in VS Code to see the schematic.

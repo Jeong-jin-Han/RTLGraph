@@ -22,4 +22,5 @@ PROJECT_FOLDER/.agent/RTLGRAPH_SPEC.md 와 PROJECT_FOLDER/.agent/ENVIRONMENT.md
 <이름>.rtlgraph-schematic.json)도 만들고, 루트를 node PROJECT_FOLDER/.agent/
 rtlgraph-validate.mjs 로 에러 0개까지 검증해줘. 스펙 그대로 따르고, 중간에 나한테
 아무것도 묻지 말고 끝까지 진행해줘. 다 되면 바꾼 파일 목록, 시뮬레이션·기준선 비교
-결과, RTLGraph 검증 결과를 알려줘.
+결과, RTLGraph 검증 결과, 그리고 VS Code 에서 어떤 파일을 열면 회로도가 보이는지
+알려줘.
