@@ -2,9 +2,17 @@ import type { ComponentGraph, RtlNode, Signal, ViewFilter } from '@rtlgraph/ir'
 import { FILTER_PRESETS, parseEndpoint, visibleElements } from '@rtlgraph/ir'
 import { lookupSymbol } from '@rtlgraph/registry'
 import { displayName, layoutComponent, PORT_PIN, TITLE_H, type LayoutResult, type NodeBox } from '@rtlgraph/layout'
+import { sceneToSvg, type Group, type Item, type Scene } from './scene.ts'
+import { renderScenePdf, type PdfResult } from './pdf.ts'
 
-// IR -> SVG as a pure function. The editor webview and the HTML export both use
-// this, so there is one renderer (NodeGraph kept two and they drifted apart).
+export type { Group, Item, Paint, Scene } from './scene.ts'
+export type { PdfResult } from './pdf.ts'
+export { sceneToSvg } from './scene.ts'
+export { renderScenePdf } from './pdf.ts'
+
+// IR -> picture as pure functions. The editor webview and every export format
+// draw the same Scene, so there is one renderer (NodeGraph kept two and they
+// drifted apart).
 
 // Fixed palette: colours carry meaning (data / control / reset), so they must
 // not follow the VS Code theme.
@@ -31,8 +39,8 @@ export interface RenderOptions {
 }
 
 const CROP_MARGIN = 24
-
-const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+const FONT_FAMILY = 'Arial, Helvetica, sans-serif'
+const FONT_SIZE = 12
 
 function wireStyle(s: Signal): { color: string; width: number; dash?: string } {
   if (s.flow === 'data') return { color: PALETTE.data, width: s.width > 1 ? 2 : 1.25 }
@@ -41,49 +49,61 @@ function wireStyle(s: Signal): { color: string; width: number; dash?: string } {
   return { color: PALETTE.control, width: 1.25, dash: '5 3' }
 }
 
-function text(x: number, y: number, body: string, attrs = ''): string {
-  return `<text x="${x}" y="${y}"${attrs ? ' ' + attrs : ''}>${esc(body)}</text>`
-}
-
-function drawNode(id: string, node: RtlNode, b: NodeBox): string {
+function nodeItems(id: string, node: RtlNode, b: NodeBox): Item[] {
   const cx = b.x + b.w / 2
   const cy = b.y + b.h / 2
-  const middle = 'text-anchor="middle" dominant-baseline="central"'
-  const parts: string[] = []
   if (node.kind === 'port') {
-    parts.push(`<rect x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}" rx="9" fill="${PALETTE.background}" stroke="${PALETTE.muted}"/>`)
-    parts.push(text(cx, cy, displayName(id), `${middle} font-size="11" fill="${PALETTE.ink}"`))
-    return parts.join('')
+    return [
+      { kind: 'rect', x: b.x, y: b.y, w: b.w, h: b.h, rx: 9, fill: PALETTE.background, stroke: PALETTE.muted },
+      { kind: 'text', x: cx, y: cy, text: displayName(id), anchor: 'middle', central: true, size: 11, fill: PALETTE.ink },
+    ]
   }
   const def = node.kind === 'control' ? undefined : lookupSymbol(node.module)
   if (def?.symbol === 'register') {
-    parts.push(`<rect x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}" fill="${PALETTE.nodeFill}" stroke="${PALETTE.ink}" stroke-width="2"/>`)
-    parts.push(text(cx, cy, displayName(id), `${middle} fill="${PALETTE.ink}"`))
-  } else if (def?.symbol === 'mux') {
+    return [
+      { kind: 'rect', x: b.x, y: b.y, w: b.w, h: b.h, fill: PALETTE.nodeFill, stroke: PALETTE.ink, strokeWidth: 2 },
+      { kind: 'text', x: cx, y: cy, text: displayName(id), anchor: 'middle', central: true, fill: PALETTE.ink },
+    ]
+  }
+  if (def?.symbol === 'mux') {
     const inset = 10
-    parts.push(`<polygon points="${b.x},${b.y + b.h} ${b.x + b.w},${b.y + b.h} ${b.x + b.w - inset},${b.y} ${b.x + inset},${b.y}" fill="${PALETTE.muxFill}" stroke="${PALETTE.ink}" stroke-width="1.5"/>`)
+    const items: Item[] = [{
+      kind: 'polygon',
+      points: [[b.x, b.y + b.h], [b.x + b.w, b.y + b.h], [b.x + b.w - inset, b.y], [b.x + inset, b.y]],
+      fill: PALETTE.muxFill, stroke: PALETTE.ink, strokeWidth: 1.5,
+    }]
     def.ports.filter(p => p.role === 'data' && p.dir === 'in').forEach((p, i) => {
       const pin = b.pins[p.name]
-      if (pin) parts.push(text(pin.x, b.y + b.h - 5, String(i), `text-anchor="middle" font-size="9" fill="${PALETTE.muted}"`))
+      if (pin) items.push({ kind: 'text', x: pin.x, y: b.y + b.h - 5, text: String(i), anchor: 'middle', size: 9, fill: PALETTE.muted })
     })
-  } else if (def) {
-    parts.push(`<rect x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}" fill="${PALETTE.nodeFill}" stroke="${PALETTE.ink}" stroke-width="1.5"/>`)
-    parts.push(text(cx, cy, def.label ?? def.module, `${middle} fill="${PALETTE.ink}"`))
-  } else {
-    const control = node.kind === 'control'
-    const dash = node.kind === 'blackbox' ? ' stroke-dasharray="6 3"' : ''
-    parts.push(`<rect x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}" rx="3" fill="${control ? PALETTE.controlFill : PALETTE.nodeFill}" stroke="${control ? PALETTE.controlStroke : PALETTE.ink}" stroke-width="1.5"${dash}/>`)
-    parts.push(text(cx, b.y + TITLE_H / 2, node.label ?? node.module, `${middle} font-weight="600" fill="${PALETTE.ink}"`))
-    for (const [name, pin] of Object.entries(b.pins)) {
-      if (name === PORT_PIN) continue
-      const left = pin.side === 'left'
-      parts.push(text(left ? pin.x + 5 : pin.x - 5, pin.y, name, `text-anchor="${left ? 'start' : 'end'}" dominant-baseline="central" font-size="10" fill="${PALETTE.muted}"`))
-    }
+    return items
   }
-  return parts.join('')
+  if (def) {
+    return [
+      { kind: 'rect', x: b.x, y: b.y, w: b.w, h: b.h, fill: PALETTE.nodeFill, stroke: PALETTE.ink, strokeWidth: 1.5 },
+      { kind: 'text', x: cx, y: cy, text: def.label ?? def.module, anchor: 'middle', central: true, fill: PALETTE.ink },
+    ]
+  }
+  const control = node.kind === 'control'
+  const items: Item[] = [
+    {
+      kind: 'rect', x: b.x, y: b.y, w: b.w, h: b.h, rx: 3,
+      fill: control ? PALETTE.controlFill : PALETTE.nodeFill,
+      stroke: control ? PALETTE.controlStroke : PALETTE.ink,
+      strokeWidth: 1.5,
+      ...(node.kind === 'blackbox' ? { dash: '6 3' } : {}),
+    },
+    { kind: 'text', x: cx, y: b.y + TITLE_H / 2, text: node.label ?? node.module, anchor: 'middle', central: true, bold: true, fill: PALETTE.ink },
+  ]
+  for (const [name, pin] of Object.entries(b.pins)) {
+    if (name === PORT_PIN) continue
+    const left = pin.side === 'left'
+    items.push({ kind: 'text', x: left ? pin.x + 5 : pin.x - 5, y: pin.y, text: name, anchor: left ? 'start' : 'end', central: true, size: 10, fill: PALETTE.muted })
+  }
+  return items
 }
 
-export function renderSvg(graph: ComponentGraph, options: RenderOptions = {}): string {
+export function buildScene(graph: ComponentGraph, options: RenderOptions = {}): Scene {
   const layout = options.layout ?? layoutComponent(graph)
   const visible = visibleElements(graph, options.filter ?? FILTER_PRESETS.all)
 
@@ -104,32 +124,34 @@ export function renderSvg(graph: ComponentGraph, options: RenderOptions = {}): s
     }
   }
 
-  const lines: string[] = [
-    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${view.x} ${view.y} ${view.w} ${view.h}" width="${view.w}" height="${view.h}" font-family="Arial, Helvetica, sans-serif" font-size="12">`,
-    `<rect x="${view.x}" y="${view.y}" width="${view.w}" height="${view.h}" fill="${PALETTE.background}"/>`,
-  ]
-
+  const groups: Group[] = []
   for (const [name, wire] of Object.entries(layout.wires)) {
     if (!visible.signals.has(name)) continue
     const s = graph.signals[name]
     const style = wireStyle(s)
-    const d = wire.segments.map(g => `M${g.x1} ${g.y1}L${g.x2} ${g.y2}`).join('')
-    const dash = style.dash ? ` stroke-dasharray="${style.dash}"` : ''
-    const dots = wire.junctions.map(p => `<circle cx="${p.x}" cy="${p.y}" r="3" fill="${style.color}"/>`).join('')
-    let label = ''
+    const items: Item[] = [
+      { kind: 'lines', segments: wire.segments, fill: 'none', stroke: style.color, strokeWidth: style.width, ...(style.dash ? { dash: style.dash } : {}) },
+      ...wire.junctions.map((p): Item => ({ kind: 'circle', cx: p.x, cy: p.y, r: 3, fill: style.color })),
+    ]
     if (s.width > 1) {
       const { node, port } = parseEndpoint(s.driver)
       const pin = layout.nodes[node]?.pins[port ?? PORT_PIN]
-      if (pin) label = text(pin.x + 4, pin.side === 'top' ? pin.y - 4 : pin.y + 12, String(s.width), `font-size="9" fill="${PALETTE.muted}"`)
+      if (pin) items.push({ kind: 'text', x: pin.x + 4, y: pin.side === 'top' ? pin.y - 4 : pin.y + 12, text: String(s.width), size: 9, fill: PALETTE.muted })
     }
-    lines.push(`<g class="wire ${s.flow}" data-signal="${esc(name)}"><path d="${d}" fill="none" stroke="${style.color}" stroke-width="${style.width}"${dash}/>${dots}${label}</g>`)
+    groups.push({ className: `wire ${s.flow}`, attribute: { name: 'data-signal', value: name }, items })
   }
-
   for (const [id, b] of Object.entries(layout.nodes)) {
     if (!visible.nodes.has(id)) continue
-    lines.push(`<g class="node ${graph.nodes[id].kind}" data-node-id="${esc(id)}">${drawNode(id, graph.nodes[id], b)}</g>`)
+    groups.push({ className: `node ${graph.nodes[id].kind}`, attribute: { name: 'data-node-id', value: id }, items: nodeItems(id, graph.nodes[id], b) })
   }
 
-  lines.push('</svg>', '')
-  return lines.join('\n')
+  return { view, background: PALETTE.background, fontFamily: FONT_FAMILY, fontSize: FONT_SIZE, groups }
+}
+
+export function renderSvg(graph: ComponentGraph, options: RenderOptions = {}): string {
+  return sceneToSvg(buildScene(graph, options))
+}
+
+export function renderPdf(graph: ComponentGraph, options: RenderOptions = {}): PdfResult {
+  return renderScenePdf(buildScene(graph, options))
 }
