@@ -58,6 +58,8 @@ export interface HierarchyRenderOptions {
   // Draw the frame around an open component — its panel, title and marker. The
   // editor needs it to show what is open; a figure is just the schematic.
   frames?: boolean
+  // Draw the grips the reader drags while arranging by hand.
+  editing?: boolean
   layout?: NestedLayout // must have been laid out with the same isUnfolded
 }
 
@@ -76,6 +78,7 @@ function wireStyle(s: Signal): { color: string; width: number; dash?: string } {
 // open. One click on it opens or closes that component, so it carries a class the
 // editor can look for, and a transparent square around it to click at.
 export const FOLD_MARKER_CLASS = 'fold'
+export const RESIZE_GRIP_CLASS = 'resize'
 
 function foldMarker(b: NodeBox, titleH: number, folded: boolean): Item[] {
   const [x, y] = [b.x + b.w - 18, b.y + (titleH - 10) / 2]
@@ -91,13 +94,26 @@ function foldMarker(b: NodeBox, titleH: number, folded: boolean): Item[] {
 }
 
 // An open component: a frame whose body is drawn by the child's own level.
-function frameItems(node: ComponentNode, b: NodeBox, controls: boolean, frames: boolean): Item[] {
+function frameItems(node: ComponentNode, b: NodeBox, controls: boolean, frames: boolean, editing = false): Item[] {
   if (!frames) return [] // the wires still cross where its edge was
+  const grip: Item[] = editing
+    ? [{
+        kind: 'lines',
+        segments: [
+          { x1: b.x + b.w - 12, y1: b.y + b.h - 2, x2: b.x + b.w - 2, y2: b.y + b.h - 12 },
+          { x1: b.x + b.w - 7, y1: b.y + b.h - 2, x2: b.x + b.w - 2, y2: b.y + b.h - 7 },
+        ],
+        fill: 'none', stroke: PALETTE.frameStroke, strokeWidth: 1.5, className: RESIZE_GRIP_CLASS,
+      }, {
+        kind: 'rect', x: b.x + b.w - 16, y: b.y + b.h - 16, w: 16, h: 16, fill: 'none', className: RESIZE_GRIP_CLASS,
+      }]
+    : []
   return [
     { kind: 'rect', x: b.x, y: b.y, w: b.w, h: b.h, rx: 4, fill: PALETTE.componentFill, stroke: PALETTE.frameStroke, strokeWidth: 1.5 },
     { kind: 'lines', segments: [{ x1: b.x, y1: b.y + FRAME_TITLE_H, x2: b.x + b.w, y2: b.y + FRAME_TITLE_H }], fill: 'none', stroke: PALETTE.frameStroke },
     { kind: 'text', x: b.x + 8, y: b.y + FRAME_TITLE_H / 2, text: node.label ?? node.name, anchor: 'start', central: true, bold: true, fill: PALETTE.ink },
     ...(controls ? foldMarker(b, FRAME_TITLE_H, false) : []),
+    ...grip,
   ]
 }
 
@@ -180,6 +196,7 @@ interface Canvas {
   filter: ViewFilter
   controls: boolean
   frames: boolean
+  editing: boolean
   groups: Group[]
   xs: number[] // extent of what is visible, for cropping
   ys: number[]
@@ -236,7 +253,9 @@ function drawLevel(
     const node = graph.nodes[id]
     const open = node.kind === 'component' && id in children
     const className = node.kind !== 'component' ? `node ${node.kind}` : `node component ${open ? 'unfolded' : 'folded'}`
-    const items = open ? frameItems(node as ComponentNode, b, canvas.controls, canvas.frames) : nodeItems(id, node, b, canvas.controls)
+    const items = open
+      ? frameItems(node as ComponentNode, b, canvas.controls, canvas.frames, canvas.editing)
+      : nodeItems(id, node, b, canvas.controls)
     // A frame is the room its children sit in, never dim.
     add(open || visible.litNodes.has(id), { className, attribute: { name: 'data-node-id', value: prefix + id }, items: place(items) })
   }
@@ -281,7 +300,7 @@ function sceneOf(canvas: Canvas, width: number, height: number, crop: boolean): 
 
 export function buildScene(graph: ComponentGraph, options: RenderOptions = {}): Scene {
   const layout = options.layout ?? layoutComponent(graph)
-  const canvas: Canvas = { filter: options.filter ?? FILTER_PRESETS.all, controls: false, frames: true, groups: [], xs: [], ys: [] }
+  const canvas: Canvas = { filter: options.filter ?? FILTER_PRESETS.all, controls: false, frames: true, editing: false, groups: [], xs: [], ys: [] }
   drawLevel(canvas, graph, layout, {}, {}, 0, 0, '')
   return sceneOf(canvas, layout.width, layout.height, options.crop ?? true)
 }
@@ -299,6 +318,7 @@ export function buildHierarchyScene(root: HierarchyEntry, options: HierarchyRend
     filter: options.filter ?? FILTER_PRESETS.all,
     controls: options.controls === true,
     frames: options.frames !== false,
+    editing: options.editing === true,
     groups: [], xs: [], ys: [],
   }
   drawLevel(canvas, entry.graph, layout, layout.children, entry.children, 0, 0, '')

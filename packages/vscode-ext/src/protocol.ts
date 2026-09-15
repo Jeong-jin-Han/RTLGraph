@@ -1,4 +1,4 @@
-import type { ViewFilter } from '@rtlgraph/ir'
+import type { Layout, ViewFilter } from '@rtlgraph/ir'
 import type { FoldAction, FoldScope } from './webview/state.ts'
 
 export type { FoldAction, FoldScope } from './webview/state.ts'
@@ -22,6 +22,7 @@ export type WebviewToHost =
   | { type: 'ready' }
   | { type: 'setFilter'; filter: ViewFilter }
   | { type: 'setFold'; unfolded: string[] }
+  | { type: 'setLayout'; layout: Layout } // what the reader arranged by hand
   | { type: 'rendered'; state: RenderState }
   | { type: 'command'; command: ToolbarCommand }
   | { type: 'export' }
@@ -32,7 +33,9 @@ export interface RenderState {
   filter: ViewFilter
   nodes: number
   signals: number
-  dim: number // drawn in grey: what the filter passed over
+  dim: number // faded: what the filter passed over
+  editing: boolean
+  goals: number // connections the sketch still owes, shown while editing
   unfolded: string[]
   selected?: string // a component instance
 }

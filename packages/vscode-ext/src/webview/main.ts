@@ -1,4 +1,7 @@
-import { FILTER_PRESETS, hierarchyEntries, loadHierarchy, type Diagnostic, type FilterPreset, type HierarchyEntry, type ViewFilter } from '@rtlgraph/ir'
+import {
+  candidatesFor, connectionGoals, FILTER_PRESETS, hierarchyEntries, loadHierarchy,
+  type Diagnostic, type FilterPreset, type Goal, type HierarchyEntry, type Layout, type ViewFilter,
+} from '@rtlgraph/ir'
 import { layoutHierarchy, type NestedLayout } from '@rtlgraph/layout'
 import { buildHierarchyScene, sceneToSvg } from '@rtlgraph/render'
 import type { HostToWebview, ToolbarCommand, WebviewToHost } from '../protocol.ts'
@@ -7,6 +10,7 @@ import {
   applyFold, componentInstances, defaultUnfolded, fitViewport, isInstanceShown, normalizeFilter, normalizeUnfolded,
   presetOf, toggleFlow, toggleTime, zoomAt, type FoldAction, type FoldScope, type Viewport,
 } from './state.ts'
+import { belongsToThisFile, cleared, emptyLayout, isArranged, isCut, movedTo, resizedTo, withCut } from './edit.ts'
 
 declare function acquireVsCodeApi(): {
   postMessage(message: WebviewToHost): void
@@ -30,10 +34,20 @@ let filter: ViewFilter = normalizeFilter(saved.filter) ?? FILTER_PRESETS.all
 let filterChosenHere = normalizeFilter(saved.filter) !== undefined
 let unfolded: string[] = Array.isArray(saved.unfolded) ? saved.unfolded : []
 let foldChosenHere = Array.isArray(saved.unfolded)
-let selected: string | undefined
+let selected: string | undefined // a component box
+let selectedWire: string | undefined // a net, while arranging
 let viewport: Viewport | undefined = saved.viewport
 
+// Arranging by hand. `arrangement` is the file's own `layout`, edited here and
+// written straight back; nothing else in the file is ever touched.
+let editing = false
+let arrangement: Layout = emptyLayout()
+let goals: Goal[] = []
+let activeGoal: string | undefined
+
 const isUnfolded = (instance: string) => unfolded.includes(instance)
+// The graph as it is drawn: the file plus whatever the reader has arranged.
+const arranged = (): HierarchyEntry => ({ ...root!, graph: { ...root!.graph, layout: arrangement } })
 
 function persist() {
   vscode.setState({ filter: filterChosenHere ? filter : undefined, unfolded: foldChosenHere ? unfolded : undefined, viewport } satisfies SavedState)
@@ -81,9 +95,16 @@ fitButton.addEventListener('click', fit)
 // Opening a component leaves you inside its own file; this walks back out.
 const rootButton = commandButton('Root', 'rtlgraph.openRoot')
 rootButton.title = 'Open the root file this schematic belongs to'
+const editButton = el('button', { type: 'button', textContent: 'Edit', title: 'Arrange this schematic by hand; the file records it under "layout"' })
+editButton.addEventListener('click', () => setEditing(!editing))
+const resetButton = el('button', { type: 'button', textContent: 'Reset', title: 'Undo every hand arrangement in this file' })
+resetButton.addEventListener('click', () => {
+  arrangement = cleared(arrangement)
+  saveArrangement()
+})
 
 const toolbar = el('div', { id: 'toolbar' },
-  fitButton, rootButton,
+  fitButton, rootButton, editButton, resetButton,
   el('span', { className: 'label', textContent: 'flow' }), ...flowButtons,
   el('span', { className: 'label', textContent: 'time' }), ...timeButtons,
   el('span', { className: 'label', textContent: 'preset' }), presetSelect,
@@ -92,18 +113,22 @@ const toolbar = el('div', { id: 'toolbar' },
 )
 const stage = el('div', { id: 'stage' })
 const canvas = el('div', { id: 'canvas' }, stage)
+const goalsPanel = el('aside', { id: 'goals', hidden: true })
+const middle = el('div', { id: 'middle' }, canvas, goalsPanel)
 const problems = el('details', { id: 'problems', hidden: true })
-document.body.append(toolbar, canvas, problems)
+document.body.append(toolbar, middle, problems)
 
 // ── rendering ──
 function updateComponentTools() {
   rootButton.hidden = root === undefined || root.graph.kind === 'system' // already there
   componentTools.hidden = instances.length === 0
-  selectionLabel.textContent = selected ?? 'none selected'
+  selectionLabel.textContent = selected ?? selectedWire ?? 'none selected'
   foldButton.title = selected ? `Fold ${selected}: only it, or it and everything inside` : 'Fold every component'
   unfoldButton.title = selected ? `Unfold ${selected}: only it, or it and everything inside` : 'Unfold every component'
   openButton.title = selected ? `Open the schematic of ${selected}` : 'Select a component box to open its schematic'
   openButton.disabled = selected === undefined
+  editButton.setAttribute('aria-pressed', String(editing))
+  resetButton.hidden = !editing || !isArranged(arrangement)
 }
 
 function report() {
@@ -115,6 +140,8 @@ function report() {
       signals: stage.querySelectorAll('[data-signal]').length,
       dim: stage.querySelectorAll('.dim').length,
       unfolded,
+      editing,
+      goals: goals.length,
       ...(selected !== undefined ? { selected } : {}),
     },
   })
@@ -122,9 +149,16 @@ function report() {
 
 function markSelection() {
   stage.querySelectorAll('g.selected').forEach(g => g.classList.remove('selected'))
-  if (selected === undefined) return
-  stage.querySelectorAll('g.component').forEach(g => {
-    if (g.getAttribute('data-node-id') === selected) g.classList.add('selected')
+  const mark = (g: Element) => {
+    const id = g.getAttribute('data-node-id') ?? g.getAttribute('data-signal')
+    if (id !== null && (id === selected || id === selectedWire)) g.classList.add('selected')
+  }
+  stage.querySelectorAll('g.component').forEach(mark)
+  stage.querySelectorAll('g.wire').forEach(mark)
+  // What the reader cannot arrange from this file, while arranging.
+  stage.querySelectorAll('g.node').forEach(g => {
+    const id = g.getAttribute('data-node-id')
+    g.classList.toggle('foreign', editing && id !== null && !belongsToThisFile(id))
   })
 }
 
@@ -139,9 +173,68 @@ function render() {
   }
   // Full layout, no cropping: switching the filter must not move anything.
   // controls: the fold markers are for clicking here; exports leave them out.
-  stage.innerHTML = sceneToSvg(buildHierarchyScene(root, { filter, layout, crop: false, isUnfolded, controls: true }))
+  stage.innerHTML = sceneToSvg(buildHierarchyScene(arranged(), { filter, layout, crop: false, isUnfolded, controls: true, editing }))
   markSelection()
+  showGoals()
   report()
+}
+
+const relayout = () => {
+  if (root) layout = layoutHierarchy(arranged(), isUnfolded)
+}
+
+function saveArrangement() {
+  vscode.postMessage({ type: 'setLayout', layout: arrangement })
+  relayout()
+  render()
+}
+
+// ── what the sketch still owes ──
+function showGoals() {
+  goals = root && editing ? connectionGoals(root.graph, arrangement.cut ?? []) : []
+  goalsPanel.hidden = !editing
+  if (!editing || !root) return
+  if (goals.length === 0) {
+    goalsPanel.replaceChildren(
+      el('h2', { textContent: 'Nothing missing' }),
+      el('p', { textContent: 'Every pin of this file is connected or tied off. Drag a box to move it, drag a frame corner to resize it, click a wire and press Delete to cut it.' }),
+    )
+    return
+  }
+  const list = el('ol')
+  for (const goal of goals) {
+    const item = el('li', { textContent: goal.what })
+    if (goal.why) item.append(el('span', { className: 'why', textContent: goal.why }))
+    if (goal.id === activeGoal) {
+      item.classList.add('active')
+      const options = candidatesFor(root.graph, goal, arrangement.cut ?? [])
+      item.append(el('div', {
+        className: 'candidates',
+        textContent: options.length > 0 ? `could come from: ${options.slice(0, 8).join(', ')}` : 'nothing free to connect it to',
+      }))
+    }
+    item.addEventListener('click', () => {
+      activeGoal = goal.id === activeGoal ? undefined : goal.id
+      if (goal.node) select(goal.node)
+      showGoals()
+    })
+    list.append(item)
+  }
+  goalsPanel.replaceChildren(
+    el('h2', { textContent: `${goals.length} connection${goals.length === 1 ? '' : 's'} to settle` }),
+    el('p', { textContent: 'The file still describes the RTL; these are what the sketch would need from it.' }),
+    list,
+  )
+}
+
+function setEditing(next: boolean) {
+  editing = next
+  document.body.classList.toggle('editing', editing)
+  if (!editing) {
+    selectedWire = undefined
+    activeGoal = undefined
+  }
+  render()
 }
 
 // PNG export: draw the cropped view (the same scene the SVG/PDF exports use) onto
@@ -149,7 +242,7 @@ function render() {
 async function rasterize(scale: number): Promise<string> {
   if (!root || !layout) throw new Error('nothing is drawn yet')
   // The PNG is an export like the others: same scene, wrapper root left out.
-  const scene = buildHierarchyScene(root, { filter, isUnfolded, unwrap: true, frames: false })
+  const scene = buildHierarchyScene(arranged(), { filter, isUnfolded, unwrap: true, frames: false })
   const url = URL.createObjectURL(new Blob([sceneToSvg(scene)], { type: 'image/svg+xml' }))
   try {
     const image = new Image()
@@ -201,15 +294,24 @@ function fold(action: FoldAction, scope: FoldScope, instance?: string) {
   unfolded = applyFold(unfolded, instances, action, scope, instance)
   foldChosenHere = true
   if (selected !== undefined && !isInstanceShown(selected, unfolded)) selected = undefined
-  layout = layoutHierarchy(root, isUnfolded)
+  relayout()
   vscode.postMessage({ type: 'setFold', unfolded })
   render()
   fit() // what opened or closed changes the size a lot; NodeGraph refits the same way
 }
 
 function select(instance: string | undefined) {
-  if (instance === selected) return
+  if (instance === selected && selectedWire === undefined) return
   selected = instance
+  selectedWire = undefined
+  markSelection()
+  updateComponentTools()
+  report()
+}
+
+function selectWire(name: string | undefined) {
+  selectedWire = name
+  selected = undefined
   markSelection()
   updateComponentTools()
   report()
@@ -245,17 +347,18 @@ function load(message: Extract<HostToWebview, { type: 'load' }>) {
   }
   const first = root === undefined
   root = next
+  arrangement = root.graph.layout ?? emptyLayout()
   instances = componentInstances(root)
   unfolded = foldChosenHere ? normalizeUnfolded(unfolded, instances)! : normalizeUnfolded(message.unfolded, instances) ?? defaultUnfolded(root)
   if (selected !== undefined && !(instances.includes(selected) && isInstanceShown(selected, unfolded))) selected = undefined
   if (!filterChosenHere) filter = normalizeFilter(message.filter) ?? normalizeFilter(root.graph.view?.filter) ?? FILTER_PRESETS.all
-  layout = layoutHierarchy(root, isUnfolded)
+  relayout()
   render()
   if (first && !viewport) fit()
   else applyViewport()
 }
 
-// ── pan, zoom, select ──
+// ── pan, zoom, select, arrange ──
 canvas.addEventListener('wheel', event => {
   event.preventDefault()
   const box = canvas.getBoundingClientRect()
@@ -264,33 +367,61 @@ canvas.addEventListener('wheel', event => {
   persist()
 }, { passive: false })
 
-const componentAt = (target: EventTarget | null) =>
-  (target instanceof Element ? target.closest('g.component')?.getAttribute('data-node-id') : undefined) ?? undefined
+const groupAt = (target: EventTarget | null, selector: string, attribute: string) =>
+  (target instanceof Element ? target.closest(selector)?.getAttribute(attribute) : undefined) ?? undefined
+const componentAt = (target: EventTarget | null) => groupAt(target, 'g.component', 'data-node-id')
+const nodeAt = (target: EventTarget | null) => groupAt(target, 'g.node', 'data-node-id')
+const wireAt = (target: EventTarget | null) => groupAt(target, 'g.wire', 'data-signal')
 const markerAt = (target: EventTarget | null) => target instanceof Element && target.closest('.fold') !== null
+const gripAt = (target: EventTarget | null) => target instanceof Element && target.closest('.resize') !== null
 
 const CLICK_SLOP = 4
 
-// Pointer capture retargets later events to the canvas, so what was clicked is
-// taken from the press. Clicking a component's fold marker selects it and opens
-// or closes it; clicking anywhere else on it only selects.
+// Pointer capture retargets later events to the canvas, so what was pressed is
+// taken from the press. While arranging, a press on a box drags it and a press
+// on a frame's corner resizes it; otherwise the press pans.
 canvas.addEventListener('pointerdown', event => {
   if (event.button !== 0) return
-  const start = { px: event.clientX, py: event.clientY, v: viewport ?? { x: 0, y: 0, zoom: 1 }, target: event.target }
+  const v = viewport ?? { x: 0, y: 0, zoom: 1 }
+  const start = { px: event.clientX, py: event.clientY, v, target: event.target }
+  const id = nodeAt(event.target)
+  const box = id !== undefined ? layout?.nodes[id] : undefined
+  const arranging = editing && id !== undefined && box !== undefined && belongsToThisFile(id)
+  const resizing = arranging && gripAt(event.target)
   canvas.setPointerCapture(event.pointerId)
-  canvas.classList.add('panning')
+  if (!arranging) canvas.classList.add('panning')
+
   const move = (e: PointerEvent) => {
-    viewport = { ...start.v, x: start.v.x + e.clientX - start.px, y: start.v.y + e.clientY - start.py }
-    applyViewport()
+    const dx = (e.clientX - start.px) / v.zoom
+    const dy = (e.clientY - start.py) / v.zoom
+    if (resizing) arrangement = resizedTo(arrangement, id!, box!.w + dx, box!.h + dy)
+    else if (arranging) arrangement = movedTo(arrangement, id!, box!.x + dx, box!.y + dy)
+    else {
+      viewport = { ...start.v, x: start.v.x + e.clientX - start.px, y: start.v.y + e.clientY - start.py }
+      applyViewport()
+      return
+    }
+    relayout()
+    render()
   }
   const up = (e: PointerEvent) => {
     canvas.classList.remove('panning')
     canvas.removeEventListener('pointermove', move)
-    if (Math.hypot(e.clientX - start.px, e.clientY - start.py) < CLICK_SLOP) {
+    const moved = Math.hypot(e.clientX - start.px, e.clientY - start.py) >= CLICK_SLOP
+    if (arranging && moved) {
+      saveArrangement()
+      return
+    }
+    if (!moved) {
       viewport = start.v
       applyViewport()
+      const wire = wireAt(start.target)
       const instance = componentAt(start.target)
-      select(instance)
-      if (instance !== undefined && markerAt(start.target)) fold(isUnfolded(instance) ? 'fold' : 'unfold', 'node', instance)
+      if (editing && wire !== undefined) selectWire(wire)
+      else {
+        select(instance)
+        if (instance !== undefined && markerAt(start.target)) fold(isUnfolded(instance) ? 'fold' : 'unfold', 'node', instance)
+      }
     }
     persist()
   }
@@ -299,7 +430,18 @@ canvas.addEventListener('pointerdown', event => {
 })
 
 window.addEventListener('keydown', event => {
-  if (event.key === 'Escape') select(undefined)
+  if (event.key === 'Escape') {
+    select(undefined)
+    selectWire(undefined)
+    return
+  }
+  if (!editing || (event.key !== 'Delete' && event.key !== 'Backspace')) return
+  // Cutting leaves the net in the file and the obligation in the panel.
+  if (selectedWire !== undefined && belongsToThisFile(selectedWire) && !isCut(arrangement, selectedWire)) {
+    arrangement = withCut(arrangement, selectedWire)
+    selectedWire = undefined
+    saveArrangement()
+  }
 })
 
 window.addEventListener('message', (event: MessageEvent<HostToWebview>) => {

@@ -59,7 +59,7 @@ export async function run(): Promise<void> {
   log('*.rtlgraph.json opens in the RTLGraph editor by default')
 
   const first = await until('the first render', renderState)
-  assert.deepEqual(first, { filter: { flow: ['data', 'control'], time: ['comb', 'seq'] }, nodes: 17, signals: 23, dim: 0, unfolded: ['acc'] })
+  assert.deepEqual(first, { filter: { flow: ['data', 'control'], time: ['comb', 'seq'] }, nodes: 17, signals: 23, dim: 0, unfolded: ['acc'], editing: false, goals: 0 })
   log('the root opens its one main component: 5 root elements + 12 inside the frame, 4 + 15 nets + 4 frame connectors')
 
   await vscode.commands.executeCommand('rtlgraph.setPreset', 'datapath')
@@ -156,6 +156,6 @@ export async function run(): Promise<void> {
   const child = await vscode.commands.executeCommand<string>('rtlgraph.openComponent', 'acc')
   assert.equal(child, join(dirname(graphFile), 'acc/acc.rtlgraph-schematic.json'))
   const childState = await renderWith('the component schematic', 12)
-  assert.deepEqual(childState, { filter: { flow: ['data', 'control'], time: ['comb', 'seq'] }, nodes: 12, signals: 15, dim: 0, unfolded: [] })
+  assert.deepEqual(childState, { filter: { flow: ['data', 'control'], time: ['comb', 'seq'] }, nodes: 12, signals: 15, dim: 0, unfolded: [], editing: false, goals: 0 })
   log('Open Component Schematic shows acc/acc.rtlgraph-schematic.json on its own (12 elements, 15 nets)')
 }

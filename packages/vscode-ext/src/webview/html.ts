@@ -23,6 +23,20 @@ body { display: flex; flex-direction: column; background: #ffffff; color: #11182
 #stage g.component .fold { cursor: pointer; pointer-events: all; }
 #stage g.component:hover rect.fold { stroke: #2563eb; }
 #stage g.selected > rect:first-child { stroke: #f59e0b; stroke-width: 3px; }
+#stage g.wire.selected path { stroke: #f59e0b !important; stroke-width: 3px; }
+body.editing #stage g.node { cursor: move; }
+body.editing #stage g.node.foreign { cursor: not-allowed; }
+body.editing #stage .resize { cursor: nwse-resize; pointer-events: all; }
+body.editing #stage g.wire { cursor: pointer; }
+#middle { flex: 1; display: flex; min-height: 0; }
+#goals { width: 320px; overflow: auto; border-left: 1px solid #e5e7eb; background: #fbfdff; padding: 8px 10px; }
+#goals h2 { font-size: 12px; margin: 0 0 6px; color: #374151; }
+#goals p { color: #6b7280; margin: 4px 0; }
+#goals ol { margin: 0; padding-left: 18px; }
+#goals li { margin: 6px 0; cursor: pointer; }
+#goals li.active { font-weight: 600; color: #1d4ed8; }
+#goals li .why { display: block; color: #6b7280; font-weight: 400; }
+#goals .candidates { margin: 2px 0 0; font-family: ui-monospace, monospace; color: #374151; }
 #canvas { flex: 1; position: relative; overflow: hidden; background: #ffffff; cursor: grab; touch-action: none; }
 #canvas.panning { cursor: grabbing; }
 #stage { position: absolute; left: 0; top: 0; transform-origin: 0 0; }

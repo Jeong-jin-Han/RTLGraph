@@ -683,7 +683,16 @@ export function layoutComponent(graph: ComponentGraph, options: LayoutOptions = 
     const shape = shapes.get(id)!
     boxes[id] = { x: x.get(id)!, y: top, w: shape.w, h: shape.h, row: row.get(id)!, pins: pinsOf(x.get(id)!, top, shape) }
   }
-  for (const id of packed) place(id, rowTop[row.get(id)!] + topInRow(id, rowH[row.get(id)!]))
+  for (const id of packed) {
+    const r = row.get(id)!
+    // A box the reader dragged keeps its height within its own row: the channels
+    // above and below it are where its wires run, so it cannot leave the band.
+    const at = pinned[id]
+    const top = at
+      ? Math.min(Math.max(at.y, rowTop[r]), rowTop[r] + rowH[r] - shapes.get(id)!.h)
+      : rowTop[r] + topInRow(id, rowH[r])
+    place(id, top)
+  }
   for (const [id, hug] of directPort) {
     const side = sideAt(hug)
     if (side === 'bottom') place(id, rowTop[row.get(id)!] + rowH[row.get(id)!] - shapes.get(id)!.h)

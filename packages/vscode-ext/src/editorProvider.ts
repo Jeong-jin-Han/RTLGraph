@@ -4,6 +4,7 @@ import { FILTER_PRESETS, hierarchyEntries, loadHierarchy } from '@rtlgraph/ir'
 import type { HostToWebview, RenderState, WebviewToHost } from './protocol.ts'
 import type { ExportSource } from './export.ts'
 import { collectHierarchyFiles } from './hierarchyFiles.ts'
+import { setLayoutEdit } from './jsonEdit.ts'
 import { normalizeFilter } from './webview/state.ts'
 import { webviewHtml } from './webview/html.ts'
 
@@ -161,6 +162,14 @@ export class RtlGraphEditorProvider implements vscode.CustomTextEditorProvider {
           if (filter) void this.context.workspaceState.update(filterKey, filter)
         } else if (message.type === 'setFold') {
           if (Array.isArray(message.unfolded)) void this.context.workspaceState.update(foldKey, message.unfolded)
+        } else if (message.type === 'setLayout') {
+          // The only thing the editor writes, and only into `layout`.
+          const edit = setLayoutEdit(document.getText(), message.layout)
+          if (edit) {
+            const change = new vscode.WorkspaceEdit()
+            change.replace(document.uri, new vscode.Range(document.positionAt(edit.start), document.positionAt(edit.end)), edit.text)
+            void vscode.workspace.applyEdit(change)
+          }
         } else if (message.type === 'command') {
           RtlGraphEditorProvider.active = panel
           void vscode.commands.executeCommand(message.command)
