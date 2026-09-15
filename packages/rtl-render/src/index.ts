@@ -81,7 +81,9 @@ function foldMarker(b: NodeBox, titleH: number, folded: boolean): Item[] {
   const bars = [{ x1: x + 2, y1: y + 5, x2: x + 8, y2: y + 5 }]
   if (folded) bars.push({ x1: x + 5, y1: y + 2, x2: x + 5, y2: y + 8 })
   return [
-    { kind: 'rect', x: x - 5, y: y - 5, w: 20, h: 20, fill: 'transparent', className: FOLD_MARKER_CLASS },
+    // No fill: the editor's stylesheet is what makes this square catch clicks,
+    // and a renderer that does not know "transparent" would paint it black.
+    { kind: 'rect', x: x - 5, y: y - 5, w: 20, h: 20, fill: 'none', className: FOLD_MARKER_CLASS },
     { kind: 'rect', x, y, w: 10, h: 10, fill: PALETTE.background, stroke: PALETTE.muted, className: FOLD_MARKER_CLASS },
     { kind: 'lines', segments: bars, fill: 'none', stroke: PALETTE.ink, strokeWidth: 1.25, className: FOLD_MARKER_CLASS },
   ]
@@ -242,7 +244,23 @@ function drawLevel(
       const line: Item = { kind: 'lines', segments: [segment], fill: 'none', stroke: style.color, strokeWidth: style.width, ...(style.dash ? { dash: style.dash } : {}) }
       groups.push({ className: `wire connector ${entry.graph.signals[name].flow}`, attribute: { name: 'data-signal', value: childPrefix + name }, items: place([line]) })
     }
+    const before = groups.length
     drawLevel(canvas, entry.graph, child.layout, child.layout.children, entry.children, dx + child.x, dy + child.y, childPrefix)
+    // An open component whose whole inside is filtered away is just an empty
+    // panel, which reads as a bug. Say what happened instead.
+    if (groups.length === before && canvas.frames) {
+      groups.push({
+        className: 'note',
+        attribute: { name: 'data-node-id', value: `${prefix}${id}` },
+        items: place([{
+          kind: 'text',
+          x: child.x + child.layout.width / 2,
+          y: child.y + child.layout.height / 2,
+          text: 'nothing here matches the filter',
+          anchor: 'middle', central: true, size: 11, fill: PALETTE.muted,
+        }]),
+      })
+    }
   }
 }
 

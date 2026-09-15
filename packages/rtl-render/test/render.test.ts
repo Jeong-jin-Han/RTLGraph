@@ -85,7 +85,7 @@ test('the fold marker is one clickable part of the component group', () => {
   const group = /<g class="node component folded" data-node-id="acc">(.*?)<\/g>/s.exec(svg)![1]
   const marked = [...group.matchAll(/class="fold"/g)].length
   assert.equal(marked, 3) // the box, its bars, and a transparent square to click at
-  assert.match(group, /<rect [^>]*fill="transparent"[^>]*class="fold"|<rect [^>]*class="fold"[^>]*fill="transparent"/)
+  assert.match(group, /<rect [^>]*class="fold" fill="none"/) // the square to click at
 })
 
 test('fold markers are drawn for the editor only, never in an export', () => {
@@ -118,6 +118,13 @@ test('an export draws no frame around an open component', () => {
   // The boxes and wires inside them stay, and so do the connectors across the edge.
   assert.deepEqual(nodeIds(figure), nodeIds(editor))
   assert.deepEqual(signalIds(figure), signalIds(editor))
+})
+
+test('an open component says so when the filter empties it', () => {
+  const comb = renderHierarchySvg(sysRoot, { isUnfolded: () => true, filter: FILTER_PRESETS.comb })
+  assert.ok(!nodeIds(comb).some(id => id.startsWith('sys/u_dev/u_inbuf/')), 'inbuf holds only a register')
+  assert.equal([...comb.matchAll(/>nothing here matches the filter</g)].length, 1)
+  assert.ok(!renderHierarchySvg(sysRoot, { isUnfolded: () => true }).includes('nothing here matches the filter'))
 })
 
 test('the filter applies inside frames, connectors included', () => {

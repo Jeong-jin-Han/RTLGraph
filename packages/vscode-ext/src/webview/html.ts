@@ -20,7 +20,7 @@ body { display: flex; flex-direction: column; background: #ffffff; color: #11182
 #toolbar .selection { font-family: ui-monospace, monospace; color: #374151; }
 #toolbar button:disabled { opacity: 0.5; cursor: default; }
 #stage g.component { cursor: pointer; }
-#stage g.component .fold { cursor: pointer; }
+#stage g.component .fold { cursor: pointer; pointer-events: all; }
 #stage g.component:hover rect.fold { stroke: #2563eb; }
 #stage g.selected > rect:first-child { stroke: #f59e0b; stroke-width: 3px; }
 #canvas { flex: 1; position: relative; overflow: hidden; background: #ffffff; cursor: grab; touch-action: none; }
