@@ -3,13 +3,19 @@ import assert from 'node:assert/strict'
 import { readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { FILTER_PRESETS, loadHierarchy, type ComponentGraph, type FilterPreset } from '@rtlgraph/ir'
-import { renderHierarchySvg, renderSvg } from '../src/index.ts'
+import { PALETTE, renderHierarchySvg, renderSvg } from '../src/index.ts'
 
 const DEMO = join(import.meta.dirname, '../../../demo/acc/acc')
 const graph = JSON.parse(readFileSync(join(DEMO, 'acc.rtlgraph-schematic.json'), 'utf8')) as ComponentGraph
 const render = (preset: FilterPreset) => renderSvg(graph, { filter: FILTER_PRESETS[preset] })
 const nodeIds = (svg: string) => [...svg.matchAll(/data-node-id="([^"]+)"/g)].map(m => m[1]).sort()
 const signalIds = (svg: string) => [...svg.matchAll(/data-signal="([^"]+)"/g)].map(m => m[1]).sort()
+// What the filter picked: the groups the renderer did not mark dim.
+const litIds = (svg: string, attribute: 'data-node-id' | 'data-signal') =>
+  [...svg.matchAll(new RegExp(`<g class="([^"]+)" ${attribute}="([^"]+)"`, 'g'))]
+    .filter(m => !m[1].split(' ').includes('dim'))
+    .map(m => m[2])
+    .sort()
 
 test('renders symbols with registry labels', () => {
   const svg = render('all')
@@ -20,11 +26,15 @@ test('renders symbols with registry labels', () => {
   assert.match(svg, /<polygon /) // the MUX
 })
 
-test('datapath preset draws only the slide p.31 elements', () => {
+test('datapath preset lights the slide p.31 elements and dims the rest', () => {
   const svg = render('datapath')
-  assert.deepEqual(nodeIds(svg), ['@ACC', 'ACC_FF', 'CNT_FF', 'OUT_FF', 'data_path.u_add', 'data_path.u_inc', 'data_path.u_mux', 'data_path.u_sub'])
-  assert.deepEqual(signalIds(svg), ['ACC_D', 'ACC_Q', 'CNT_D', 'CNT_Q', 'OUT_Q', 'data_path.ADD_OUT', 'data_path.SUB_OUT'])
-  assert.ok(!svg.includes('stroke-dasharray'))
+  assert.deepEqual(litIds(svg, 'data-node-id'), ['@ACC', 'ACC_FF', 'CNT_FF', 'OUT_FF', 'data_path.u_add', 'data_path.u_inc', 'data_path.u_mux', 'data_path.u_sub'])
+  assert.deepEqual(litIds(svg, 'data-signal'), ['ACC_D', 'ACC_Q', 'CNT_D', 'CNT_Q', 'OUT_Q', 'data_path.ADD_OUT', 'data_path.SUB_OUT'])
+  // The control block and its wires stay on the page, in grey, so no net is cut.
+  assert.deepEqual(nodeIds(svg), nodeIds(render('all')))
+  assert.deepEqual(signalIds(svg), signalIds(render('all')))
+  assert.match(svg, /<g class="node control dim"/)
+  assert.ok(svg.includes(`stroke="${PALETTE.dim}"`))
 })
 
 test('control nets are dashed, reset nets red', () => {
@@ -33,12 +43,12 @@ test('control nets are dashed, reset nets red', () => {
   assert.match(svg, /data-signal="RST"><path [^>]*stroke="#dc2626"/)
 })
 
-test('crops to the visible part unless asked not to', () => {
+test('crops to what is drawn unless asked not to', () => {
   const size = (svg: string) => /viewBox="(-?\d+) (-?\d+) (\d+) (\d+)"/.exec(svg)!.slice(1).map(Number)
-  const full = size(renderSvg(graph, { filter: FILTER_PRESETS.datapath, crop: false }))
-  const cropped = size(render('datapath'))
+  const full = size(renderSvg(graph, { crop: false }))
+  const cropped = size(render('all'))
   assert.deepEqual(full.slice(0, 2), [0, 0])
-  assert.ok(cropped[2] < full[2] && cropped[0] > 0)
+  assert.ok(cropped[2] <= full[2] && cropped[3] <= full[3])
 })
 
 test('text is escaped', () => {
@@ -120,18 +130,20 @@ test('an export draws no frame around an open component', () => {
   assert.deepEqual(signalIds(figure), signalIds(editor))
 })
 
-test('an open component says so when the filter empties it', () => {
+test('a component keeps its contents whatever the filter picks', () => {
+  // inbuf holds one register: with Seq off its inside is all grey, never empty.
   const comb = renderHierarchySvg(sysRoot, { isUnfolded: () => true, filter: FILTER_PRESETS.comb })
-  assert.ok(!nodeIds(comb).some(id => id.startsWith('sys/u_dev/u_inbuf/')), 'inbuf holds only a register')
-  assert.equal([...comb.matchAll(/>nothing here matches the filter</g)].length, 1)
-  assert.ok(!renderHierarchySvg(sysRoot, { isUnfolded: () => true }).includes('nothing here matches the filter'))
+  const inside = nodeIds(comb).filter(id => id.startsWith('sys/u_dev/u_inbuf/'))
+  assert.deepEqual(inside, nodeIds(renderHierarchySvg(sysRoot, { isUnfolded: () => true })).filter(id => id.startsWith('sys/u_dev/u_inbuf/')))
+  assert.ok(!litIds(comb, 'data-node-id').includes('sys/u_dev/u_inbuf/BUF_FF'))
 })
 
 test('the filter applies inside frames, connectors included', () => {
   const svg = renderHierarchySvg(root, { isUnfolded: () => true, filter: FILTER_PRESETS.datapath })
-  assert.ok(!svg.includes('stroke-dasharray'))
-  assert.ok(nodeIds(svg).includes('acc/data_path.u_mux'))
-  assert.ok(!nodeIds(svg).includes('acc/control_path'))
+  assert.ok(litIds(svg, 'data-node-id').includes('acc/data_path.u_mux'))
+  assert.ok(!litIds(svg, 'data-node-id').includes('acc/control_path'))
+  assert.ok(nodeIds(svg).includes('acc/control_path'), 'still drawn, in grey')
+  assert.ok(!litIds(svg, 'data-signal').some(name => name.endsWith('/ACC_SEL')))
 })
 
 // ── three levels: demo/sys ──

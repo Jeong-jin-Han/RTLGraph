@@ -32,6 +32,7 @@ export interface RenderState {
   filter: ViewFilter
   nodes: number
   signals: number
+  dim: number // drawn in grey: what the filter passed over
   unfolded: string[]
   selected?: string // a component instance
 }

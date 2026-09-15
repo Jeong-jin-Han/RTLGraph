@@ -1,8 +1,13 @@
 import type { ComponentGraph, Flow, RtlNode, Signal, ViewFilter } from './types.ts'
 import { parseEndpoint } from './endpoint.ts'
 
-// The two-axis filter (draft 01 §4). Shared by the editor and the HTML export so
-// both hide exactly the same things.
+// The two-axis filter (draft 01 §4). Shared by the editor and every export so
+// they all treat the filter the same way.
+//
+// The filter highlights; it does not hide. Hiding left nets cut in half — a wire
+// whose driver was filtered away still had its sinks — and a schematic with holes
+// is harder to read than one where the parts you asked for stand out. Everything
+// stays on the page; what the filter does not pick is drawn dim.
 
 export const FILTER_PRESETS = {
   all: { flow: ['data', 'control'], time: ['comb', 'seq'] },
@@ -18,33 +23,49 @@ export type FilterPreset = keyof typeof FILTER_PRESETS
 export const signalAxis = (s: Signal): Flow => (s.flow === 'data' ? 'data' : 'control')
 
 export interface VisibleElements {
-  nodes: Set<string>
+  nodes: Set<string> // drawn at all — everything except the nets marked hidden
   signals: Set<string>
+  litNodes: Set<string> // drawn in full colour; the rest are dim
+  litSignals: Set<string>
 }
 
-// Policy "hide": a net is drawn only when its driver and at least one sink are
-// visible; a port node is drawn only when one of its nets is.
+const isEverything = (filter: ViewFilter) =>
+  filter.flow.length === 2 && filter.time.length === 2
+
 export function visibleElements(graph: ComponentGraph, filter: ViewFilter): VisibleElements {
-  const shown = (n: RtlNode | undefined) =>
-    !!n && (n.kind === 'port' || n.kind === 'component' || (filter.flow.includes(n.flow) && filter.time.includes(n.time)))
-  const endpointShown = (ref: string) => shown(graph.nodes[parseEndpoint(ref).node])
-
-  const signals = new Set<string>()
-  for (const [name, s] of Object.entries(graph.signals)) {
-    if (s.hidden || !filter.flow.includes(signalAxis(s))) continue
-    if (endpointShown(s.driver) && s.sinks.some(endpointShown)) signals.add(name)
-  }
-
   const nodes = new Set<string>()
-  for (const [id, n] of Object.entries(graph.nodes)) {
-    if (n.kind !== 'port' && shown(n)) nodes.add(id)
-  }
+  const signals = new Set<string>()
+  for (const [name, s] of Object.entries(graph.signals)) if (!s.hidden) signals.add(name)
+  for (const id of Object.keys(graph.nodes)) nodes.add(id)
+
+  // A box is picked by the filter on both axes; a port or a component box has
+  // neither, so it follows the nets that reach it.
+  const picked = (n: RtlNode | undefined) =>
+    !!n && n.kind !== 'port' && n.kind !== 'component' && filter.flow.includes(n.flow) && filter.time.includes(n.time)
+
+  const litNodes = new Set<string>()
+  const litSignals = new Set<string>()
+  if (isEverything(filter)) return { nodes, signals, litNodes: nodes, litSignals: signals }
+
+  for (const id of nodes) if (picked(graph.nodes[id])) litNodes.add(id)
   for (const name of signals) {
+    const s = graph.signals[name]
+    if (!filter.flow.includes(signalAxis(s))) continue
+    // A net is lit when it carries something between two boxes the filter picked;
+    // a net that only touches ports or component boxes is lit by its own flow.
+    const ends = [s.driver, ...s.sinks].map(ref => graph.nodes[parseEndpoint(ref).node])
+    const boxes = ends.filter(n => n && n.kind !== 'port' && n.kind !== 'component')
+    if (boxes.length > 0 && !boxes.every(picked)) continue
+    litSignals.add(name)
+  }
+  // Ports and component boxes light up with the nets that reach them.
+  for (const name of litSignals) {
     const s = graph.signals[name]
     for (const ref of [s.driver, ...s.sinks]) {
       const id = parseEndpoint(ref).node
-      if (graph.nodes[id]?.kind === 'port') nodes.add(id)
+      const kind = graph.nodes[id]?.kind
+      if (kind === 'port' || kind === 'component') litNodes.add(id)
     }
   }
-  return { nodes, signals }
+  return { nodes, signals, litNodes, litSignals }
 }

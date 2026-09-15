@@ -59,13 +59,16 @@ export async function run(): Promise<void> {
   log('*.rtlgraph.json opens in the RTLGraph editor by default')
 
   const first = await until('the first render', renderState)
-  assert.deepEqual(first, { filter: { flow: ['data', 'control'], time: ['comb', 'seq'] }, nodes: 17, signals: 23, unfolded: ['acc'] })
+  assert.deepEqual(first, { filter: { flow: ['data', 'control'], time: ['comb', 'seq'] }, nodes: 17, signals: 23, dim: 0, unfolded: ['acc'] })
   log('the root opens its one main component: 5 root elements + 12 inside the frame, 4 + 15 nets + 4 frame connectors')
 
   await vscode.commands.executeCommand('rtlgraph.setPreset', 'datapath')
-  const datapath = await renderWith('the datapath render', 10)
-  assert.deepEqual(datapath, { filter: { flow: ['data'], time: ['comb', 'seq'] }, nodes: 10, signals: 9, unfolded: ['acc'] })
-  log('the datapath preset applies inside the frame too (10 elements, 9 nets)')
+  const datapath = await until('the datapath render', async () => {
+    const state = await renderState()
+    return state && state.dim > 0 ? state : undefined
+  })
+  assert.deepEqual([datapath.filter, datapath.nodes, datapath.signals], [{ flow: ['data'], time: ['comb', 'seq'] }, 17, 23])
+  log(`the datapath preset greys what it passes over instead of removing it (${datapath.dim} of 40 dimmed, nothing cut)`)
 
   // ── export the current (datapath, unfolded) view; a folder of its own leaves the user's exports alone ──
   await vscode.workspace.getConfiguration('rtlgraph').update('export.folder', '.out-e2e-${name}', vscode.ConfigurationTarget.Global)
@@ -77,7 +80,8 @@ export async function run(): Promise<void> {
     const [, , width, height] = /viewBox="(-?\d+) (-?\d+) (\d+) (\d+)"/.exec(svg)!.slice(1).map(Number)
     // the wrapper root is left out of a figure: ids are the component's own
     assert.ok(svg.includes('data-node-id="data_path.u_mux"'))
-    assert.ok(!svg.includes('data-node-id="acc"') && !svg.includes('data-node-id="control_path"'))
+    assert.ok(!svg.includes('data-node-id="acc"'), 'the wrapper root is left out of a figure')
+    assert.match(svg, /<g class="node control dim" data-node-id="control_path"/) // greyed, not cut
     const png = readFileSync(exported[1])
     assert.deepEqual([...png.subarray(0, 8)], [137, 80, 78, 71, 13, 10, 26, 10])
     assert.deepEqual([png.readUInt32BE(16), png.readUInt32BE(20)], [width * 2, height * 2])
@@ -90,14 +94,14 @@ export async function run(): Promise<void> {
 
   // ── fold / unfold ──
   assert.equal(await vscode.commands.executeCommand('rtlgraph.fold'), 'all')
-  const folded = await renderWith('the folded render', 2)
+  const folded = await renderWith('the folded render', 5)
   assert.deepEqual(folded.unfolded, [])
-  log('Fold with nothing selected folds the whole hierarchy (2 elements left)')
+  log('Fold with nothing selected folds the whole hierarchy (5 elements left)')
 
   assert.equal(await vscode.commands.executeCommand('rtlgraph.unfold', { instance: 'acc', scope: 'node' }), 'node')
-  assert.deepEqual((await renderWith('the unfolded render', 10)).unfolded, ['acc'])
+  assert.deepEqual((await renderWith('the unfolded render', 17)).unfolded, ['acc'])
   assert.equal(await vscode.commands.executeCommand('rtlgraph.fold', { instance: 'acc', scope: 'descendants' }), 'descendants')
-  await renderWith('the render folded again', 2)
+  await renderWith('the render folded again', 5)
   log('a selected component folds and unfolds on its own or with everything inside')
 
   await vscode.commands.executeCommand('rtlgraph.fitView')
@@ -106,7 +110,7 @@ export async function run(): Promise<void> {
   await until('the editor to close', async () => ((await renderState()) === undefined ? true : undefined))
   await vscode.commands.executeCommand('vscode.open', uri)
   const reopened = await until('the render after reopening', renderState)
-  assert.deepEqual([reopened.filter, reopened.unfolded, reopened.nodes], [{ flow: ['data'], time: ['comb', 'seq'] }, [], 2])
+  assert.deepEqual([reopened.filter, reopened.unfolded, reopened.nodes], [{ flow: ['data'], time: ['comb', 'seq'] }, [], 5])
   log('the chosen filter and fold state survive closing and reopening the file')
 
   const document = vscode.workspace.textDocuments.find(d => d.uri.toString() === uri.toString())
@@ -152,6 +156,6 @@ export async function run(): Promise<void> {
   const child = await vscode.commands.executeCommand<string>('rtlgraph.openComponent', 'acc')
   assert.equal(child, join(dirname(graphFile), 'acc/acc.rtlgraph-schematic.json'))
   const childState = await renderWith('the component schematic', 12)
-  assert.deepEqual(childState, { filter: { flow: ['data', 'control'], time: ['comb', 'seq'] }, nodes: 12, signals: 15, unfolded: [] })
+  assert.deepEqual(childState, { filter: { flow: ['data', 'control'], time: ['comb', 'seq'] }, nodes: 12, signals: 15, dim: 0, unfolded: [] })
   log('Open Component Schematic shows acc/acc.rtlgraph-schematic.json on its own (12 elements, 15 nets)')
 }

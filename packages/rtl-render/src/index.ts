@@ -29,6 +29,11 @@ export const PALETTE = {
   controlStroke: '#4f46e5',
   componentFill: '#f8fafc',
   frameStroke: '#94a3b8',
+  // What the filter passed over: still legible as a grey ghost, never competing
+  // with what it picked.
+  dim: '#b9c0c9',
+  dimFill: '#f5f7f9',
+  dimText: '#aab2bc',
   data: '#111827',
   control: '#2563eb',
   reset: '#dc2626',
@@ -171,6 +176,18 @@ function translate(item: Item, dx: number, dy: number): Item {
   }
 }
 
+// Grey, so the parts the filter picked stand out against what surrounds them.
+const dimmed = (items: Item[]): Item[] =>
+  items.map(item => {
+    if (item.kind === 'text') return { ...item, fill: PALETTE.dimText }
+    const paint = item as { fill?: string; stroke?: string }
+    return {
+      ...item,
+      ...(paint.fill !== undefined && paint.fill !== 'none' ? { fill: item.kind === 'circle' ? PALETTE.dim : PALETTE.dimFill } : {}),
+      ...(paint.stroke !== undefined && paint.stroke !== 'none' ? { stroke: PALETTE.dim } : {}),
+    } as Item
+  })
+
 interface Canvas {
   filter: ViewFilter
   controls: boolean
@@ -204,6 +221,13 @@ function drawLevel(
     for (const s of layout.wires[name]?.segments ?? []) xs.push(s.x1 + dx, s.x2 + dx), ys.push(s.y1 + dy, s.y2 + dy)
   }
 
+  // Within one level the dim parts go under the picked ones. Not globally: a
+  // frame is painted, and a frame drawn later would cover its children.
+  const levelDim: Group[] = []
+  const levelLit: Group[] = []
+  const add = (lit: boolean, group: Group) =>
+    lit ? levelLit.push(group) : levelDim.push({ ...group, className: `${group.className} dim`, items: dimmed(group.items) })
+
   for (const [name, wire] of Object.entries(layout.wires)) {
     if (!visible.signals.has(name)) continue
     const s = graph.signals[name]
@@ -217,7 +241,7 @@ function drawLevel(
       const pin = layout.nodes[node]?.pins[port ?? PORT_PIN]
       if (pin) items.push({ kind: 'text', x: pin.x + 4, y: pin.side === 'top' ? pin.y - 4 : pin.y + 12, text: String(s.width), size: 9, fill: PALETTE.muted })
     }
-    groups.push({ className: `wire ${s.flow}`, attribute: { name: 'data-signal', value: prefix + name }, items: place(items) })
+    add(visible.litSignals.has(name), { className: `wire ${s.flow}`, attribute: { name: 'data-signal', value: prefix + name }, items: place(items) })
   }
   for (const [id, b] of Object.entries(layout.nodes)) {
     if (!visible.nodes.has(id)) continue
@@ -225,8 +249,11 @@ function drawLevel(
     const open = node.kind === 'component' && id in children
     const className = node.kind !== 'component' ? `node ${node.kind}` : `node component ${open ? 'unfolded' : 'folded'}`
     const items = open ? frameItems(node as ComponentNode, b, canvas.controls, canvas.frames) : nodeItems(id, node, b, canvas.controls)
-    groups.push({ className, attribute: { name: 'data-node-id', value: prefix + id }, items: place(items) })
+    // A frame is the room its children sit in, never dim.
+    add(open || visible.litNodes.has(id), { className, attribute: { name: 'data-node-id', value: prefix + id }, items: place(items) })
   }
+
+  groups.push(...levelDim, ...levelLit)
 
   for (const [id, child] of Object.entries(children)) {
     const entry = entries[id]
@@ -242,25 +269,16 @@ function drawLevel(
       if (name === undefined || !childVisible.signals.has(name)) continue
       const style = wireStyle(entry.graph.signals[name])
       const line: Item = { kind: 'lines', segments: [segment], fill: 'none', stroke: style.color, strokeWidth: style.width, ...(style.dash ? { dash: style.dash } : {}) }
-      groups.push({ className: `wire connector ${entry.graph.signals[name].flow}`, attribute: { name: 'data-signal', value: childPrefix + name }, items: place([line]) })
+      const group: Group = {
+        className: `wire connector ${entry.graph.signals[name].flow}`,
+        attribute: { name: 'data-signal', value: childPrefix + name },
+        items: place([line]),
+      }
+      groups.push(childVisible.litSignals.has(name)
+        ? group
+        : { ...group, className: `${group.className} dim`, items: dimmed(group.items) })
     }
-    const before = groups.length
     drawLevel(canvas, entry.graph, child.layout, child.layout.children, entry.children, dx + child.x, dy + child.y, childPrefix)
-    // An open component whose whole inside is filtered away is just an empty
-    // panel, which reads as a bug. Say what happened instead.
-    if (groups.length === before && canvas.frames) {
-      groups.push({
-        className: 'note',
-        attribute: { name: 'data-node-id', value: `${prefix}${id}` },
-        items: place([{
-          kind: 'text',
-          x: child.x + child.layout.width / 2,
-          y: child.y + child.layout.height / 2,
-          text: 'nothing here matches the filter',
-          anchor: 'middle', central: true, size: 11, fill: PALETTE.muted,
-        }]),
-      })
-    }
   }
 }
 

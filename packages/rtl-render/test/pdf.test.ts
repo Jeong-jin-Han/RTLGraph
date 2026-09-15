@@ -5,7 +5,7 @@ import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { FILTER_PRESETS, type ComponentGraph } from '@rtlgraph/ir'
-import { buildScene, renderPdf, renderSvg } from '../src/index.ts'
+import { buildScene, PALETTE, renderPdf, renderSvg } from '../src/index.ts'
 
 const DEMO = join(import.meta.dirname, '../../../demo/acc/acc')
 const graph = JSON.parse(readFileSync(join(DEMO, 'acc.rtlgraph-schematic.json'), 'utf8')) as ComponentGraph
@@ -30,10 +30,11 @@ test('page size follows the cropped view and labels are drawn as text', () => {
   const text = latin1(renderPdf(graph, { filter: FILTER_PRESETS.datapath }).bytes)
   assert.match(text, new RegExp(`/MediaBox \\[0 0 ${scene.view.w} ${scene.view.h}\\]`))
   for (const label of ['CNT_FF', 'ACC_FF', 'OUT_FF', '+1', 'ADD', 'SUB', 'ACC']) assert.ok(text.includes(`(${label}) Tj`), label)
-  assert.ok(!text.includes('(acc_cp) Tj'), 'the control block is filtered out')
-  // Dashed strokes belong to control nets only.
-  assert.ok(!text.includes('[5 3] 0 d'))
-  assert.ok(latin1(renderPdf(graph).bytes).includes('[5 3] 0 d'))
+  assert.ok(text.includes('(acc_cp) Tj'), 'the control block is dimmed, not dropped')
+  // The grey everything the filter passed over is drawn in.
+  const rgb = [1, 3, 5].map(i => Math.round((parseInt(PALETTE.dim.slice(i, i + 2), 16) / 255) * 100) / 100).join(' ')
+  assert.ok(text.includes(`${rgb} RG`), rgb)
+  assert.ok(!latin1(renderPdf(graph).bytes).includes(`${rgb} RG`))
 })
 
 test('PDF output is deterministic', () => {

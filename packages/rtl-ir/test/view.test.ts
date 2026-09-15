@@ -8,38 +8,46 @@ const graph = JSON.parse(
   readFileSync(join(import.meta.dirname, '../../../demo/acc/acc/acc.rtlgraph-schematic.json'), 'utf8'),
 ) as ComponentGraph
 
-const visible = (preset: FilterPreset) => {
+const lit = (preset: FilterPreset) => {
   const v = visibleElements(graph, FILTER_PRESETS[preset])
-  return { nodes: [...v.nodes].sort(), signals: [...v.signals].sort() }
+  return { nodes: [...v.litNodes].sort(), signals: [...v.litSignals].sort() }
 }
 
-test('datapath preset is exactly the slide p.31 picture', () => {
-  assert.deepEqual(visible('datapath'), {
+test('the filter picks what to light; nothing is taken away', () => {
+  for (const preset of Object.keys(FILTER_PRESETS) as FilterPreset[]) {
+    const v = visibleElements(graph, FILTER_PRESETS[preset])
+    assert.equal(v.nodes.size, Object.keys(graph.nodes).length, preset)
+    assert.equal(v.signals.size, Object.keys(graph.signals).length - 1, preset) // CLK is hidden in the file
+    assert.ok(!v.signals.has('CLK'), preset)
+  }
+})
+
+test('all lights everything that is drawn', () => {
+  const v = visibleElements(graph, FILTER_PRESETS.all)
+  assert.deepEqual([...v.litNodes].sort(), [...v.nodes].sort())
+  assert.deepEqual([...v.litSignals].sort(), [...v.signals].sort())
+})
+
+test('datapath lights exactly the slide p.31 picture', () => {
+  assert.deepEqual(lit('datapath'), {
     nodes: ['@ACC', 'ACC_FF', 'CNT_FF', 'OUT_FF', 'data_path.u_add', 'data_path.u_inc', 'data_path.u_mux', 'data_path.u_sub'],
     signals: ['ACC_D', 'ACC_Q', 'CNT_D', 'CNT_Q', 'OUT_Q', 'data_path.ADD_OUT', 'data_path.SUB_OUT'],
   })
 })
 
-test('all preset shows every net except hidden ones', () => {
-  const v = visible('all')
-  assert.equal(v.nodes.length, Object.keys(graph.nodes).length - 1) // @CLK: its only net is hidden
-  assert.ok(!v.signals.includes('CLK'))
-  assert.equal(v.signals.length, Object.keys(graph.signals).length - 1)
-})
-
-test('comb preset drops registers and the nets that touch them', () => {
-  assert.deepEqual(visible('comb'), {
+test('comb lights the combinational boxes and the nets between them', () => {
+  assert.deepEqual(lit('comb'), {
     nodes: ['@MODE', '@RST', '@SHOW', 'control_path', 'data_path.u_add', 'data_path.u_inc', 'data_path.u_mux', 'data_path.u_sub'],
     signals: ['ACC_SEL', 'MODE', 'RST', 'SHOW', 'data_path.ADD_OUT', 'data_path.SUB_OUT'],
   })
 })
 
-test('seq preset keeps registers, and ports only when a net reaches them', () => {
-  assert.deepEqual(visible('seq'), { nodes: ['@ACC', 'ACC_FF', 'CNT_FF', 'OUT_FF'], signals: ['OUT_Q'] })
+test('seq lights the registers; a net into one is only half sequential', () => {
+  assert.deepEqual(lit('seq'), { nodes: ['@ACC', 'ACC_FF', 'CNT_FF', 'OUT_FF'], signals: ['OUT_Q'] })
 })
 
-test('controlpath preset shows the control block and its inputs', () => {
-  assert.deepEqual(visible('controlpath'), {
+test('controlpath lights the control block and its inputs', () => {
+  assert.deepEqual(lit('controlpath'), {
     nodes: ['@MODE', '@RST', '@SHOW', 'control_path'],
     signals: ['MODE', 'RST', 'SHOW'],
   })

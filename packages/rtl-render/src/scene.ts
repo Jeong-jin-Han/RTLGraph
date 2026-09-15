@@ -57,7 +57,10 @@ function itemToSvg(item: Item): string {
     case 'polygon':
       return `<polygon points="${item.points.map(([x, y]) => `${x},${y}`).join(' ')}"${paint(item)}/>`
     case 'lines':
-      return `<path d="${item.segments.map(s => `M${s.x1} ${s.y1}L${s.x2} ${s.y2}`).join('')}"${paint(item)}/>`
+      // Round caps and joins: each segment is drawn on its own, and overlapping
+      // round ends are what makes a corner look joined (the trick Digital Logic
+      // Sim gets from its capsule shader).
+      return `<path d="${item.segments.map(s => `M${s.x1} ${s.y1}L${s.x2} ${s.y2}`).join('')}"${paint(item)} stroke-linecap="round" stroke-linejoin="round"/>`
     case 'circle':
       return `<circle cx="${item.cx}" cy="${item.cy}" r="${item.r}"${paint(item)}/>`
     case 'text': {

@@ -113,6 +113,7 @@ function report() {
       filter,
       nodes: stage.querySelectorAll('[data-node-id]').length,
       signals: stage.querySelectorAll('[data-signal]').length,
+      dim: stage.querySelectorAll('.dim').length,
       unfolded,
       ...(selected !== undefined ? { selected } : {}),
     },
