@@ -5,7 +5,7 @@ import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { FILTER_PRESETS, type ComponentGraph } from '@rtlgraph/ir'
-import { buildScene, PALETTE, renderPdf, renderSvg } from '../src/index.ts'
+import { buildScene, DIM_OPACITY, renderPdf, renderSvg } from '../src/index.ts'
 
 const DEMO = join(import.meta.dirname, '../../../demo/acc/acc')
 const graph = JSON.parse(readFileSync(join(DEMO, 'acc.rtlgraph-schematic.json'), 'utf8')) as ComponentGraph
@@ -31,10 +31,11 @@ test('page size follows the cropped view and labels are drawn as text', () => {
   assert.match(text, new RegExp(`/MediaBox \\[0 0 ${scene.view.w} ${scene.view.h}\\]`))
   for (const label of ['CNT_FF', 'ACC_FF', 'OUT_FF', '+1', 'ADD', 'SUB', 'ACC']) assert.ok(text.includes(`(${label}) Tj`), label)
   assert.ok(text.includes('(acc_cp) Tj'), 'the control block is dimmed, not dropped')
-  // The grey everything the filter passed over is drawn in.
-  const rgb = [1, 3, 5].map(i => Math.round((parseInt(PALETTE.dim.slice(i, i + 2), 16) / 255) * 100) / 100).join(' ')
-  assert.ok(text.includes(`${rgb} RG`), rgb)
-  assert.ok(!latin1(renderPdf(graph).bytes).includes(`${rgb} RG`))
+  // What the filter passed over is faded through a graphics state of its own.
+  assert.match(text, new RegExp(`/ExtGState << /GS0 << /Type /ExtGState /ca ${DIM_OPACITY} /CA ${DIM_OPACITY} >> >>`))
+  assert.ok(text.includes('/GS0 gs'))
+  const everything = latin1(renderPdf(graph).bytes)
+  assert.ok(!everything.includes('/ExtGState') && !everything.includes('/GS0 gs'))
 })
 
 test('PDF output is deterministic', () => {

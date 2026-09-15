@@ -138,13 +138,23 @@ export function renderScenePdf(scene: Scene): PdfResult {
   }
 
   ops.push(`${rgb(scene.background).map(num).join(' ')} rg`, `0 0 ${num(W)} ${num(H)} re`, 'f')
-  for (const group of scene.groups) for (const item of group.items) draw(item)
+  // A faded group needs a graphics state of its own: PDF has no per-object alpha.
+  const fades = [...new Set(scene.groups.map(g => g.opacity).filter((o): o is number => o !== undefined && o < 1))]
+  for (const group of scene.groups) {
+    const fade = group.opacity !== undefined && group.opacity < 1 ? fades.indexOf(group.opacity) : -1
+    if (fade >= 0) ops.push('q', `/GS${fade} gs`)
+    for (const item of group.items) draw(item)
+    if (fade >= 0) ops.push('Q')
+  }
   const content = ops.join('\n')
+  const extGState = fades.length === 0
+    ? ''
+    : ` /ExtGState << ${fades.map((o, i) => `/GS${i} << /Type /ExtGState /ca ${num(o)} /CA ${num(o)} >>`).join(' ')} >>`
 
   const objects = [
     '<< /Type /Catalog /Pages 2 0 R >>',
     '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
-    `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${num(W)} ${num(H)}] /Resources << /Font << /F1 4 0 R /F2 5 0 R >> >> /Contents 6 0 R >>`,
+    `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${num(W)} ${num(H)}] /Resources << /Font << /F1 4 0 R /F2 5 0 R >>${extGState} >> /Contents 6 0 R >>`,
     '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>',
     '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>',
     `<< /Length ${new TextEncoder().encode(content).length} >>\nstream\n${content}\nendstream`,

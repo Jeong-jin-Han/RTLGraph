@@ -33,6 +33,7 @@ export type Item =
 export interface Group {
   className: string
   attribute: { name: 'data-signal' | 'data-node-id'; value: string }
+  opacity?: number // < 1 for what the filter passed over: faded, not recoloured
   items: Item[]
 }
 
@@ -83,7 +84,8 @@ export function sceneToSvg(scene: Scene): string {
     `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${scene.background}"/>`,
   ]
   for (const g of scene.groups) {
-    lines.push(`<g class="${g.className}" ${g.attribute.name}="${esc(g.attribute.value)}">${g.items.map(itemToSvg).join('')}</g>`)
+    const fade = g.opacity !== undefined && g.opacity < 1 ? ` opacity="${g.opacity}"` : ''
+    lines.push(`<g class="${g.className}" ${g.attribute.name}="${esc(g.attribute.value)}"${fade}>${g.items.map(itemToSvg).join('')}</g>`)
   }
   lines.push('</svg>', '')
   return lines.join('\n')

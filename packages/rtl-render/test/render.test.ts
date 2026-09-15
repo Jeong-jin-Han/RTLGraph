@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { FILTER_PRESETS, loadHierarchy, type ComponentGraph, type FilterPreset } from '@rtlgraph/ir'
-import { PALETTE, renderHierarchySvg, renderSvg } from '../src/index.ts'
+import { DIM_OPACITY, renderHierarchySvg, renderSvg } from '../src/index.ts'
 
 const DEMO = join(import.meta.dirname, '../../../demo/acc/acc')
 const graph = JSON.parse(readFileSync(join(DEMO, 'acc.rtlgraph-schematic.json'), 'utf8')) as ComponentGraph
@@ -33,8 +33,9 @@ test('datapath preset lights the slide p.31 elements and dims the rest', () => {
   // The control block and its wires stay on the page, in grey, so no net is cut.
   assert.deepEqual(nodeIds(svg), nodeIds(render('all')))
   assert.deepEqual(signalIds(svg), signalIds(render('all')))
-  assert.match(svg, /<g class="node control dim"/)
-  assert.ok(svg.includes(`stroke="${PALETTE.dim}"`))
+  // Faded, not recoloured: a dimmed control net is still blue and still dashed.
+  assert.match(svg, new RegExp(`<g class="node control dim" data-node-id="control_path" opacity="${DIM_OPACITY}"`))
+  assert.match(svg, new RegExp(`<g class="wire control dim" data-signal="ACC_SEL" opacity="${DIM_OPACITY}"><path [^>]*stroke="#2563eb"[^>]*stroke-dasharray`))
 })
 
 test('control nets are dashed, reset nets red', () => {

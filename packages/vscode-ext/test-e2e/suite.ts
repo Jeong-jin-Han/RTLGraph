@@ -68,7 +68,7 @@ export async function run(): Promise<void> {
     return state && state.dim > 0 ? state : undefined
   })
   assert.deepEqual([datapath.filter, datapath.nodes, datapath.signals], [{ flow: ['data'], time: ['comb', 'seq'] }, 17, 23])
-  log(`the datapath preset greys what it passes over instead of removing it (${datapath.dim} of 40 dimmed, nothing cut)`)
+  log(`the datapath preset fades what it passes over instead of removing it (${datapath.dim} of 40 faded, nothing cut)`)
 
   // ── export the current (datapath, unfolded) view; a folder of its own leaves the user's exports alone ──
   await vscode.workspace.getConfiguration('rtlgraph').update('export.folder', '.out-e2e-${name}', vscode.ConfigurationTarget.Global)

@@ -29,11 +29,7 @@ export const PALETTE = {
   controlStroke: '#4f46e5',
   componentFill: '#f8fafc',
   frameStroke: '#94a3b8',
-  // What the filter passed over: still legible as a grey ghost, never competing
-  // with what it picked.
-  dim: '#b9c0c9',
-  dimFill: '#f5f7f9',
-  dimText: '#aab2bc',
+
   data: '#111827',
   control: '#2563eb',
   reset: '#dc2626',
@@ -176,17 +172,9 @@ function translate(item: Item, dx: number, dy: number): Item {
   }
 }
 
-// Grey, so the parts the filter picked stand out against what surrounds them.
-const dimmed = (items: Item[]): Item[] =>
-  items.map(item => {
-    if (item.kind === 'text') return { ...item, fill: PALETTE.dimText }
-    const paint = item as { fill?: string; stroke?: string }
-    return {
-      ...item,
-      ...(paint.fill !== undefined && paint.fill !== 'none' ? { fill: item.kind === 'circle' ? PALETTE.dim : PALETTE.dimFill } : {}),
-      ...(paint.stroke !== undefined && paint.stroke !== 'none' ? { stroke: PALETTE.dim } : {}),
-    } as Item
-  })
+// What the filter passed over keeps its own colours — data black, control blue,
+// reset red — and fades, so it reads as background without losing what it is.
+export const DIM_OPACITY = 0.18
 
 interface Canvas {
   filter: ViewFilter
@@ -226,7 +214,7 @@ function drawLevel(
   const levelDim: Group[] = []
   const levelLit: Group[] = []
   const add = (lit: boolean, group: Group) =>
-    lit ? levelLit.push(group) : levelDim.push({ ...group, className: `${group.className} dim`, items: dimmed(group.items) })
+    lit ? levelLit.push(group) : levelDim.push({ ...group, className: `${group.className} dim`, opacity: DIM_OPACITY })
 
   for (const [name, wire] of Object.entries(layout.wires)) {
     if (!visible.signals.has(name)) continue
@@ -276,7 +264,7 @@ function drawLevel(
       }
       groups.push(childVisible.litSignals.has(name)
         ? group
-        : { ...group, className: `${group.className} dim`, items: dimmed(group.items) })
+        : { ...group, className: `${group.className} dim`, opacity: DIM_OPACITY })
     }
     drawLevel(canvas, entry.graph, child.layout, child.layout.children, entry.children, dx + child.x, dy + child.y, childPrefix)
   }
