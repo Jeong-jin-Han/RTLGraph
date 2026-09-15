@@ -124,13 +124,18 @@ export function layoutHierarchy(
   for (const [id, child] of Object.entries(entry.children)) {
     if (!isUnfolded(child.instance)) continue
     const childLayout = layoutHierarchy(child, isUnfolded, true)
+    const asked = entry.graph.layout?.sizes?.[id] // a frame the reader resized
     const pins: Frame['pins'] = {}
     for (const [portId, box] of Object.entries(childLayout.nodes)) {
       const pin = box.pins[PORT_PIN]
       if (!portId.startsWith('@') || !pin) continue
       pins[portId.slice(1)] = { side: pin.side === 'right' ? 'left' : 'right', offset: FRAME_TITLE_H + pin.y }
     }
-    frames[id] = { w: childLayout.width, h: childLayout.height + FRAME_TITLE_H, pins }
+    frames[id] = {
+      w: Math.max(childLayout.width, asked?.w ?? 0),
+      h: Math.max(childLayout.height + FRAME_TITLE_H, asked?.h ?? 0),
+      pins,
+    }
     inner.set(id, childLayout)
   }
 
@@ -218,6 +223,11 @@ function pinsOf(x: number, y: number, shape: Shape): Record<string, Pin> {
 export function layoutComponent(graph: ComponentGraph, options: LayoutOptions = {}): LayoutResult {
   const { nodes, signals } = graph
   const boundary = options.boundaryPorts === true
+  // What the reader arranged by hand (graph.layout, which no extractor writes):
+  // where a box sits, the shape of a wire, and the links they cut in the sketch.
+  const pinned = graph.layout?.nodes ?? {}
+  const drawn = graph.layout?.wires ?? {}
+  const cut = new Set(graph.layout?.cut ?? [])
   const ids = Object.keys(nodes)
   const signalNames = Object.keys(signals)
   const signalIndex = new Map(signalNames.map((name, i) => [name, i]))
@@ -227,7 +237,7 @@ export function layoutComponent(graph: ComponentGraph, options: LayoutOptions = 
   const refOf = (id: string, pin: string) => (pin === PORT_PIN ? id : `${id}:${pin}`)
   const nodeOf = (ref: string) => parseEndpoint(ref).node
   const pinOf = (ref: string) => parseEndpoint(ref).port ?? PORT_PIN
-  const routedNet = (name: string) => !signals[name].hidden
+  const routedNet = (name: string) => !signals[name].hidden && !cut.has(name)
 
   // ── shapes of instances, then port nodes facing the pin they connect to ──
   const shapes = new Map<string, Shape>()
@@ -444,7 +454,7 @@ export function layoutComponent(graph: ComponentGraph, options: LayoutOptions = 
         .sort((a, b) => a.key - b.key || a.i - b.i)
         .map(e => e.id)
       rows[r] = [...head, ...tail, ...rows[r].filter(id => edge(id) === 1)]
-      relax(rows[r], id => (fixed(id) ? -Infinity : barycenter(id) - W(id) / 2))
+      relax(rows[r], id => (Object.hasOwn(pinned, id) ? pinned[id].x : fixed(id) ? -Infinity : barycenter(id) - W(id) / 2))
     }
   }
   // An output port closes its own row, right after what drives it: pushing them all
@@ -454,6 +464,8 @@ export function layoutComponent(graph: ComponentGraph, options: LayoutOptions = 
   // refers to nothing else can settle far to the right of the fixed heads and stay
   // there. Take back the slack every row can spare, the same amount everywhere, so
   // nothing moves relative to anything else.
+  // A box the reader placed stays where they put it.
+  for (const [id, at] of Object.entries(pinned)) if (x.has(id)) x.set(id, Math.floor(at.x))
   const slack = Math.min(...rows.map(members => {
     const first = members.findIndex(id => !fixed(id))
     if (first < 0) return Infinity
@@ -687,6 +699,13 @@ export function layoutComponent(graph: ComponentGraph, options: LayoutOptions = 
     const segments: Segment[] = []
     const seg = (x1: number, y1: number, x2: number, y2: number) => {
       if (x1 !== x2 || y1 !== y2) segments.push({ x1, y1, x2, y2 })
+    }
+    const shaped = drawn[name]?.points
+    if (shaped && shaped.length >= 2) {
+      // The reader drew this one by hand; draw exactly that.
+      for (let i = 1; i < shaped.length; i++) seg(shaped[i - 1].x, shaped[i - 1].y, shaped[i].x, shaped[i].y)
+      wires[name] = { segments, junctions: junctionsOf(segments) }
+      continue
     }
     const plan = plans.get(name)
     if (!plan) {

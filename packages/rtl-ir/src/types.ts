@@ -144,10 +144,18 @@ export interface Group {
   members: string[]
 }
 
-// User-owned. Re-extraction never overwrites it (see mergeLayout).
+// User-owned: everything the reader arranged by hand. Re-extraction never
+// overwrites it (see mergeLayout), so an agent rewriting the graph from the RTL
+// leaves the picture the way it was left.
 export interface Layout {
   grid?: number
   nodes: Record<string, { x: number; y: number }>
+  sizes?: Record<string, { w: number; h: number }> // a component frame the reader resized
+  wires?: Record<string, { points: { x: number; y: number }[] }> // a wire the reader shaped
+  // Links the reader cut in the sketch. The net stays in `signals` — the file
+  // still describes the RTL — and the editor reports the missing connection
+  // instead, the way a type checker reports a hole.
+  cut?: string[]
   collapsed?: string[] // group ids
 }
 
