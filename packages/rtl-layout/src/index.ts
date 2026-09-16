@@ -709,10 +709,13 @@ export function layoutComponent(graph: ComponentGraph, options: LayoutOptions = 
     const seg = (x1: number, y1: number, x2: number, y2: number) => {
       if (x1 !== x2 || y1 !== y2) segments.push({ x1, y1, x2, y2 })
     }
-    const shaped = drawn[name]?.points
-    if (shaped && shaped.length >= 2) {
-      // The reader drew this one by hand; draw exactly that.
-      for (let i = 1; i < shaped.length; i++) seg(shaped[i - 1].x, shaped[i - 1].y, shaped[i].x, shaped[i].y)
+    const byHand = drawn[name]
+    const shaped = byHand?.paths ?? (byHand?.points ? [byHand.points] : undefined)
+    if (shaped?.some(path => path.length >= 2)) {
+      // The reader drew this one by hand; draw exactly that, branch by branch.
+      for (const path of shaped) {
+        for (let i = 1; i < path.length; i++) seg(path[i - 1].x, path[i - 1].y, path[i].x, path[i].y)
+      }
       wires[name] = { segments, junctions: junctionsOf(segments) }
       continue
     }

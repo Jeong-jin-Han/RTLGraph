@@ -32,8 +32,12 @@ export function resizedTo(layout: Layout, id: string, w: number, h: number): Lay
   return pruned({ ...layout, sizes })
 }
 
-export function shapedTo(layout: Layout, name: string, points: { x: number; y: number }[]): Layout {
-  const wires = { ...layout.wires, [name]: { points: points.map(p => ({ x: Math.round(p.x), y: Math.round(p.y) })) } }
+const rounded = (path: readonly { x: number; y: number }[]) => path.map(p => ({ x: Math.round(p.x), y: Math.round(p.y) }))
+
+export function shapedTo(layout: Layout, name: string, paths: readonly (readonly { x: number; y: number }[])[]): Layout {
+  const drawn = paths.filter(path => path.length >= 2).map(rounded)
+  if (drawn.length === 0) return layout
+  const wires = { ...layout.wires, [name]: drawn.length === 1 ? { points: drawn[0] } : { paths: drawn } }
   return pruned({ ...layout, wires })
 }
 
@@ -156,3 +160,59 @@ export function removedVertex(points: readonly Point[], index: number): Point[] 
 }
 
 export const midpoint = (a: Point, b: Point): Point => ({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 })
+
+// Every branch of a net: the path from the driver pin to each sink pin. A net
+// with one sink has one; a fan-out has one per sink, sharing their early part.
+export function branchesOf(segments: readonly Segment[], from: Point, to: readonly Point[]): Point[][] {
+  const key = (p: Point) => `${p.x},${p.y}`
+  const next = new Map<string, Point[]>()
+  const note = (a: Point, b: Point) => next.set(key(a), [...(next.get(key(a)) ?? []), b])
+  for (const s of segments) {
+    const [a, b] = [{ x: s.x1, y: s.y1 }, { x: s.x2, y: s.y2 }]
+    note(a, b)
+    note(b, a)
+  }
+
+  const out: Point[][] = []
+  for (const target of to) {
+    // Breadth first: the fewest corners between the two pins.
+    const came = new Map<string, Point | undefined>([[key(from), undefined]])
+    const queue: Point[] = [from]
+    while (queue.length > 0) {
+      const here = queue.shift()!
+      if (key(here) === key(target)) break
+      for (const step of next.get(key(here)) ?? []) {
+        if (came.has(key(step))) continue
+        came.set(key(step), here)
+        queue.push(step)
+      }
+    }
+    if (!came.has(key(target))) continue
+    const path: Point[] = []
+    for (let at: Point | undefined = target; at; at = came.get(key(at))) path.unshift(at)
+    out.push(tidied(path))
+  }
+  return out
+}
+
+// The branch a click landed on: the one whose segments pass closest to it.
+export function branchAt(paths: readonly Point[][], at: Point): number {
+  const distance = (a: Point, b: Point) => {
+    const [dx, dy] = [b.x - a.x, b.y - a.y]
+    const length = dx * dx + dy * dy
+    const t = length === 0 ? 0 : Math.max(0, Math.min(1, ((at.x - a.x) * dx + (at.y - a.y) * dy) / length))
+    return Math.hypot(at.x - (a.x + t * dx), at.y - (a.y + t * dy))
+  }
+  let best = 0
+  let closest = Infinity
+  paths.forEach((path, i) => {
+    for (let k = 1; k < path.length; k++) {
+      const d = distance(path[k - 1], path[k])
+      if (d < closest) {
+        closest = d
+        best = i
+      }
+    }
+  })
+  return best
+}

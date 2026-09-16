@@ -151,7 +151,9 @@ export interface Layout {
   grid?: number
   nodes: Record<string, { x: number; y: number }>
   sizes?: Record<string, { w: number; h: number }> // a component frame the reader resized
-  wires?: Record<string, { points: { x: number; y: number }[] }> // a wire the reader shaped
+  // A wire the reader shaped. One net can reach several sinks, so it is kept as
+  // one path per branch; `points` is the short form for a net with a single path.
+  wires?: Record<string, { points?: { x: number; y: number }[]; paths?: { x: number; y: number }[][] }>
   // Links the reader cut in the sketch. The net stays in `signals` — the file
   // still describes the RTL — and the editor reports the missing connection
   // instead, the way a type checker reports a hole.

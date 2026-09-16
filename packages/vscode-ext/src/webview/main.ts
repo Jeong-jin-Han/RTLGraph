@@ -1,8 +1,8 @@
 import {
-  candidatesFor, connectionGoals, FILTER_PRESETS, hierarchyEntries, loadHierarchy,
+  candidatesFor, connectionGoals, FILTER_PRESETS, hierarchyEntries, loadHierarchy, parseEndpoint,
   type Diagnostic, type FilterPreset, type Goal, type HierarchyEntry, type Layout, type ViewFilter,
 } from '@rtlgraph/ir'
-import { layoutHierarchy, type NestedLayout } from '@rtlgraph/layout'
+import { layoutHierarchy, PORT_PIN, type NestedLayout } from '@rtlgraph/layout'
 import { buildHierarchyScene, sceneToSvg } from '@rtlgraph/render'
 import type { HostToWebview, ToolbarCommand, WebviewToHost } from '../protocol.ts'
 import {
@@ -11,8 +11,8 @@ import {
   presetOf, toggleFlow, toggleTime, zoomAt, type FoldAction, type FoldScope, type Viewport,
 } from './state.ts'
 import {
-  belongsToThisFile, cleared, emptyLayout, isArranged, isCut, midpoint, movedSegment, movedTo,
-  polylineOf, removedVertex, resizedTo, shapedTo, withCut, type Point,
+  belongsToThisFile, branchAt, branchesOf, cleared, emptyLayout, isArranged, isCut, midpoint,
+  movedSegment, movedTo, removedVertex, resizedTo, shapedTo, withCut, type Point,
 } from './edit.ts'
 
 declare function acquireVsCodeApi(): {
@@ -47,7 +47,8 @@ let editing = false
 let arrangement: Layout = emptyLayout()
 let goals: Goal[] = []
 let activeGoal: string | undefined
-let selectedVertex: number | undefined // a corner of the selected wire
+let selectedVertex: number | undefined // a corner of the selected branch
+let selectedBranch = 0 // which way through a net that reaches several sinks
 
 const isUnfolded = (instance: string) => unfolded.includes(instance)
 // The graph as it is drawn: the file plus whatever the reader has arranged.
@@ -153,12 +154,9 @@ function report() {
 
 function markSelection() {
   stage.querySelectorAll('g.selected').forEach(g => g.classList.remove('selected'))
-  const mark = (g: Element) => {
-    const id = g.getAttribute('data-node-id') ?? g.getAttribute('data-signal')
-    if (id !== null && (id === selected || id === selectedWire)) g.classList.add('selected')
-  }
-  stage.querySelectorAll('g.component').forEach(mark)
-  stage.querySelectorAll('g.wire').forEach(mark)
+  stage.querySelectorAll('g.component').forEach(g => {
+    if (g.getAttribute('data-node-id') === selected) g.classList.add('selected')
+  })
   // What the reader cannot arrange from this file, while arranging.
   stage.querySelectorAll('g.node').forEach(g => {
     const id = g.getAttribute('data-node-id')
@@ -166,15 +164,29 @@ function markSelection() {
   })
 }
 
-// The wire the reader is shaping: what they drew if they drew it, else the path
-// the router produced. A net that forks has no single path and cannot be shaped.
-function shapeOfSelected(): Point[] | undefined {
-  if (!editing || !layout || selectedWire === undefined || !belongsToThisFile(selectedWire)) return undefined
-  const drawn = arrangement.wires?.[selectedWire]?.points
-  if (drawn && drawn.length >= 2) return drawn
+// The ways through the selected net: what the reader drew if they drew it, else
+// one path from the driver pin to each sink pin. Selection is one of these, not
+// the whole net, so a fan-out is shaped one branch at a time.
+function branchesOfSelected(): Point[][] | undefined {
+  if (!editing || !layout || !root || selectedWire === undefined || !belongsToThisFile(selectedWire)) return undefined
+  const drawn = arrangement.wires?.[selectedWire]
+  if (drawn?.paths?.length) return drawn.paths
+  if (drawn?.points?.length) return [drawn.points]
   const wire = layout.wires[selectedWire]
-  return wire ? polylineOf(wire.segments) : undefined
+  const signal = root.graph.signals[selectedWire]
+  if (!wire || !signal) return undefined
+  const pinOf = (ref: string) => {
+    const { node, port } = parseEndpoint(ref)
+    return layout!.nodes[node]?.pins[port ?? PORT_PIN]
+  }
+  const from = pinOf(signal.driver)
+  const to = signal.sinks.map(pinOf).filter((p): p is NonNullable<typeof p> => p !== undefined)
+  if (!from || to.length === 0) return undefined
+  const found = branchesOf(wire.segments, from, to)
+  return found.length > 0 ? found : undefined
 }
+
+const shapeOfSelected = (): Point[] | undefined => branchesOfSelected()?.[selectedBranch]
 
 // Grips live in their own overlay, not in the scene: the scene is what gets
 // exported, and these are only for the hand holding the mouse.
@@ -187,6 +199,13 @@ function drawHandles() {
   svg.setAttribute('width', String(layout.width))
   svg.setAttribute('height', String(layout.height))
   svg.setAttribute('viewBox', `0 0 ${layout.width} ${layout.height}`)
+
+  // The branch under the hand, marked here rather than by recolouring the net —
+  // a net that fans out would otherwise light up all the way to every sink.
+  const branch = document.createElementNS(ns, 'polyline')
+  branch.setAttribute('class', 'branch')
+  branch.setAttribute('points', points.map(p => `${p.x},${p.y}`).join(' '))
+  svg.append(branch)
 
   points.slice(0, -1).forEach((a, i) => {
     const at = midpoint(a, points[i + 1])
@@ -360,9 +379,10 @@ function select(instance: string | undefined) {
   report()
 }
 
-function selectWire(name: string | undefined) {
-  if (name !== selectedWire) selectedVertex = undefined
+function selectWire(name: string | undefined, branch = 0) {
+  if (name !== selectedWire || branch !== selectedBranch) selectedVertex = undefined
   selectedWire = name
+  selectedBranch = branch
   selected = undefined
   markSelection()
   updateComponentTools()
@@ -442,6 +462,7 @@ canvas.addEventListener('pointerdown', event => {
   const handle = editing ? handleAt(event.target) : null
   if (handle && selectedWire !== undefined) {
     const index = Number(handle.dataset.index)
+    const branches = branchesOfSelected()
     const from = shapeOfSelected()
     canvas.setPointerCapture(event.pointerId)
     if (handle.classList.contains('vertex')) {
@@ -451,7 +472,8 @@ canvas.addEventListener('pointerdown', event => {
     }
     const shape = (e: PointerEvent) => {
       if (!from) return
-      arrangement = shapedTo(arrangement, selectedWire!, movedSegment(from, index, (e.clientX - start.px) / v.zoom, (e.clientY - start.py) / v.zoom))
+      const moved = movedSegment(from, index, (e.clientX - start.px) / v.zoom, (e.clientY - start.py) / v.zoom)
+      arrangement = shapedTo(arrangement, selectedWire!, (branches ?? [from]).map((path, i) => (i === selectedBranch ? moved : path)))
       relayout()
       render()
     }
@@ -497,7 +519,14 @@ canvas.addEventListener('pointerdown', event => {
       applyViewport()
       const wire = wireAt(start.target)
       const instance = componentAt(start.target)
-      if (editing && wire !== undefined) selectWire(wire)
+      if (editing && wire !== undefined) {
+        // Pick the branch that was actually clicked, not the whole net.
+        selectWire(wire)
+        const ways = branchesOfSelected()
+        const box = canvas.getBoundingClientRect()
+        const at = { x: (e.clientX - box.left - start.v.x) / start.v.zoom, y: (e.clientY - box.top - start.v.y) / start.v.zoom }
+        if (ways && ways.length > 1) selectWire(wire, branchAt(ways, at))
+      }
       else {
         select(instance)
         if (instance !== undefined && markerAt(start.target)) fold(isUnfolded(instance) ? 'fold' : 'unfold', 'node', instance)
@@ -521,7 +550,8 @@ window.addEventListener('keydown', event => {
   // leaves it in the file and the obligation in the panel.
   const points = shapeOfSelected()
   if (selectedVertex !== undefined && points) {
-    arrangement = shapedTo(arrangement, selectedWire, removedVertex(points, selectedVertex))
+    const branches = branchesOfSelected() ?? [points]
+    arrangement = shapedTo(arrangement, selectedWire, branches.map((path, i) => (i === selectedBranch ? removedVertex(points, selectedVertex!) : path)))
     selectedVertex = undefined
     saveArrangement()
     return

@@ -23,7 +23,7 @@ body { display: flex; flex-direction: column; background: #ffffff; color: #11182
 #stage g.component .fold { cursor: pointer; pointer-events: all; }
 #stage g.component:hover rect.fold { stroke: #2563eb; }
 #stage g.selected > rect:first-child { stroke: #f59e0b; stroke-width: 3px; }
-#stage g.wire.selected path { stroke: #f59e0b !important; stroke-width: 3px; }
+#stage .branch { fill: none; stroke: #f59e0b; stroke-width: 6; stroke-opacity: 0.45; stroke-linecap: round; stroke-linejoin: round; }
 body.editing #stage g.node { cursor: move; }
 body.editing #stage g.node.foreign { cursor: not-allowed; }
 body.editing #stage .resize { cursor: nwse-resize; pointer-events: all; }

@@ -19,7 +19,7 @@ test('moving and resizing round to whole pixels and keep the rest', () => {
 })
 
 test('cutting a wire drops the shape it had, and can be undone', () => {
-  const shaped = shapedTo(emptyLayout(), 'CNT_D', [{ x: 1.2, y: 2 }, { x: 30, y: 2 }])
+  const shaped = shapedTo(emptyLayout(), 'CNT_D', [[{ x: 1.2, y: 2 }, { x: 30, y: 2 }]])
   assert.deepEqual(shaped.wires, { CNT_D: { points: [{ x: 1, y: 2 }, { x: 30, y: 2 }] } })
 
   const cut = withCut(shaped, 'CNT_D')
@@ -44,4 +44,13 @@ test('an untouched arrangement is empty, and can be cleared back to it', () => {
   assert.ok(isArranged(busy))
   assert.ok(!isArranged(cleared(busy)))
   assert.deepEqual(cleared({ ...busy, grid: 10, collapsed: ['g'] }), { nodes: {}, grid: 10, collapsed: ['g'] })
+})
+
+test('a net with several branches keeps one path each', () => {
+  const two = shapedTo(emptyLayout(), 'SUM_Q', [
+    [{ x: 0, y: 0 }, { x: 40, y: 0 }],
+    [{ x: 0, y: 0 }, { x: 0, y: 60 }, { x: 80, y: 60 }],
+  ])
+  assert.deepEqual(two.wires!.SUM_Q.paths!.length, 2)
+  assert.equal(two.wires!.SUM_Q.points, undefined, 'the short form is only for one path')
 })

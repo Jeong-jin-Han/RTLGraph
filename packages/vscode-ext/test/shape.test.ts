@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { movedSegment, polylineOf, removedVertex, tidied, type Point } from '../src/webview/edit.ts'
+import { branchAt, branchesOf, movedSegment, polylineOf, removedVertex, tidied, type Point } from '../src/webview/edit.ts'
 
 // A wire leaving a pin on the left, stepping down, and arriving on the right.
 const path: Point[] = [
@@ -59,4 +59,35 @@ test('the pins themselves cannot be removed', () => {
 
 test('points that repeat or lie on a straight run are dropped', () => {
   assert.deepEqual(tidied([{ x: 0, y: 0 }, { x: 0, y: 0 }, { x: 0, y: 50 }, { x: 0, y: 100 }]), [{ x: 0, y: 0 }, { x: 0, y: 100 }])
+})
+
+// One driver feeding two sinks: a trunk down, then left to one and right to the
+// other — the shape that made the whole net light up when any part was clicked.
+const trunk = [
+  { x1: 100, y1: 0, x2: 100, y2: 60 }, // driver pin down to the split
+  { x1: 100, y1: 60, x2: 20, y2: 60 },
+  { x1: 20, y1: 60, x2: 20, y2: 120 }, // to the left sink
+  { x1: 100, y1: 60, x2: 180, y2: 60 },
+  { x1: 180, y1: 60, x2: 180, y2: 120 }, // to the right sink
+]
+const driver: Point = { x: 100, y: 0 }
+const sinks: Point[] = [{ x: 20, y: 120 }, { x: 180, y: 120 }]
+
+test('a fan-out is one path per sink, sharing the trunk', () => {
+  const branches = branchesOf(trunk, driver, sinks)
+  assert.equal(branches.length, 2)
+  assert.deepEqual(branches[0], [{ x: 100, y: 0 }, { x: 100, y: 60 }, { x: 20, y: 60 }, { x: 20, y: 120 }])
+  assert.deepEqual(branches[1], [{ x: 100, y: 0 }, { x: 100, y: 60 }, { x: 180, y: 60 }, { x: 180, y: 120 }])
+  for (const branch of branches) assert.deepEqual(branch[0], driver, 'every branch starts at the driver')
+})
+
+test('clicking picks the branch nearest the point, not the whole net', () => {
+  const branches = branchesOf(trunk, driver, sinks)
+  assert.equal(branchAt(branches, { x: 22, y: 100 }), 0)
+  assert.equal(branchAt(branches, { x: 178, y: 100 }), 1)
+  assert.equal(branchAt(branches, { x: 101, y: 10 }), 0, 'on the shared trunk, the first way through')
+})
+
+test('a sink the wire never reaches is left out', () => {
+  assert.deepEqual(branchesOf(trunk, driver, [{ x: 999, y: 999 }]), [])
 })
