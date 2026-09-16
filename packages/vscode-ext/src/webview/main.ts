@@ -1,9 +1,10 @@
 import {
-  candidatesFor, connectionGoals, FILTER_PRESETS, hierarchyEntries, loadHierarchy, parseEndpoint,
-  type Diagnostic, type FilterPreset, type Goal, type HierarchyEntry, type Layout, type ViewFilter,
+  candidatesFor, connectionGoals, FILTER_PRESETS, graphFileKind, hierarchyEntries, loadHierarchy, parseEndpoint,
+  validateFsmGraph,
+  type Diagnostic, type FilterPreset, type FsmGraph, type Goal, type HierarchyEntry, type Layout, type ViewFilter,
 } from '@rtlgraph/ir'
 import { layoutHierarchy, PORT_PIN, type NestedLayout } from '@rtlgraph/layout'
-import { buildHierarchyScene, sceneToSvg } from '@rtlgraph/render'
+import { buildFsmScene, buildHierarchyScene, fsmTable, sceneToSvg } from '@rtlgraph/render'
 import type { HostToWebview, ToolbarCommand, WebviewToHost } from '../protocol.ts'
 import {
   FLOW_LABELS, FLOWS, GROUP_LABELS, PRESET_LABELS, SEQ_KINDS, SEQ_LABELS,
@@ -49,6 +50,9 @@ let arrangement: Layout = emptyLayout()
 let goals: Goal[] = []
 let activeGoal: string | undefined
 let selectedVertex: number | undefined // a corner of the selected branch
+// A state machine file is drawn instead of a schematic; the two never mix.
+let fsm: FsmGraph | undefined
+let selectedTransition: number | undefined
 let selectedBranch = 0 // which way through a net that reaches several sinks
 
 const isUnfolded = (instance: string) => unfolded.includes(instance)
@@ -91,6 +95,10 @@ for (const [key, label] of Object.entries(PRESET_LABELS)) presetSelect.append(el
 presetSelect.append(el('option', { value: '', textContent: 'Custom', disabled: true }))
 presetSelect.addEventListener('change', () => setFilter(FILTER_PRESETS[presetSelect.value as FilterPreset]))
 
+const combGroup = el('span', { className: 'group filter' }, combButton, ...flowButtons)
+const seqGroup = el('span', { className: 'group filter' }, seqButton, ...seqButtons)
+const presetGroup = el('span', { className: 'group' }, el('span', { className: 'label', textContent: 'preset' }), presetSelect)
+
 const commandButton = (text: string, command: ToolbarCommand) => {
   const button = el('button', { type: 'button', textContent: text })
   button.addEventListener('click', () => vscode.postMessage({ type: 'command', command }))
@@ -109,6 +117,13 @@ const fitButton = el('button', { type: 'button', textContent: 'Fit', title: 'Fit
 fitButton.addEventListener('click', fit)
 // Opening a component leaves you inside its own file; this walks back out.
 const rootButton = commandButton('Root', 'rtlgraph.openRoot')
+// Between a component and its machine, both ways.
+const fsmButton = commandButton('FSM', 'rtlgraph.openFsm')
+fsmButton.title = 'Open the state machine of this component'
+fsmButton.hidden = true
+const schematicButton = commandButton('Schematic', 'rtlgraph.openSchematic')
+schematicButton.title = 'Back to the schematic this machine belongs to'
+schematicButton.hidden = true
 rootButton.title = 'Open the root file this schematic belongs to'
 const editButton = el('button', { type: 'button', textContent: 'Edit', title: 'Arrange this schematic by hand; the file records it under "layout"' })
 editButton.addEventListener('click', () => setEditing(!editing))
@@ -119,17 +134,16 @@ resetButton.addEventListener('click', () => {
 })
 
 const toolbar = el('div', { id: 'toolbar' },
-  fitButton, rootButton, editButton, resetButton,
-  el('span', { className: 'group filter' }, combButton, ...flowButtons),
-  el('span', { className: 'group filter' }, seqButton, ...seqButtons),
-  el('span', { className: 'label', textContent: 'preset' }), presetSelect,
+  fitButton, rootButton, schematicButton, fsmButton, editButton, resetButton,
+  combGroup, seqGroup, presetGroup,
   componentTools,
   el('span', { className: 'spacer' }), exportButton,
 )
 const stage = el('div', { id: 'stage' })
 const canvas = el('div', { id: 'canvas' }, stage)
 const goalsPanel = el('aside', { id: 'goals', hidden: true })
-const middle = el('div', { id: 'middle' }, canvas, goalsPanel)
+const tablePanel = el('aside', { id: 'table', hidden: true })
+const middle = el('div', { id: 'middle' }, canvas, goalsPanel, tablePanel)
 const problems = el('details', { id: 'problems', hidden: true })
 document.body.append(toolbar, middle, problems)
 
@@ -144,6 +158,8 @@ function updateComponentTools() {
   openButton.disabled = selected === undefined
   editButton.setAttribute('aria-pressed', String(editing))
   resetButton.hidden = !editing || !isArranged(arrangement)
+  // Only worth offering when something in this file names a machine.
+  fsmButton.hidden = root === undefined || !Object.values(root.graph.nodes).some(n => 'fsm' in n && n.fsm !== undefined)
 }
 
 function report() {
@@ -157,6 +173,7 @@ function report() {
       unfolded,
       editing,
       goals: goals.length,
+      ...(fsm ? { fsm: { states: Object.keys(fsm.states).length, transitions: fsm.transitions.length } } : {}),
       ...(selected !== undefined ? { selected } : {}),
     },
   })
@@ -242,6 +259,7 @@ function drawHandles() {
 }
 
 function render() {
+  if (fsm) return renderFsm()
   // A kind is only reachable while its group is on, so it greys out with it.
   combButton.setAttribute('aria-pressed', String(isGroupOn(filter, 'comb')))
   seqButton.setAttribute('aria-pressed', String(isGroupOn(filter, 'seq')))
@@ -270,6 +288,83 @@ function render() {
 
 const relayout = () => {
   if (root) layout = layoutHierarchy(arranged(), isUnfolded)
+}
+
+// ── state machines ──
+// A *.rtlgraph-fsm.json file has no schematic in it, so the view turns into the
+// diagram and the table beside it. The table is the point: D02 builds a machine
+// in a spreadsheet first, and a drawing you cannot read row by row is not
+// checkable against the code.
+
+function renderFsm() {
+  if (!fsm) return
+  // Nothing on the filter side means anything here: a machine has no data path
+  // and nothing to fold.
+  combGroup.hidden = seqGroup.hidden = presetGroup.hidden = componentTools.hidden = true
+  editButton.hidden = resetButton.hidden = true
+  schematicButton.hidden = false
+  fsmButton.hidden = true
+  stage.innerHTML = sceneToSvg(buildFsmScene(fsm, { selected: selectedTransition }))
+  showFsmTable()
+  report()
+}
+
+function showFsmTable() {
+  if (!fsm) return
+  const rows = fsmTable(fsm)
+  const cell = (text: string, className?: string) => el('td', { textContent: text, ...(className ? { className } : {}) })
+  const table = el('table', {},
+    el('thead', {}, el('tr', {}, ...['State', 'When', 'Next', 'Outputs'].map(h => el('th', { textContent: h })))),
+    el('tbody', {}, ...rows.map(r => {
+      const tr = el('tr', { className: r.index === selectedTransition ? 'selected' : '' },
+        cell(r.encoding ? `${r.state} ${r.encoding}` : r.state, 'mono'),
+        cell(r.guard || r.when, r.guard ? 'mono' : undefined),
+        cell(r.nextEncoding ? `${r.next} ${r.nextEncoding}` : r.next, 'mono'),
+        cell(r.outputs, 'mono'))
+      tr.title = r.when
+      tr.addEventListener('click', () => selectTransition(r.index))
+      return tr
+    })),
+  )
+  const states = el('dl', {}, ...Object.entries(fsm.states).flatMap(([id, s]) => [
+    el('dt', { textContent: s.label ?? id }),
+    el('dd', { textContent: s.meaning }),
+  ]))
+  tablePanel.replaceChildren(
+    el('h2', { textContent: fsm.machine.name }),
+    el('p', { className: 'muted', textContent: `${fsm.machine.style} · resets to ${fsm.machine.reset}` }),
+    states,
+    table,
+  )
+  tablePanel.hidden = false
+}
+
+function selectTransition(index: number | undefined) {
+  selectedTransition = selectedTransition === index ? undefined : index
+  render()
+}
+
+function loadFsm(text: string) {
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(text)
+  } catch (err) {
+    showDiagnostics([{ severity: 'error', code: 'json', msg: (err as Error).message }], false)
+    return
+  }
+  const result = validateFsmGraph(parsed)
+  showDiagnostics(result.diagnostics, result.ok)
+  if (!result.ok) {
+    fsm = undefined
+    stage.replaceChildren()
+    return
+  }
+  const first = fsm === undefined
+  fsm = parsed as FsmGraph
+  if (selectedTransition !== undefined && selectedTransition >= fsm.transitions.length) selectedTransition = undefined
+  render()
+  if (first && !viewport) fit()
+  else applyViewport()
 }
 
 function saveArrangement() {
@@ -425,6 +520,8 @@ function showDiagnostics(diagnostics: Diagnostic[], drawn: boolean) {
 // A broken component schematic leaves its box folded; only a broken opened file
 // stops the drawing.
 function load(message: Extract<HostToWebview, { type: 'load' }>) {
+  // A machine file is not a hierarchy: it is drawn on its own.
+  if (graphFileKind(message.root) === 'fsm') return loadFsm(message.files[message.root] ?? '')
   const hierarchy = loadHierarchy(message.root, path => (Object.hasOwn(message.files, path) ? message.files[path] : undefined))
   const next = hierarchy.root
   const recorded = hierarchyEntries(next).flatMap(entry =>
@@ -548,6 +645,14 @@ canvas.addEventListener('pointerdown', event => {
     if (!moved) {
       viewport = start.v
       applyViewport()
+      if (fsm) {
+        // In a diagram the only thing to pick is a transition, and picking it
+        // points at its row in the table.
+        const edge = groupAt(start.target, 'g.fsm-edge', 'data-signal')
+        selectTransition(edge === undefined ? undefined : Number(edge))
+        persist()
+        return
+      }
       const instance = componentAt(start.target)
       select(instance)
       if (instance !== undefined && markerAt(start.target)) fold(isUnfolded(instance) ? 'fold' : 'unfold', 'node', instance)
@@ -559,6 +664,10 @@ canvas.addEventListener('pointerdown', event => {
 })
 
 window.addEventListener('keydown', event => {
+  if (event.key === 'Escape' && fsm) {
+    if (selectedTransition !== undefined) selectTransition(selectedTransition)
+    return
+  }
   if (event.key === 'Escape') {
     select(undefined)
     selectWire(undefined)

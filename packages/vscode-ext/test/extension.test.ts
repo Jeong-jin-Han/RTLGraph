@@ -34,6 +34,7 @@ test('custom editor view type is consistent across manifest and provider', () =>
   assert.deepEqual(manifest.contributes.customEditors[0].selector, [
     { filenamePattern: '*.rtlgraph.json' },
     { filenamePattern: '*.rtlgraph-schematic.json' },
+    { filenamePattern: '*.rtlgraph-fsm.json' },
   ])
 })
 

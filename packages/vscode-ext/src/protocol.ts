@@ -16,7 +16,9 @@ export type HostToWebview =
   | { type: 'rasterize'; id: number; scale: number } // PNG export needs the browser canvas
 
 // Toolbar buttons that need the host (a quick pick, opening a file) run these.
-export type ToolbarCommand = 'rtlgraph.fold' | 'rtlgraph.unfold' | 'rtlgraph.openComponent' | 'rtlgraph.openRoot'
+export type ToolbarCommand =
+  | 'rtlgraph.fold' | 'rtlgraph.unfold' | 'rtlgraph.openComponent' | 'rtlgraph.openRoot'
+  | 'rtlgraph.openFsm' | 'rtlgraph.openSchematic'
 
 export type WebviewToHost =
   | { type: 'ready' }
@@ -38,4 +40,5 @@ export interface RenderState {
   goals: number // connections the sketch still owes, shown while editing
   unfolded: string[]
   selected?: string // a component instance
+  fsm?: { states: number; transitions: number } // set only for a state machine file
 }

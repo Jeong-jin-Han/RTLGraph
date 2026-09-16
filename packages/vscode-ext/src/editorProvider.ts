@@ -1,6 +1,6 @@
 import * as vscode from 'vscode'
 import { randomBytes } from 'node:crypto'
-import { FILTER_PRESETS, hierarchyEntries, loadHierarchy } from '@rtlgraph/ir'
+import { FILTER_PRESETS, graphFileKind, hierarchyEntries, loadHierarchy } from '@rtlgraph/ir'
 import type { HostToWebview, RenderState, WebviewToHost } from './protocol.ts'
 import type { ExportSource } from './export.ts'
 import { collectHierarchyFiles } from './hierarchyFiles.ts'
@@ -132,8 +132,18 @@ export class RtlGraphEditorProvider implements vscode.CustomTextEditorProvider {
       }
     }
 
+    // A state machine file stands on its own: it has no component schematics to
+    // collect, and the webview draws the diagram instead of a hierarchy.
+    const standalone = graphFileKind(rootName) === 'fsm'
+
     let generation = 0
     const sendDocument = async () => {
+      if (standalone) {
+        files = { [rootName]: document.getText() }
+        const only: HostToWebview = { type: 'load', root: rootName, files }
+        void webview.postMessage(only)
+        return
+      }
       const mine = ++generation
       const collected = await collectHierarchyFiles(rootName, document.getText(), readChild)
       if (mine !== generation) return // a newer reload started meanwhile
@@ -150,7 +160,7 @@ export class RtlGraphEditorProvider implements vscode.CustomTextEditorProvider {
     const onChildChanged = (uri: vscode.Uri) => {
       if (tracked.has(uri.toString())) reloadSoon()
     }
-    const watcher = vscode.workspace.createFileSystemWatcher('**/*.rtlgraph-schematic.json')
+    const watcher = vscode.workspace.createFileSystemWatcher('**/*.rtlgraph-{schematic,fsm}.json')
 
     const subscriptions = [
       watcher,

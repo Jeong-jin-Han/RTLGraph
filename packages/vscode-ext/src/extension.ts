@@ -6,7 +6,7 @@ import { copyAgentSpec } from './agent/copyAgentSpec.ts'
 import { exportSchematic } from './export.ts'
 import { EXPORT_FORMATS, viewName, type ExportFormat } from './exportFiles.ts'
 import { collectHierarchyFiles } from './hierarchyFiles.ts'
-import { graphFileKind, hierarchyEntries, loadHierarchy } from '@rtlgraph/ir'
+import { fsmFileName, graphFileKind, graphName, hierarchyEntries, loadHierarchy, schematicFileName } from '@rtlgraph/ir'
 import type { FoldAction, FoldScope } from './protocol.ts'
 
 // The folder a command acts on: the one right-clicked in the Explorer, else the
@@ -21,6 +21,31 @@ async function resolveTargetFolder(clicked: unknown): Promise<vscode.Uri | undef
 
 const FOLD_SCOPES: readonly FoldScope[] = ['all', 'node', 'descendants']
 const ROOT_SEARCH_DEPTH = 8
+
+const exists = async (uri: vscode.Uri) => {
+  try {
+    await vscode.workspace.fs.stat(uri)
+    return true
+  } catch {
+    return false
+  }
+}
+
+// The machine files a schematic can reach: whatever its nodes name, and the one
+// named after the file itself. Only the ones actually on disk are offered.
+async function machinesOf(document: vscode.TextDocument): Promise<vscode.Uri[]> {
+  const named = new Set<string>()
+  try {
+    const graph = JSON.parse(document.getText()) as { nodes?: Record<string, { fsm?: unknown }> }
+    for (const node of Object.values(graph.nodes ?? {})) if (typeof node.fsm === 'string') named.add(node.fsm)
+  } catch {
+    // an unreadable file still has a name; fall through to the sibling
+  }
+  named.add(fsmFileName(graphName(document.uri.path)))
+  const candidates = [...named].map(path => vscode.Uri.joinPath(document.uri, '..', path))
+  const found = await Promise.all(candidates.map(exists))
+  return candidates.filter((_, i) => found[i])
+}
 
 // The root file whose hierarchy contains `file`: the schematics sit in folders
 // under it, so look in this folder and then upwards.
@@ -192,6 +217,46 @@ export function activate(context: vscode.ExtensionContext): void {
       }
       await vscode.commands.executeCommand('vscode.open', rootUri)
       return rootUri.fsPath
+    }),
+
+    // A component and its machine are two files side by side; these are the two
+    // ways between them. The machine a node names wins over the one named after
+    // the file, because a component may hold more than one.
+    vscode.commands.registerCommand('rtlgraph.openFsm', async () => {
+      const document = RtlGraphEditorProvider.activeDocument()
+      if (!document) {
+        void vscode.window.showWarningMessage('RTLGraph: open a schematic first.')
+        return undefined
+      }
+      const machines = await machinesOf(document)
+      if (machines.length === 0) {
+        void vscode.window.showWarningMessage('RTLGraph: this component has no state machine file.')
+        return undefined
+      }
+      const picked = machines.length === 1
+        ? machines[0]
+        : (await vscode.window.showQuickPick(
+            machines.map(uri => ({ label: uri.path.split('/').pop()!, uri })),
+            { placeHolder: 'RTLGraph state machine' },
+          ))?.uri
+      if (!picked) return undefined
+      await vscode.commands.executeCommand('vscode.open', picked)
+      return picked.fsPath
+    }),
+
+    vscode.commands.registerCommand('rtlgraph.openSchematic', async () => {
+      const document = RtlGraphEditorProvider.activeDocument()
+      if (!document || graphFileKind(document.uri.path) !== 'fsm') {
+        void vscode.window.showWarningMessage('RTLGraph: open a state machine first.')
+        return undefined
+      }
+      const uri = vscode.Uri.joinPath(document.uri, '..', schematicFileName(graphName(document.uri.path)))
+      if (!(await exists(uri))) {
+        void vscode.window.showWarningMessage(`RTLGraph: ${uri.path.split('/').pop()} is not there.`)
+        return undefined
+      }
+      await vscode.commands.executeCommand('vscode.open', uri)
+      return uri.fsPath
     }),
 
     vscode.commands.registerCommand('rtlgraph.fitView', () => RtlGraphEditorProvider.postToActive({ type: 'fitView' })),

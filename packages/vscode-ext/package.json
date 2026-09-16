@@ -32,6 +32,9 @@
           },
           {
             "filenamePattern": "*.rtlgraph-schematic.json"
+          },
+          {
+            "filenamePattern": "*.rtlgraph-fsm.json"
           }
         ],
         "priority": "default"
@@ -61,6 +64,14 @@
       {
         "command": "rtlgraph.openRoot",
         "title": "RTLGraph: Open Root File"
+      },
+      {
+        "command": "rtlgraph.openFsm",
+        "title": "RTLGraph: Open State Machine"
+      },
+      {
+        "command": "rtlgraph.openSchematic",
+        "title": "RTLGraph: Open the Component Schematic"
       },
       {
         "command": "rtlgraph.fitView",

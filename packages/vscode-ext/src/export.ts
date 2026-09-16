@@ -1,6 +1,6 @@
 import * as vscode from 'vscode'
-import { loadHierarchy, type ViewFilter } from '@rtlgraph/ir'
-import { renderHierarchyPdf, renderHierarchySvg } from '@rtlgraph/render'
+import { graphFileKind, loadHierarchy, validateFsmGraph, type FsmGraph, type ViewFilter } from '@rtlgraph/ir'
+import { renderFsmPdf, renderFsmSvg, renderHierarchyPdf, renderHierarchySvg } from '@rtlgraph/render'
 import { exportFileName, exportFolderName, graphBaseName, type ExportFormat } from './exportFiles.ts'
 
 export interface ExportSource {
@@ -12,12 +12,31 @@ export interface ExportSource {
   rasterize: (scale: number) => Promise<Uint8Array> // PNG bytes drawn by the webview
 }
 
+function readFsm(source: ExportSource): FsmGraph {
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(source.files[source.root] ?? '')
+  } catch (err) {
+    throw new Error(`the machine file is not readable JSON — ${(err as Error).message}`)
+  }
+  const result = validateFsmGraph(parsed)
+  if (!result.ok) {
+    const errors = result.diagnostics.filter(d => d.severity === 'error').length
+    throw new Error(`the machine has ${errors} error(s); fix them before exporting`)
+  }
+  return parsed as FsmGraph
+}
+
 // Writes the current view of a schematic next to its graph file:
 //   <dir>/.out-<name>/<name>.<view>.{svg,png,pdf}
 // SVG and PDF are drawn here from the same scene; PNG comes from the webview canvas.
 export async function exportSchematic(source: ExportSource, formats: readonly ExportFormat[]): Promise<{ files: vscode.Uri[]; warnings: string[] }> {
-  const { root, diagnostics } = loadHierarchy(source.root, path => (Object.hasOwn(source.files, path) ? source.files[path] : undefined))
-  if (!root) {
+  // A state machine file draws its diagram; there is no hierarchy and no filter.
+  const fsm = graphFileKind(source.root) === 'fsm' ? readFsm(source) : undefined
+  const { root, diagnostics } = fsm
+    ? { root: undefined, diagnostics: [] }
+    : loadHierarchy(source.root, path => (Object.hasOwn(source.files, path) ? source.files[path] : undefined))
+  if (!root && !fsm) {
     const errors = diagnostics.filter(d => d.severity === 'error').length
     throw new Error(`the graph has ${errors} error(s); fix them before exporting`)
   }
@@ -40,9 +59,9 @@ export async function exportSchematic(source: ExportSource, formats: readonly Ex
   for (const format of formats) {
     let bytes: Uint8Array
     if (format === 'svg') {
-      bytes = new TextEncoder().encode(renderHierarchySvg(root, options))
+      bytes = new TextEncoder().encode(fsm ? renderFsmSvg(fsm) : renderHierarchySvg(root!, options))
     } else if (format === 'pdf') {
-      const pdf = renderHierarchyPdf(root, options)
+      const pdf = fsm ? renderFsmPdf(fsm) : renderHierarchyPdf(root!, options)
       if (pdf.unsupportedText.length > 0) {
         warnings.push(`the PDF fonts cannot draw ${pdf.unsupportedText.join(' ')} (shown as "?"); the SVG and PNG show it correctly.`)
       }
@@ -50,7 +69,7 @@ export async function exportSchematic(source: ExportSource, formats: readonly Ex
     } else {
       bytes = await source.rasterize(2)
     }
-    const file = vscode.Uri.joinPath(folder, exportFileName(name, source.filter, format))
+    const file = vscode.Uri.joinPath(folder, fsm ? `${name}.fsm.${format}` : exportFileName(name, source.filter, format))
     await vscode.workspace.fs.writeFile(file, bytes)
     files.push(file)
   }

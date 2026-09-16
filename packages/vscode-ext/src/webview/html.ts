@@ -43,6 +43,24 @@ body.editing #stage g.wire { cursor: pointer; }
 #goals li.active { font-weight: 600; color: #1d4ed8; }
 #goals li .why { display: block; color: #6b7280; font-weight: 400; }
 #goals .candidates { margin: 2px 0 0; font-family: ui-monospace, monospace; color: #374151; }
+/* A state machine: the diagram on the left, what it means on the right. The
+   table is the same thing the design was built from, so it is read next to the
+   picture rather than exported on its own. */
+#table { width: 360px; overflow: auto; border-left: 1px solid #e5e7eb; background: #fbfdff; padding: 8px 10px; }
+#table h2 { font-size: 13px; margin: 0 0 2px; color: #111827; }
+#table p.muted { color: #6b7280; margin: 0 0 8px; }
+#table dl { margin: 0 0 10px; }
+#table dt { font-weight: 600; color: #374151; }
+#table dd { margin: 0 0 4px; color: #6b7280; }
+#table table { border-collapse: collapse; width: 100%; }
+#table th, #table td { text-align: left; padding: 3px 6px; border-bottom: 1px solid #eef2f7; vertical-align: top; }
+#table th { color: #6b7280; font-weight: 600; }
+#table td.mono { font-family: ui-monospace, monospace; }
+#table tbody tr { cursor: pointer; }
+#table tbody tr:hover { background: #eef2ff; }
+#table tbody tr.selected { background: #fee2e2; }
+#stage g.fsm-edge { cursor: pointer; }
+#stage g.fsm-edge:hover text { fill: #1d4ed8; }
 #canvas { flex: 1; position: relative; overflow: hidden; background: #ffffff; cursor: grab; touch-action: none; }
 #canvas.panning { cursor: grabbing; }
 #stage { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
