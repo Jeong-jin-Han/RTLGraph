@@ -15,6 +15,9 @@ const pruned = (layout: Layout): Layout => {
   if (layout.sizes && Object.keys(layout.sizes).length > 0) out.sizes = layout.sizes
   if (layout.wires && Object.keys(layout.wires).length > 0) out.wires = layout.wires
   if (layout.cut && layout.cut.length > 0) out.cut = [...layout.cut].sort()
+  if (layout.links && layout.links.length > 0) {
+    out.links = [...layout.links].sort((a, b) => a.from.localeCompare(b.from) || a.to.localeCompare(b.to))
+  }
   if (layout.collapsed && layout.collapsed.length > 0) out.collapsed = layout.collapsed
   return out
 }
@@ -56,6 +59,27 @@ export function withoutCut(layout: Layout, name: string): Layout {
   return pruned({ ...layout, cut: (layout.cut ?? []).filter(other => other !== name) })
 }
 
+// ── links the reader drew ──
+// Drawing one is how a cut is undone, and how a connection the RTL does not have
+// yet is proposed. The two are told apart by what the file already says: if a net
+// carries this pair, the cut goes; if not, the link is the reader's own.
+
+export const linkedPair = (layout: Layout, from: string, to: string): boolean =>
+  (layout.links ?? []).some(link => link.from === from && link.to === to)
+
+export function withLink(layout: Layout, from: string, to: string): Layout {
+  if (from === to || linkedPair(layout, from, to)) return layout
+  return pruned({ ...layout, links: [...(layout.links ?? []), { from, to }] })
+}
+
+export function withoutLink(layout: Layout, from: string, to: string): Layout {
+  const links = (layout.links ?? []).filter(link => !(link.from === from && link.to === to))
+  if (links.length === (layout.links ?? []).length) return layout
+  const wires = { ...layout.wires }
+  delete wires[`${from}->${to}`] // its shape goes with it
+  return pruned({ ...layout, links, wires })
+}
+
 // Anything the reader changed by hand, undone in one go.
 export function cleared(layout: Layout): Layout {
   return { nodes: {}, ...(layout.grid !== undefined ? { grid: layout.grid } : {}), ...(layout.collapsed ? { collapsed: layout.collapsed } : {}) }
@@ -66,7 +90,8 @@ export const isArranged = (layout: Layout | undefined): boolean =>
   (Object.keys(layout.nodes ?? {}).length > 0 ||
     Object.keys(layout.sizes ?? {}).length > 0 ||
     Object.keys(layout.wires ?? {}).length > 0 ||
-    (layout.cut ?? []).length > 0)
+    (layout.cut ?? []).length > 0 ||
+    (layout.links ?? []).length > 0)
 
 // ── shaping a wire by hand ──
 // A net drawn as one path can be reshaped: drag a segment sideways, or take a

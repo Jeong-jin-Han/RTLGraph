@@ -161,6 +161,10 @@ export interface Layout {
   // still describes the RTL — and the editor reports the missing connection
   // instead, the way a type checker reports a hole.
   cut?: string[]
+  // Links the reader drew that no net of the RTL carries. They are the other half
+  // of a cut: the sketch says what the code would have to do, and the editor
+  // reports each one until the RTL has a net for it. Endpoints, driver first.
+  links?: { from: string; to: string }[]
   collapsed?: string[] // group ids
 }
 

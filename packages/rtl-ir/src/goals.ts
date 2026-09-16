@@ -22,7 +22,9 @@ export interface Goal {
 export const goalLink = (goal: Goal): string | undefined =>
   goal.from === undefined && goal.to === undefined ? undefined : `${goal.from ?? '?'} → ${goal.to ?? '?'}`
 
-const endpointsOf = (graph: ComponentGraph, cut: ReadonlySet<string>) => {
+export type DrawnLink = { from: string; to: string }
+
+const endpointsOf = (graph: ComponentGraph, cut: ReadonlySet<string>, links: readonly DrawnLink[]) => {
   const driven = new Set<string>() // input endpoints a net reaches
   const drives = new Set<string>() // output endpoints a net leaves
   for (const [name, s] of Object.entries(graph.signals)) {
@@ -30,15 +32,33 @@ const endpointsOf = (graph: ComponentGraph, cut: ReadonlySet<string>) => {
     drives.add(s.driver)
     for (const ref of s.sinks) driven.add(ref)
   }
+  // A link the reader drew fills the hole in the picture, though not in the code.
+  for (const link of links) {
+    drives.add(link.from)
+    driven.add(link.to)
+  }
   return { driven, drives }
 }
 
 // `cut`: nets the reader removed by hand (layout.cut). They stay in the graph,
 // so the goals say what their removal left undone.
-export function connectionGoals(graph: ComponentGraph, cut: readonly string[] = []): Goal[] {
+export function connectionGoals(graph: ComponentGraph, cut: readonly string[] = [], links: readonly DrawnLink[] = []): Goal[] {
   const removed = new Set(cut.filter(name => Object.hasOwn(graph.signals, name)))
-  const { driven, drives } = endpointsOf(graph, removed)
+  const { driven, drives } = endpointsOf(graph, removed, links)
   const goals: Goal[] = []
+
+  // A link the reader drew is a hole in the RTL instead: the picture says what
+  // the code would have to carry.
+  for (const link of links) {
+    goals.push({
+      id: `link:${link.from}->${link.to}`,
+      what: 'Add this net to the RTL',
+      why: 'you drew it here, and no net of the code carries it; the schematic is a sketch until it does',
+      from: link.from,
+      to: link.to,
+      node: parseEndpoint(link.to).node,
+    })
+  }
 
   for (const name of removed) {
     const s = graph.signals[name]
@@ -96,7 +116,7 @@ export function connectionGoals(graph: ComponentGraph, cut: readonly string[] = 
 export const goalsAsDiagnostics = (goals: readonly Goal[]): Diagnostic[] =>
   goals.map(goal => ({
     severity: 'warn',
-    code: goal.id.startsWith('cut:') ? 'cut' : 'undriven',
+    code: goal.id.startsWith('cut:') ? 'cut' : goal.id.startsWith('link:') ? 'sketch-link' : 'undriven',
     msg: [goal.what, goalLink(goal), goal.why].filter(Boolean).join(' — '),
     ...(goal.node ? { node: goal.node } : {}),
     ...(goal.signal ? { signal: goal.signal } : {}),
@@ -104,9 +124,9 @@ export const goalsAsDiagnostics = (goals: readonly Goal[]): Diagnostic[] =>
 
 // Endpoints the reader may reconnect to satisfy a goal: the free pins that face
 // the right way. Offered by the editor when a goal is selected.
-export function candidatesFor(graph: ComponentGraph, goal: Goal, cut: readonly string[] = []): string[] {
+export function candidatesFor(graph: ComponentGraph, goal: Goal, cut: readonly string[] = [], links: readonly DrawnLink[] = []): string[] {
   const removed = new Set(cut)
-  const { driven, drives } = endpointsOf(graph, removed)
+  const { driven, drives } = endpointsOf(graph, removed, links)
   const wantDriver = goal.id.startsWith('in:') || goal.id.startsWith('port:')
   const out: string[] = []
   for (const [id, node] of Object.entries(graph.nodes)) {

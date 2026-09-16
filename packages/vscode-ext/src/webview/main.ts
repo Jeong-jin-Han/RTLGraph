@@ -3,7 +3,7 @@ import {
   validateFsmGraph,
   type Diagnostic, type FilterPreset, type FsmGraph, type Goal, type HierarchyEntry, type Layout, type ViewFilter,
 } from '@rtlgraph/ir'
-import { layoutHierarchy, PORT_PIN, type NestedLayout } from '@rtlgraph/layout'
+import { layoutHierarchy, linkEnds, linkKey, PORT_PIN, type NestedLayout } from '@rtlgraph/layout'
 import { buildFsmScene, buildHierarchyScene, fsmTable, sceneToSvg } from '@rtlgraph/render'
 import type { HostToWebview, ToolbarCommand, WebviewToHost } from '../protocol.ts'
 import {
@@ -14,7 +14,8 @@ import {
 } from './state.ts'
 import {
   belongsToThisFile, branchAt, branchesOf, cleared, emptyLayout, isArranged, isCut, midpoint,
-  movedSegment, movedTo, removedVertex, resizedTo, segmentAt, shapedTo, turnedAt, withCut, type Point,
+  movedSegment, movedTo, removedVertex, resizedTo, segmentAt, shapedTo, turnedAt, withCut, withLink,
+  withoutCut, withoutLink, type Point,
 } from './edit.ts'
 
 declare function acquireVsCodeApi(): {
@@ -57,6 +58,8 @@ let selectedTransition: number | undefined
 // anything the reader dragged outside it, so its origin can be negative.
 let view = { x: 0, y: 0, w: 0, h: 0 }
 let selectedBranch = 0 // which way through a net that reaches several sinks
+// Drawing a link: the pin it started from and where the hand is now.
+let drawing: { from: string; at: Point } | undefined
 
 const isUnfolded = (instance: string) => unfolded.includes(instance)
 // The graph as it is drawn: the file plus whatever the reader has arranged.
@@ -197,20 +200,24 @@ function markSelection() {
 // The ways through the selected net: what the reader drew if they drew it, else
 // one path from the driver pin to each sink pin. Selection is one of these, not
 // the whole net, so a fan-out is shaped one branch at a time.
+function pinOf(ref: string): Point | undefined {
+  const { node, port } = parseEndpoint(ref)
+  return layout?.nodes[node]?.pins[port ?? PORT_PIN]
+}
+
 function branchesOfSelected(): Point[][] | undefined {
   if (!editing || !layout || !root || selectedWire === undefined || !belongsToThisFile(selectedWire)) return undefined
   const drawn = arrangement.wires?.[selectedWire]
   if (drawn?.paths?.length) return drawn.paths
   if (drawn?.points?.length) return [drawn.points]
-  const wire = layout.wires[selectedWire]
-  const signal = root.graph.signals[selectedWire]
-  if (!wire || !signal) return undefined
-  const pinOf = (ref: string) => {
-    const { node, port } = parseEndpoint(ref)
-    return layout!.nodes[node]?.pins[port ?? PORT_PIN]
-  }
-  const from = pinOf(signal.driver)
-  const to = signal.sinks.map(pinOf).filter((p): p is NonNullable<typeof p> => p !== undefined)
+  // A link the reader drew is shaped the same way a net is; its two ends are in
+  // its name instead of in `signals`.
+  const ends = linkEnds(selectedWire)
+  const wire = ends ? layout.links[selectedWire] : layout.wires[selectedWire]
+  const signal = ends ? undefined : root.graph.signals[selectedWire]
+  if (!wire || (!ends && !signal)) return undefined
+  const from = pinOf(ends ? ends.from : signal!.driver)
+  const to = (ends ? [ends.to] : signal!.sinks).map(pinOf).filter((p): p is Point => p !== undefined)
   if (!from || to.length === 0) return undefined
   const found = branchesOf(wire.segments, from, to)
   return found.length > 0 ? found : undefined
@@ -228,13 +235,14 @@ const shapeOfSelected = (): Point[] | undefined => branchesOfSelected()?.[select
 const GRIP_R = 3.5 // screen px
 const GRIP_SIDE = 7
 const TURN_REACH = 14 // how near a corner a right-click has to land to turn it
+const PIN_DOT = 3.5 // the mark on every pin a link can be drawn from
 
 function drawHandles() {
   // Drawing again replaces what was there, and nothing selected leaves nothing
   // behind — a stale overlay would keep showing a selection that is gone.
   stage.querySelectorAll('svg.handles').forEach(old => old.remove())
   const points = shapeOfSelected()
-  if (!points || !layout) return
+  if (!layout || (!editing && !points)) return
   const r = screenSize(GRIP_R, viewport?.zoom)
   const side = screenSize(GRIP_SIDE, viewport?.zoom)
   const ns = 'http://www.w3.org/2000/svg'
@@ -246,6 +254,35 @@ function drawHandles() {
 
   // The branch under the hand, marked here rather than by recolouring the net —
   // a net that fans out would otherwise light up all the way to every sink.
+  // Every pin this file draws is something to start a link from.
+  if (editing) {
+    const dot = screenSize(PIN_DOT, viewport?.zoom)
+    for (const [id, box] of Object.entries(layout.nodes)) {
+      if (!belongsToThisFile(id)) continue
+      const isPort = root?.graph.nodes[id]?.kind === 'port'
+      for (const [pin, at] of Object.entries(box.pins)) {
+        const mark = document.createElementNS(ns, 'circle')
+        mark.setAttribute('class', 'pin')
+        mark.setAttribute('cx', String(at.x))
+        mark.setAttribute('cy', String(at.y))
+        mark.setAttribute('r', String(dot))
+        mark.dataset.ref = isPort || pin === PORT_PIN ? id : `${id}:${pin}`
+        svg.append(mark)
+      }
+    }
+  }
+  if (drawing) {
+    const line = document.createElementNS(ns, 'polyline')
+    line.setAttribute('class', 'drawing')
+    const from = pinOf(drawing.from)
+    if (from) line.setAttribute('points', `${from.x},${from.y} ${drawing.at.x},${drawing.at.y}`)
+    svg.append(line)
+  }
+  if (!points) {
+    stage.append(svg)
+    return
+  }
+
   const branch = document.createElementNS(ns, 'polyline')
   branch.setAttribute('class', 'branch')
   branch.setAttribute('points', points.map(p => `${p.x},${p.y}`).join(' '))
@@ -396,7 +433,7 @@ function saveArrangement() {
 
 // ── what the sketch still owes ──
 function showGoals() {
-  goals = root && editing ? connectionGoals(root.graph, arrangement.cut ?? []) : []
+  goals = root && editing ? connectionGoals(root.graph, arrangement.cut ?? [], arrangement.links ?? []) : []
   goalsPanel.hidden = !editing
   if (!editing || !root) return
   if (goals.length === 0) {
@@ -406,6 +443,7 @@ function showGoals() {
       el('ul', { className: 'hints' },
         el('li', { textContent: 'Drag a box or a component frame to move it' }),
         el('li', { textContent: 'Drag a frame corner to resize it' }),
+        el('li', { textContent: 'Drag from one pin dot to another to draw a link — that is also how a cut one comes back' }),
         el('li', { textContent: 'Drag a straight run of a wire sideways; right-click it to turn its corner the other way' }),
         el('li', { textContent: 'Click a wire, then Delete to cut it (or a corner grip to take that corner out)' }),
       ),
@@ -421,7 +459,7 @@ function showGoals() {
     if (goal.why) item.append(el('span', { className: 'why', textContent: goal.why }))
     if (goal.id === activeGoal) {
       item.classList.add('active')
-      const options = candidatesFor(root.graph, goal, arrangement.cut ?? [])
+      const options = candidatesFor(root.graph, goal, arrangement.cut ?? [], arrangement.links ?? [])
       const open = goal.from === undefined ? 'drive it from' : 'take it to'
       item.append(el('div', {
         className: 'candidates',
@@ -600,6 +638,35 @@ const markerAt = (target: EventTarget | null) => target instanceof Element && ta
 const handleAt = (target: EventTarget | null) =>
   target instanceof Element ? (target.closest('.handle') as SVGElement | null) : null
 const gripAt = (target: EventTarget | null) => target instanceof Element && target.closest('.resize') !== null
+const pinRefAt = (target: EventTarget | null) =>
+  (target instanceof Element ? (target.closest('.pin') as SVGElement | null)?.dataset.ref : undefined) ?? undefined
+const pinRefUnder = (x: number, y: number) => pinRefAt(document.elementFromPoint(x, y))
+
+// Which way a pin faces, seen from inside this schematic: an input port of the
+// component drives what is drawn here, so it counts as a source.
+function pinDirection(ref: string): 'in' | 'out' | undefined {
+  const { node, port } = parseEndpoint(ref)
+  const n = root?.graph.nodes[node]
+  if (!n) return undefined
+  if (n.kind === 'port') return n.dir === 'in' ? 'out' : 'in'
+  return port === undefined ? undefined : (n.ports[port] as 'in' | 'out' | 'inout') === 'out' ? 'out' : 'in'
+}
+
+// Drawing a link between two pins. Redrawing a net that was cut is how a cut is
+// undone; anything else is the reader's own sketch, which the goals then ask the
+// RTL for.
+function linkPins(a: string, b: string) {
+  if (a === b || !root) return
+  const [da, db] = [pinDirection(a), pinDirection(b)]
+  if (da === undefined || db === undefined || da === db) return // two sources, or two sinks
+  const [from, to] = da === 'out' ? [a, b] : [b, a]
+  const net = Object.entries(root.graph.signals).find(([, s]) => s.driver === from && s.sinks.includes(to))
+  if (net && isCut(arrangement, net[0])) arrangement = withoutCut(arrangement, net[0])
+  else if (net) return // the RTL already carries it and it is already drawn
+  else arrangement = withLink(arrangement, from, to)
+  selectWire(net ? net[0] : linkKey(from, to))
+  saveArrangement()
+}
 
 const CLICK_SLOP = 4
 
@@ -615,6 +682,26 @@ canvas.addEventListener('pointerdown', event => {
   const frame = canvas.getBoundingClientRect()
   // Stage pixels are the page's own coordinates, which start at the view box.
   const pressedAt = { x: (event.clientX - frame.left - v.x) / v.zoom + view.x, y: (event.clientY - frame.top - v.y) / v.zoom + view.y }
+  // A press on a pin draws a link from it; nothing else in the editor starts there.
+  const startPin = editing ? pinRefAt(event.target) : undefined
+  if (startPin !== undefined) {
+    canvas.setPointerCapture(event.pointerId)
+    drawing = { from: startPin, at: pressedAt }
+    const track = (e: PointerEvent) => {
+      drawing = { from: startPin, at: { x: (e.clientX - frame.left - v.x) / v.zoom + view.x, y: (e.clientY - frame.top - v.y) / v.zoom + view.y } }
+      drawHandles()
+    }
+    const drop = (e: PointerEvent) => {
+      canvas.removeEventListener('pointermove', track)
+      drawing = undefined
+      const landed = pinRefUnder(e.clientX, e.clientY)
+      if (landed !== undefined) linkPins(startPin, landed)
+      else drawHandles()
+    }
+    canvas.addEventListener('pointermove', track)
+    canvas.addEventListener('pointerup', drop, { once: true })
+    return
+  }
   const handle = editing ? handleAt(event.target) : null
   const pressedWire = editing ? wireAt(event.target) : undefined
   if (editing && (handle !== null || (pressedWire !== undefined && belongsToThisFile(pressedWire)))) {
@@ -743,6 +830,14 @@ window.addEventListener('keydown', event => {
     const branches = branchesOfSelected() ?? [points]
     arrangement = shapedTo(arrangement, selectedWire, branches.map((path, i) => (i === selectedBranch ? removedVertex(points, selectedVertex!) : path)))
     selectedVertex = undefined
+    saveArrangement()
+    return
+  }
+  // A link the reader drew is theirs to remove; a net of the RTL is only cut.
+  const ends = linkEnds(selectedWire)
+  if (ends) {
+    arrangement = withoutLink(arrangement, ends.from, ends.to)
+    selectedWire = undefined
     saveArrangement()
     return
   }

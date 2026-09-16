@@ -258,6 +258,15 @@ function drawLevel(
     }
     add(visible.litSignals.has(name), { className: `wire ${s.flow}`, attribute: { name: 'data-signal', value: prefix + name }, items: place(items) })
   }
+  // What the reader drew and the RTL has no net for: amber and dashed, so it does
+  // not read as part of the circuit until the code has caught up with it.
+  for (const [key, link] of Object.entries(layout.links)) {
+    const items: Item[] = [
+      { kind: 'lines', segments: link.segments, fill: 'none', stroke: PALETTE.sketch, strokeWidth: 2, dash: '6 4' },
+    ]
+    levelLit.push({ className: 'wire sketch', attribute: { name: 'data-signal', value: `${prefix}${key}` }, items: place(items) })
+    for (const s of link.segments) xs.push(s.x1 + dx, s.x2 + dx), ys.push(s.y1 + dy, s.y2 + dy)
+  }
   for (const [id, b] of Object.entries(layout.nodes)) {
     if (!visible.nodes.has(id)) continue
     const node = graph.nodes[id]

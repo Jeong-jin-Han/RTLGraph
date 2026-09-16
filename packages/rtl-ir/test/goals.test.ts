@@ -64,3 +64,28 @@ test('goals read as diagnostics for the problems list', () => {
   assert.deepEqual(found.map(d => d.code).sort(), ['cut', 'undriven', 'undriven'])
   assert.ok(found.every(d => d.severity === 'warn'))
 })
+
+test('a link the reader drew fills the hole in the picture and opens one in the RTL', () => {
+  // The net is cut and something else is drawn in its place.
+  const drawn = [{ from: 'CNT_FF:Q', to: 'CNT_FF:D' }]
+  const goals = connectionGoals(graph, ['CNT_D'], drawn)
+  const sketch = goals.find(g => g.id.startsWith('link:'))!
+  assert.equal(sketch.what, 'Add this net to the RTL')
+  assert.equal(goalLink(sketch), 'CNT_FF:Q → CNT_FF:D')
+
+  // CNT_FF:D is no longer asking to be driven — the picture has an answer for it.
+  assert.ok(!ids(goals).includes('in:CNT_FF:D'))
+  // The cut net is still an obligation: the code still carries it.
+  assert.ok(ids(goals).includes('cut:CNT_D'))
+  assert.deepEqual(goalsAsDiagnostics([sketch])[0].code, 'sketch-link')
+})
+
+test('a drawn link takes its endpoints out of the free list', () => {
+  const open = structuredClone(graph)
+  open.nodes['data_path.u_spare'] = structuredClone(open.nodes['data_path.u_inc']) // wired to nothing
+  // What could read this spare output: any input still waiting for one.
+  const goal = connectionGoals(open).find(g => g.id === 'out:data_path.u_spare:y')!
+  assert.ok(candidatesFor(open, goal).includes('CNT_FF:EN'))
+  const drawn = [{ from: 'data_path.u_inc:y', to: 'CNT_FF:EN' }]
+  assert.ok(!candidatesFor(open, goal, [], drawn).includes('CNT_FF:EN'), 'it is spoken for now')
+})

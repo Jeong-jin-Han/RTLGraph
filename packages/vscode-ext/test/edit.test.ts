@@ -2,8 +2,8 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import type { Layout } from '@rtlgraph/ir'
 import {
-  belongsToThisFile, cleared, emptyLayout, isArranged, isCut, movedTo, resizedTo, shapedTo,
-  turnedAt, vertexAt, withCut, withoutCut,
+  belongsToThisFile, cleared, emptyLayout, isArranged, isCut, linkedPair, movedTo, resizedTo, shapedTo,
+  turnedAt, vertexAt, withCut, withLink, withoutCut, withoutLink,
 } from '../src/webview/edit.ts'
 
 test('only what this file draws can be arranged here', () => {
@@ -79,4 +79,18 @@ test('the pins at the ends are never taken for a corner', () => {
   assert.equal(vertexAt(elbow, { x: 0, y: 0 }, 8), undefined)
   assert.equal(vertexAt(elbow, { x: 40, y: 0 }, 8), 1)
   assert.equal(vertexAt(elbow, { x: 20, y: 0 }, 8), undefined, 'the middle of a run is not a corner')
+})
+
+test('a link the reader drew is kept apart from the nets of the RTL', () => {
+  const drawn = withLink(emptyLayout(), 'CNT_FF:Q', 'data_path.u_inc:a')
+  assert.deepEqual(drawn.links, [{ from: 'CNT_FF:Q', to: 'data_path.u_inc:a' }])
+  assert.ok(linkedPair(drawn, 'CNT_FF:Q', 'data_path.u_inc:a'))
+  assert.equal(withLink(drawn, 'CNT_FF:Q', 'data_path.u_inc:a'), drawn, 'drawing it twice changes nothing')
+  assert.equal(withLink(emptyLayout(), 'X:a', 'X:a').links, undefined, 'a pin to itself is nothing')
+
+  const shaped = shapedTo(drawn, 'CNT_FF:Q->data_path.u_inc:a', [[{ x: 0, y: 0 }, { x: 10, y: 0 }]])
+  const gone = withoutLink(shaped, 'CNT_FF:Q', 'data_path.u_inc:a')
+  assert.equal(gone.links, undefined)
+  assert.equal(gone.wires, undefined, 'its shape goes with it')
+  assert.ok(isArranged(drawn) && !isArranged(gone))
 })

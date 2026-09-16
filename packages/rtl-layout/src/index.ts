@@ -53,6 +53,16 @@ export interface LayoutResult {
   height: number
   nodes: Record<string, NodeBox>
   wires: Record<string, Wire>
+  // What the reader drew that the RTL has no net for, keyed by `linkKey`.
+  links: Record<string, Wire>
+}
+
+// A drawn link is named by its two endpoints, so it keeps the same name while
+// the picture changes and the editor can point back at it.
+export const linkKey = (from: string, to: string): string => `${from}->${to}`
+export const linkEnds = (key: string): { from: string; to: string } | undefined => {
+  const at = key.indexOf('->')
+  return at < 0 ? undefined : { from: key.slice(0, at), to: key.slice(at + 2) }
 }
 
 // A port node has a single pin, stored under this key.
@@ -757,8 +767,28 @@ export function layoutComponent(graph: ComponentGraph, options: LayoutOptions = 
 
   tidyWires(signals, boxes, wires, pinAt)
 
-  const width = Math.max(...Object.values(boxes).map(b => b.x + b.w), ...Object.values(wires).flatMap(w => w.segments.map(s => Math.max(s.x1, s.x2)))) + MARGIN
-  return { width, height, nodes: boxes, wires }
+  // Links the reader drew: they are not nets, so the channel router knows nothing
+  // about them. Each one leaves both pins the way a pin faces and meets in the
+  // middle — the plainest route there is, and the reader can shape it afterwards.
+  const links: Record<string, Wire> = {}
+  for (const link of graph.layout?.links ?? []) {
+    const [a, b] = [link.from, link.to]
+    if (!boxes[nodeOf(a)] || !boxes[nodeOf(b)]) continue
+    const key = linkKey(a, b)
+    const byHand = drawn[key]
+    const shaped = byHand?.paths ?? (byHand?.points ? [byHand.points] : undefined)
+    const spare = new Set([nodeOf(a), nodeOf(b)])
+    const clearOf = (path: Point[]) => segmentsOf(path).every(seg => !Object.entries(boxes).some(([id, box]) =>
+      !spare.has(id) &&
+      Math.min(seg.x1, seg.x2) < box.x + box.w && Math.max(seg.x1, seg.x2) > box.x &&
+      Math.min(seg.y1, seg.y2) < box.y + box.h && Math.max(seg.y1, seg.y2) > box.y))
+    const path = shaped?.find(p => p.length >= 2) ?? routeLink(pinAt(a), pinAt(b), clearOf)
+    links[key] = { segments: segmentsOf(path), junctions: [] }
+  }
+
+  const spans = [...Object.values(wires), ...Object.values(links)]
+  const width = Math.max(...Object.values(boxes).map(b => b.x + b.w), ...spans.flatMap(w => w.segments.map(s => Math.max(s.x1, s.x2)))) + MARGIN
+  return { width, height, nodes: boxes, wires, links }
 }
 
 // Kahn's algorithm, lowest index first so the result is stable. On a cycle the
@@ -800,6 +830,33 @@ export function onSegment(p: Point, s: Segment): boolean {
     p.y >= Math.min(s.y1, s.y2) && p.y <= Math.max(s.y1, s.y2) &&
     (s.x1 === s.x2 ? p.x === s.x1 : p.y === s.y1)
   )
+}
+
+// A link the reader drew, from one pin to another. It leaves each pin the way
+// that pin faces and turns once or twice — no channels, no tracks, because it is
+// not a net of the RTL and nothing else was planned around it. `clear` says which
+// routes are acceptable; the first one that is wins, so a link does not cut
+// through a box when a way round it exists.
+export function routeLink(a: Pin, b: Pin, clear: (path: Point[]) => boolean = () => true): Point[] {
+  const away = (p: Pin, d: number): Point => ({
+    x: p.x + (p.side === 'left' ? -d : p.side === 'right' ? d : 0),
+    y: p.y + (p.side === 'top' ? -d : p.side === 'bottom' ? d : 0),
+  })
+  const [a1, b1] = [away(a, PORT_GAP / 2), away(b, PORT_GAP / 2)]
+  const ends = (mids: Point[]) => merged([{ x: a.x, y: a.y }, a1, ...mids, b1, { x: b.x, y: b.y }])
+  const sideways = a.side === 'left' || a.side === 'right'
+  const elbows = [[{ x: b1.x, y: a1.y }], [{ x: a1.x, y: b1.y }]]
+  if (!sideways) elbows.reverse() // leave the pin the way it faces first
+  const steps: Point[][] = []
+  for (let k = 0; k <= 8; k++) {
+    for (const sign of k === 0 ? [1] : [1, -1]) {
+      const xm = Math.round((a1.x + b1.x) / 2) + sign * k * PORT_GAP
+      const ym = Math.round((a1.y + b1.y) / 2) + sign * k * PORT_GAP
+      steps.push([{ x: xm, y: a1.y }, { x: xm, y: b1.y }], [{ x: a1.x, y: ym }, { x: b1.x, y: ym }])
+    }
+  }
+  const candidates = [...elbows, ...steps].map(ends)
+  return candidates.find(clear) ?? candidates[0]
 }
 
 // A wire between two pins that face each other should run straight across, or

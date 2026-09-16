@@ -222,3 +222,16 @@ test('the page grows around a wire dragged out of the layout box', () => {
   const filtered = buildScene(dragged, { crop: false, filter: FILTER_PRESETS.registers })
   assert.deepEqual(filtered.view, uncropped.view)
 })
+
+test('a drawn link is dashed and named by its ends, and never dimmed away', () => {
+  const drawn = structuredClone(graph)
+  drawn.layout = { nodes: {}, links: [{ from: 'CNT_FF:Q', to: 'ACC_FF:EN' }] }
+  const svg = renderSvg(drawn, { filter: FILTER_PRESETS.comb })
+  // ">" is escaped in the attribute; the editor reads it back through the DOM.
+  const key = 'CNT_FF:Q-&gt;ACC_FF:EN'
+  const group = new RegExp(`<g class="([^"]*)" data-signal="${key}"([^>]*)>(.*?)</g>`, 's').exec(svg)
+  assert.ok(group, 'the link is drawn')
+  assert.equal(group![1], 'wire sketch')
+  assert.equal(group![2], '', 'a filter never fades what the reader drew')
+  assert.match(group![3], /stroke-dasharray="6 4"/)
+})

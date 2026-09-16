@@ -130,3 +130,39 @@ test('cutting a link takes the wire away and moves nothing else', () => {
   }
   assert.deepEqual([after.width, after.height], [before.width, before.height])
 })
+
+test('a link the reader drew is routed from pin to pin', () => {
+  const drawn = {
+    ...graph,
+    layout: { nodes: {}, links: [{ from: 'CNT_FF:Q', to: 'ACC_FF:EN' }] },
+  } as ComponentGraph
+  const layout = layoutComponent(drawn)
+  const wire = layout.links['CNT_FF:Q->ACC_FF:EN']
+  assert.ok(wire, 'the link is laid out under the name of its two ends')
+  assert.equal(Object.keys(layout.wires).length, Object.keys(layoutComponent(graph).wires).length, 'no net was invented')
+
+  // It starts at one pin, ends at the other, and every run is orthogonal.
+  const ends = [layout.nodes.CNT_FF.pins.Q, layout.nodes.ACC_FF.pins.EN]
+  const first = wire.segments[0]
+  const last = wire.segments[wire.segments.length - 1]
+  assert.deepEqual([first.x1, first.y1], [ends[0].x, ends[0].y])
+  assert.deepEqual([last.x2, last.y2], [ends[1].x, ends[1].y])
+  for (const s of wire.segments) assert.ok(s.x1 === s.x2 || s.y1 === s.y2)
+
+  // It goes round what is in the way rather than through it.
+  for (const s of wire.segments) {
+    for (const [id, box] of Object.entries(layout.nodes)) {
+      if (id === 'CNT_FF' || id === 'ACC_FF') continue
+      const inside = Math.min(s.x1, s.x2) < box.x + box.w && Math.max(s.x1, s.x2) > box.x &&
+        Math.min(s.y1, s.y2) < box.y + box.h && Math.max(s.y1, s.y2) > box.y
+      assert.ok(!inside, `the link cuts through ${id}`)
+    }
+  }
+
+  // And the reader can shape it like any other wire.
+  const shaped = layoutComponent({
+    ...drawn,
+    layout: { ...drawn.layout!, wires: { 'CNT_FF:Q->ACC_FF:EN': { points: [{ x: 5, y: 5 }, { x: 5, y: 60 }] } } },
+  } as ComponentGraph)
+  assert.deepEqual(shaped.links['CNT_FF:Q->ACC_FF:EN'].segments, [{ x1: 5, y1: 5, x2: 5, y2: 60 }])
+})

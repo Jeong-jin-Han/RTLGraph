@@ -15,6 +15,7 @@ export const PALETTE = {
   componentFill: '#f8fafc',
   frameStroke: '#94a3b8',
 
+  sketch: '#d97706', // a link the reader drew that the RTL has no net for
   data: '#111827',
   control: '#2563eb',
   reset: '#dc2626',
