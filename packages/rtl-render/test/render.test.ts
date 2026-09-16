@@ -52,6 +52,18 @@ test('crops to what is drawn unless asked not to', () => {
   assert.ok(cropped[2] <= full[2] && cropped[3] <= full[3])
 })
 
+test('an active-low reset wears a bubble on its pin', () => {
+  const plain = renderSvg(graph)
+  const low = structuredClone(graph)
+  const register = low.nodes.CNT_FF as { rstActive?: string; enActive?: string }
+  register.rstActive = 'low'
+  register.enActive = 'low'
+  const svg = renderSvg(low)
+  const bubbles = (text: string) => (text.match(/<circle [^>]*r="3.5"/g) ?? []).length
+  assert.equal(bubbles(plain), 0)
+  assert.equal(bubbles(svg), 2, 'one on RST, one on EN')
+})
+
 test('text is escaped', () => {
   const g = structuredClone(graph)
   g.nodes.control_path = { ...g.nodes.control_path, label: 'a<b & "c"' } as typeof g.nodes.control_path

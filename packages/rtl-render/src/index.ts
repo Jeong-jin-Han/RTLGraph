@@ -117,6 +117,33 @@ function frameItems(node: ComponentNode, b: NodeBox, controls: boolean, frames: 
   ]
 }
 
+// The bubble a schematic puts on a pin that acts when it is low, drawn just
+// outside the box so the wire runs into it.
+function activeLowBubbles(node: RtlNode, b: NodeBox): Item[] {
+  if (node.kind !== 'reg') return []
+  const low = [
+    ...(node.rstActive === 'low' ? ['RST'] : []),
+    ...(node.enActive === 'low' ? ['EN'] : []),
+  ]
+  return low.flatMap((name): Item[] => {
+    const pin = b.pins[name]
+    if (!pin) return []
+    const away = pin.side === 'left' ? -1 : pin.side === 'right' ? 1 : 0
+    const down = pin.side === 'top' ? -1 : pin.side === 'bottom' ? 1 : 0
+    return [{
+      kind: 'circle',
+      cx: pin.x + away * BUBBLE_R,
+      cy: pin.y + down * BUBBLE_R,
+      r: BUBBLE_R,
+      fill: PALETTE.background,
+      stroke: PALETTE.ink,
+      strokeWidth: 1.25,
+    }]
+  })
+}
+
+const BUBBLE_R = 3.5
+
 function nodeItems(id: string, node: RtlNode, b: NodeBox, controls = false): Item[] {
   const cx = b.x + b.w / 2
   const cy = b.y + b.h / 2
@@ -131,6 +158,7 @@ function nodeItems(id: string, node: RtlNode, b: NodeBox, controls = false): Ite
     return [
       { kind: 'rect', x: b.x, y: b.y, w: b.w, h: b.h, fill: PALETTE.nodeFill, stroke: PALETTE.ink, strokeWidth: 2 },
       { kind: 'text', x: cx, y: cy, text: displayName(id), anchor: 'middle', central: true, fill: PALETTE.ink },
+      ...activeLowBubbles(node, b),
     ]
   }
   if (def?.symbol === 'mux') {

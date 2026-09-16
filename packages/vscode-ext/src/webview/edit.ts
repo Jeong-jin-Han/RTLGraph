@@ -195,19 +195,35 @@ export function branchesOf(segments: readonly Segment[], from: Point, to: readon
   return out
 }
 
+// How far a point is from a segment, and which segment of a path is nearest: the
+// reader grabs the straight run itself, not a small handle sitting on it.
+const distanceToSegment = (at: Point, a: Point, b: Point) => {
+  const [dx, dy] = [b.x - a.x, b.y - a.y]
+  const length = dx * dx + dy * dy
+  const t = length === 0 ? 0 : Math.max(0, Math.min(1, ((at.x - a.x) * dx + (at.y - a.y) * dy) / length))
+  return Math.hypot(at.x - (a.x + t * dx), at.y - (a.y + t * dy))
+}
+
+export function segmentAt(points: readonly Point[], at: Point): number {
+  let best = 0
+  let closest = Infinity
+  for (let i = 1; i < points.length; i++) {
+    const d = distanceToSegment(at, points[i - 1], points[i])
+    if (d < closest) {
+      closest = d
+      best = i - 1
+    }
+  }
+  return best
+}
+
 // The branch a click landed on: the one whose segments pass closest to it.
 export function branchAt(paths: readonly Point[][], at: Point): number {
-  const distance = (a: Point, b: Point) => {
-    const [dx, dy] = [b.x - a.x, b.y - a.y]
-    const length = dx * dx + dy * dy
-    const t = length === 0 ? 0 : Math.max(0, Math.min(1, ((at.x - a.x) * dx + (at.y - a.y) * dy) / length))
-    return Math.hypot(at.x - (a.x + t * dx), at.y - (a.y + t * dy))
-  }
   let best = 0
   let closest = Infinity
   paths.forEach((path, i) => {
     for (let k = 1; k < path.length; k++) {
-      const d = distance(path[k - 1], path[k])
+      const d = distanceToSegment(at, path[k - 1], path[k])
       if (d < closest) {
         closest = d
         best = i

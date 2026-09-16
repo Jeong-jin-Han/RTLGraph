@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { branchAt, branchesOf, movedSegment, polylineOf, removedVertex, tidied, type Point } from '../src/webview/edit.ts'
+import { branchAt, branchesOf, movedSegment, polylineOf, removedVertex, segmentAt, tidied, type Point } from '../src/webview/edit.ts'
 
 // A wire leaving a pin on the left, stepping down, and arriving on the right.
 const path: Point[] = [
@@ -90,4 +90,10 @@ test('clicking picks the branch nearest the point, not the whole net', () => {
 
 test('a sink the wire never reaches is left out', () => {
   assert.deepEqual(branchesOf(trunk, driver, [{ x: 999, y: 999 }]), [])
+})
+
+test('pressing anywhere along a straight run takes hold of that run', () => {
+  assert.equal(segmentAt(path, { x: 20, y: 3 }), 0) // along the first horizontal
+  assert.equal(segmentAt(path, { x: 47, y: 70 }), 1) // along the vertical
+  assert.equal(segmentAt(path, { x: 100, y: 104 }), 2) // along the last horizontal
 })

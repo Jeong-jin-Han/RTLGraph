@@ -12,7 +12,7 @@ import {
 } from './state.ts'
 import {
   belongsToThisFile, branchAt, branchesOf, cleared, emptyLayout, isArranged, isCut, midpoint,
-  movedSegment, movedTo, removedVertex, resizedTo, shapedTo, withCut, type Point,
+  movedSegment, movedTo, removedVertex, resizedTo, segmentAt, shapedTo, withCut, type Point,
 } from './edit.ts'
 
 declare function acquireVsCodeApi(): {
@@ -458,32 +458,44 @@ canvas.addEventListener('pointerdown', event => {
   if (event.button !== 0) return
   const v = viewport ?? { x: 0, y: 0, zoom: 1 }
   const start = { px: event.clientX, py: event.clientY, v, target: event.target }
-  // A grip on the selected wire: drag the segment it sits on, or pick the corner.
+  // In edit mode a press on a wire takes hold of the straight run under it: a
+  // corner grip picks the corner instead, and everything else pans as before.
+  const frame = canvas.getBoundingClientRect()
+  const pressedAt = { x: (event.clientX - frame.left - v.x) / v.zoom, y: (event.clientY - frame.top - v.y) / v.zoom }
   const handle = editing ? handleAt(event.target) : null
-  if (handle && selectedWire !== undefined) {
-    const index = Number(handle.dataset.index)
+  const pressedWire = editing ? wireAt(event.target) : undefined
+  if (editing && (handle !== null || (pressedWire !== undefined && belongsToThisFile(pressedWire)))) {
+    if (pressedWire !== undefined && pressedWire !== selectedWire) {
+      selectWire(pressedWire)
+      const ways = branchesOfSelected()
+      if (ways && ways.length > 1) selectWire(pressedWire, branchAt(ways, pressedAt))
+    }
     const branches = branchesOfSelected()
     const from = shapeOfSelected()
-    canvas.setPointerCapture(event.pointerId)
-    if (handle.classList.contains('vertex')) {
+    if (handle?.classList.contains('vertex')) {
+      const index = Number(handle.dataset.index)
       selectedVertex = selectedVertex === index ? undefined : index
       render()
       return
     }
-    const shape = (e: PointerEvent) => {
-      if (!from) return
-      const moved = movedSegment(from, index, (e.clientX - start.px) / v.zoom, (e.clientY - start.py) / v.zoom)
-      arrangement = shapedTo(arrangement, selectedWire!, (branches ?? [from]).map((path, i) => (i === selectedBranch ? moved : path)))
-      relayout()
-      render()
+    if (from) {
+      const index = handle ? Number(handle.dataset.index) : segmentAt(from, pressedAt)
+      canvas.setPointerCapture(event.pointerId)
+      const shape = (e: PointerEvent) => {
+        const moved = movedSegment(from, index, (e.clientX - start.px) / v.zoom, (e.clientY - start.py) / v.zoom)
+        arrangement = shapedTo(arrangement, selectedWire!, (branches ?? [from]).map((path, i) => (i === selectedBranch ? moved : path)))
+        relayout()
+        render()
+      }
+      const done = (e: PointerEvent) => {
+        canvas.removeEventListener('pointermove', shape)
+        if (Math.hypot(e.clientX - start.px, e.clientY - start.py) >= CLICK_SLOP) saveArrangement()
+        else render() // a plain click: just the selection
+      }
+      canvas.addEventListener('pointermove', shape)
+      canvas.addEventListener('pointerup', done, { once: true })
+      return
     }
-    const done = () => {
-      canvas.removeEventListener('pointermove', shape)
-      saveArrangement()
-    }
-    canvas.addEventListener('pointermove', shape)
-    canvas.addEventListener('pointerup', done, { once: true })
-    return
   }
 
   const id = nodeAt(event.target)
@@ -517,20 +529,9 @@ canvas.addEventListener('pointerdown', event => {
     if (!moved) {
       viewport = start.v
       applyViewport()
-      const wire = wireAt(start.target)
       const instance = componentAt(start.target)
-      if (editing && wire !== undefined) {
-        // Pick the branch that was actually clicked, not the whole net.
-        selectWire(wire)
-        const ways = branchesOfSelected()
-        const box = canvas.getBoundingClientRect()
-        const at = { x: (e.clientX - box.left - start.v.x) / start.v.zoom, y: (e.clientY - box.top - start.v.y) / start.v.zoom }
-        if (ways && ways.length > 1) selectWire(wire, branchAt(ways, at))
-      }
-      else {
-        select(instance)
-        if (instance !== undefined && markerAt(start.target)) fold(isUnfolded(instance) ? 'fold' : 'unfold', 'node', instance)
-      }
+      select(instance)
+      if (instance !== undefined && markerAt(start.target)) fold(isUnfolded(instance) ? 'fold' : 'unfold', 'node', instance)
     }
     persist()
   }
