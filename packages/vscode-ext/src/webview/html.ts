@@ -41,6 +41,12 @@ body.editing #stage g.wire { cursor: pointer; }
 #canvas.panning { cursor: grabbing; }
 #stage { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
 #stage svg { display: block; }
+#stage svg.handles { position: absolute; left: 0; top: 0; background: none; }
+#stage .handle { fill: #ffffff; stroke: #f59e0b; stroke-width: 1.5; }
+#stage .handle.segment.vertical { cursor: ew-resize; }
+#stage .handle.segment.horizontal { cursor: ns-resize; }
+#stage .handle.vertex { cursor: pointer; }
+#stage .handle.vertex.active { fill: #f59e0b; }
 #problems { max-height: 30%; overflow: auto; border-top: 1px solid #fcd34d; background: #fffbeb; padding: 4px 10px; font-family: ui-monospace, monospace; white-space: pre-wrap; }
 #problems summary { cursor: pointer; font-family: system-ui, sans-serif; font-weight: 600; }
 #problems .error { color: #b91c1c; }

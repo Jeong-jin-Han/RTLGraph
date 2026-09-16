@@ -63,3 +63,96 @@ export const isArranged = (layout: Layout | undefined): boolean =>
     Object.keys(layout.sizes ?? {}).length > 0 ||
     Object.keys(layout.wires ?? {}).length > 0 ||
     (layout.cut ?? []).length > 0)
+
+// ── shaping a wire by hand ──
+// A net drawn as one path can be reshaped: drag a segment sideways, or take a
+// corner out. Everything stays orthogonal, and the two ends stay on their pins.
+
+export interface Point {
+  x: number
+  y: number
+}
+
+export interface Segment {
+  x1: number
+  y1: number
+  x2: number
+  y2: number
+}
+
+const same = (a: Point, b: Point) => a.x === b.x && a.y === b.y
+
+// The vertices of a wire, in order, when its segments form a single path.
+// Undefined for a net that forks — a fan-out is a tree, and there is no one path
+// through it to drag.
+export function polylineOf(segments: readonly Segment[]): Point[] | undefined {
+  if (segments.length === 0) return undefined
+  const ends = new Map<string, Point[]>()
+  const key = (p: Point) => `${p.x},${p.y}`
+  for (const s of segments) {
+    for (const p of [{ x: s.x1, y: s.y1 }, { x: s.x2, y: s.y2 }]) {
+      ends.set(key(p), [...(ends.get(key(p)) ?? []), p])
+    }
+  }
+  const tips = [...ends.values()].filter(list => list.length === 1).map(list => list[0])
+  if (tips.length !== 2) return undefined // a loop, or a fork
+
+  const left = [...segments]
+  const points: Point[] = [tips[0]]
+  while (left.length > 0) {
+    const here = points[points.length - 1]
+    const i = left.findIndex(s => same(here, { x: s.x1, y: s.y1 }) || same(here, { x: s.x2, y: s.y2 }))
+    if (i < 0) return undefined
+    const s = left.splice(i, 1)[0]
+    points.push(same(here, { x: s.x1, y: s.y1 }) ? { x: s.x2, y: s.y2 } : { x: s.x1, y: s.y1 })
+  }
+  return points
+}
+
+// Drops points that repeat or sit on the straight line between their neighbours.
+export function tidied(points: readonly Point[]): Point[] {
+  const out: Point[] = []
+  for (const p of points) {
+    const last = out[out.length - 1]
+    if (last && same(last, p)) continue
+    const before = out[out.length - 2]
+    if (before && last && ((before.x === last.x && p.x === last.x) || (before.y === last.y && p.y === last.y))) out.pop()
+    out.push(p)
+  }
+  return out
+}
+
+// Moves one segment sideways: a vertical one left or right, a horizontal one up
+// or down. The pins do not move, so pushing an end segment grows a new corner
+// beside the pin instead of dragging the pin along.
+export function movedSegment(points: readonly Point[], index: number, dx: number, dy: number): Point[] {
+  if (index < 0 || index + 1 >= points.length) return [...points]
+  const a = points[index]
+  const b = points[index + 1]
+  const vertical = a.x === b.x
+  const shifted = vertical ? { x: Math.round(a.x + dx), y: 0 } : { x: 0, y: Math.round(a.y + dy) }
+  const move = (p: Point) => (vertical ? { x: shifted.x, y: p.y } : { x: p.x, y: shifted.y })
+
+  const out = [...points]
+  out[index] = move(a)
+  out[index + 1] = move(b)
+  // An end of the wire is a pin: keep it, and let the corner appear next to it.
+  if (index === 0) out.unshift(points[0])
+  if (index + 1 === points.length - 1) out.push(points[points.length - 1])
+  return tidied(out)
+}
+
+// Takes a corner out and rejoins the two sides at right angles.
+export function removedVertex(points: readonly Point[], index: number): Point[] {
+  if (index <= 0 || index >= points.length - 1) return [...points] // the pins stay
+  const before = points[index - 1]
+  const after = points[index + 1]
+  const rest = [...points.slice(0, index), ...points.slice(index + 1)]
+  if (before.x === after.x || before.y === after.y) return tidied(rest)
+  // They do not line up, so a corner is still needed — the other one, or the wire
+  // would keep the very corner that was asked to go.
+  const corner = { x: before.x, y: after.y }
+  return tidied([...points.slice(0, index), corner, ...points.slice(index + 1)])
+}
+
+export const midpoint = (a: Point, b: Point): Point => ({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 })

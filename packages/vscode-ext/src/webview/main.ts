@@ -10,7 +10,10 @@ import {
   applyFold, componentInstances, defaultUnfolded, fitViewport, isInstanceShown, normalizeFilter, normalizeUnfolded,
   presetOf, toggleFlow, toggleTime, zoomAt, type FoldAction, type FoldScope, type Viewport,
 } from './state.ts'
-import { belongsToThisFile, cleared, emptyLayout, isArranged, isCut, movedTo, resizedTo, withCut } from './edit.ts'
+import {
+  belongsToThisFile, cleared, emptyLayout, isArranged, isCut, midpoint, movedSegment, movedTo,
+  polylineOf, removedVertex, resizedTo, shapedTo, withCut, type Point,
+} from './edit.ts'
 
 declare function acquireVsCodeApi(): {
   postMessage(message: WebviewToHost): void
@@ -44,6 +47,7 @@ let editing = false
 let arrangement: Layout = emptyLayout()
 let goals: Goal[] = []
 let activeGoal: string | undefined
+let selectedVertex: number | undefined // a corner of the selected wire
 
 const isUnfolded = (instance: string) => unfolded.includes(instance)
 // The graph as it is drawn: the file plus whatever the reader has arranged.
@@ -162,6 +166,52 @@ function markSelection() {
   })
 }
 
+// The wire the reader is shaping: what they drew if they drew it, else the path
+// the router produced. A net that forks has no single path and cannot be shaped.
+function shapeOfSelected(): Point[] | undefined {
+  if (!editing || !layout || selectedWire === undefined || !belongsToThisFile(selectedWire)) return undefined
+  const drawn = arrangement.wires?.[selectedWire]?.points
+  if (drawn && drawn.length >= 2) return drawn
+  const wire = layout.wires[selectedWire]
+  return wire ? polylineOf(wire.segments) : undefined
+}
+
+// Grips live in their own overlay, not in the scene: the scene is what gets
+// exported, and these are only for the hand holding the mouse.
+function drawHandles() {
+  const points = shapeOfSelected()
+  if (!points || !layout) return
+  const ns = 'http://www.w3.org/2000/svg'
+  const svg = document.createElementNS(ns, 'svg')
+  svg.setAttribute('class', 'handles')
+  svg.setAttribute('width', String(layout.width))
+  svg.setAttribute('height', String(layout.height))
+  svg.setAttribute('viewBox', `0 0 ${layout.width} ${layout.height}`)
+
+  points.slice(0, -1).forEach((a, i) => {
+    const at = midpoint(a, points[i + 1])
+    const grip = document.createElementNS(ns, 'circle')
+    grip.setAttribute('class', `handle segment ${a.x === points[i + 1].x ? 'vertical' : 'horizontal'}`)
+    grip.setAttribute('cx', String(at.x))
+    grip.setAttribute('cy', String(at.y))
+    grip.setAttribute('r', '5')
+    grip.dataset.index = String(i)
+    svg.append(grip)
+  })
+  points.forEach((p, i) => {
+    if (i === 0 || i === points.length - 1) return // the pins
+    const grip = document.createElementNS(ns, 'rect')
+    grip.setAttribute('class', `handle vertex${i === selectedVertex ? ' active' : ''}`)
+    grip.setAttribute('x', String(p.x - 4))
+    grip.setAttribute('y', String(p.y - 4))
+    grip.setAttribute('width', '8')
+    grip.setAttribute('height', '8')
+    grip.dataset.index = String(i)
+    svg.append(grip)
+  })
+  stage.append(svg)
+}
+
 function render() {
   flowButtons.forEach((b, i) => b.setAttribute('aria-pressed', String(filter.flow.includes(FLOWS[i]))))
   timeButtons.forEach((b, i) => b.setAttribute('aria-pressed', String(filter.time.includes(TIMES[i]))))
@@ -174,6 +224,7 @@ function render() {
   // Full layout, no cropping: switching the filter must not move anything.
   // controls: the fold markers are for clicking here; exports leave them out.
   stage.innerHTML = sceneToSvg(buildHierarchyScene(arranged(), { filter, layout, crop: false, isUnfolded, controls: true, editing }))
+  drawHandles()
   markSelection()
   showGoals()
   report()
@@ -310,6 +361,7 @@ function select(instance: string | undefined) {
 }
 
 function selectWire(name: string | undefined) {
+  if (name !== selectedWire) selectedVertex = undefined
   selectedWire = name
   selected = undefined
   markSelection()
@@ -373,6 +425,8 @@ const componentAt = (target: EventTarget | null) => groupAt(target, 'g.component
 const nodeAt = (target: EventTarget | null) => groupAt(target, 'g.node', 'data-node-id')
 const wireAt = (target: EventTarget | null) => groupAt(target, 'g.wire', 'data-signal')
 const markerAt = (target: EventTarget | null) => target instanceof Element && target.closest('.fold') !== null
+const handleAt = (target: EventTarget | null) =>
+  target instanceof Element ? (target.closest('.handle') as SVGElement | null) : null
 const gripAt = (target: EventTarget | null) => target instanceof Element && target.closest('.resize') !== null
 
 const CLICK_SLOP = 4
@@ -384,6 +438,32 @@ canvas.addEventListener('pointerdown', event => {
   if (event.button !== 0) return
   const v = viewport ?? { x: 0, y: 0, zoom: 1 }
   const start = { px: event.clientX, py: event.clientY, v, target: event.target }
+  // A grip on the selected wire: drag the segment it sits on, or pick the corner.
+  const handle = editing ? handleAt(event.target) : null
+  if (handle && selectedWire !== undefined) {
+    const index = Number(handle.dataset.index)
+    const from = shapeOfSelected()
+    canvas.setPointerCapture(event.pointerId)
+    if (handle.classList.contains('vertex')) {
+      selectedVertex = selectedVertex === index ? undefined : index
+      render()
+      return
+    }
+    const shape = (e: PointerEvent) => {
+      if (!from) return
+      arrangement = shapedTo(arrangement, selectedWire!, movedSegment(from, index, (e.clientX - start.px) / v.zoom, (e.clientY - start.py) / v.zoom))
+      relayout()
+      render()
+    }
+    const done = () => {
+      canvas.removeEventListener('pointermove', shape)
+      saveArrangement()
+    }
+    canvas.addEventListener('pointermove', shape)
+    canvas.addEventListener('pointerup', done, { once: true })
+    return
+  }
+
   const id = nodeAt(event.target)
   const box = id !== undefined ? layout?.nodes[id] : undefined
   const arranging = editing && id !== undefined && box !== undefined && belongsToThisFile(id)
@@ -436,8 +516,17 @@ window.addEventListener('keydown', event => {
     return
   }
   if (!editing || (event.key !== 'Delete' && event.key !== 'Backspace')) return
-  // Cutting leaves the net in the file and the obligation in the panel.
-  if (selectedWire !== undefined && belongsToThisFile(selectedWire) && !isCut(arrangement, selectedWire)) {
+  if (selectedWire === undefined || !belongsToThisFile(selectedWire)) return
+  // A corner is picked: take that corner out. Otherwise cut the whole net, which
+  // leaves it in the file and the obligation in the panel.
+  const points = shapeOfSelected()
+  if (selectedVertex !== undefined && points) {
+    arrangement = shapedTo(arrangement, selectedWire, removedVertex(points, selectedVertex))
+    selectedVertex = undefined
+    saveArrangement()
+    return
+  }
+  if (!isCut(arrangement, selectedWire)) {
     arrangement = withCut(arrangement, selectedWire)
     selectedWire = undefined
     saveArrangement()
