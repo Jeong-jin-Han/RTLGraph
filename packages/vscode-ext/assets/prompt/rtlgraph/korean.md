@@ -9,7 +9,9 @@ RTLGraph" 를 따라줘. 이미 있는 RTL 코드로 회로도를 만드는 작�
 먼저 이 프로젝트의 탑 모듈, 컴포넌트 트리(main component 와, 어떤 모듈이 그 안의
 컴포넌트 상자가 되는지), 그리고 계약 C1–C7 을 얼마나 따르는지를 간단히 설명해줘.
 그 다음 바로 RTLGraph 파일들을 만들어줘: PROJECT_FOLDER 에 루트 <top>.rtlgraph.json,
-그리고 컴포넌트마다 그 컴포넌트 폴더에 <이름>.rtlgraph-schematic.json.
+그리고 컴포넌트마다 그 컴포넌트 폴더에 <이름>.rtlgraph-schematic.json. 상태 기계(FSM)
+를 가진 컴포넌트라면 같은 폴더에 <이름>.rtlgraph-fsm.json 까지 쓰고(Step 7b), 상태
+레지스터에 fsm 을 표시해줘.
 
 meaning, label, note, 진단 메시지는 한국어로 쓰되, 신호·모듈·인스턴스·핀 이름은
 코드 그대로 쓰고, 기술 용어는 처음 등장할 때 영어 표현을 괄호로 병기해(예:

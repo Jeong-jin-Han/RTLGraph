@@ -158,4 +158,42 @@ export async function run(): Promise<void> {
   const childState = await renderWith('the component schematic', 12)
   assert.deepEqual(childState, { filter: { comb: ['data', 'control'], seq: ['reg', 'fsm'] }, nodes: 12, signals: 15, dim: 0, unfolded: [], editing: false, goals: 0 })
   log('Open Component Schematic shows acc/acc.rtlgraph-schematic.json on its own (12 elements, 15 nets)')
+
+  // ── state machines: demo/pwm, three levels with a machine at two of them ──
+  const demo = dirname(dirname(graphFile))
+  const pwmSchematic = vscode.Uri.file(join(demo, 'pwm/pwm/pwm.rtlgraph-schematic.json'))
+  await vscode.commands.executeCommand('vscode.open', pwmSchematic)
+  await until('the pwm schematic', renderState)
+  const machine = await vscode.commands.executeCommand<string>('rtlgraph.openFsm')
+  assert.equal(machine, join(demo, 'pwm/pwm/pwm.rtlgraph-fsm.json'))
+  const diagram = await until('the state diagram', async () => {
+    const state = await renderState()
+    return state?.fsm ? state : undefined
+  })
+  assert.deepEqual(diagram.fsm, { states: 3, transitions: 5 })
+  assert.equal(diagram.nodes, 3, 'one group per state')
+  assert.equal(diagram.signals, 6, 'one per transition, plus the reset arrow')
+  log('a *.rtlgraph-fsm.json file opens as a diagram: 3 states, 5 transitions')
+
+  const back = await vscode.commands.executeCommand<string>('rtlgraph.openSchematic')
+  assert.equal(back, pwmSchematic.fsPath)
+  await until('the schematic again', async () => {
+    const state = await renderState()
+    return state && state.fsm === undefined ? state : undefined
+  })
+  log('Schematic walks back from the machine to the component it belongs to')
+
+  // A machine is a figure of its own: no filter in its name, and no hierarchy.
+  await vscode.commands.executeCommand('vscode.open', vscode.Uri.file(machine))
+  await until('the diagram again', async () => (await renderState())?.fsm)
+  const fsmOut = join(demo, 'pwm/pwm/.out-e2e-pwm')
+  const drawn = await vscode.commands.executeCommand<string[]>('rtlgraph.export', ['svg'])
+  try {
+    assert.deepEqual(drawn, [join(fsmOut, 'pwm.fsm.svg')])
+    const svg = readFileSync(drawn![0], 'utf8')
+    assert.ok(svg.includes('>IDLE<') && svg.includes('>the core is activated<'))
+    log('Export writes pwm.fsm.svg with the states and their conditions')
+  } finally {
+    rmSync(fsmOut, { recursive: true, force: true })
+  }
 }

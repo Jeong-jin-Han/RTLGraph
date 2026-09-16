@@ -10,7 +10,9 @@ First, briefly explain this project's top module, its component tree (the main
 component and which modules become nested component boxes), and how far it follows
 contracts C1–C7. Then build the RTLGraph files right away: the root
 <top>.rtlgraph.json in PROJECT_FOLDER and one <name>.rtlgraph-schematic.json per
-component in that component's folder.
+component in that component's folder. Where a component holds a state machine,
+write its <name>.rtlgraph-fsm.json as well (Step 7b) and mark the state register
+with fsm.
 
 Write meaning, label, note and diagnostic messages in English. Keep net, module,
 instance and pin names exactly as they appear in the code.

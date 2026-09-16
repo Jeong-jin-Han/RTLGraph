@@ -74,8 +74,13 @@ One root per project and one schematic per component, each next to the code it d
     └── <child>/<child>.rtlgraph-schematic.json   …its own schematic, and so on
 ```
 
+A component with a state machine also gets `<name>.rtlgraph-fsm.json` beside its schematic: it opens
+as a state diagram with the meaning of each state and the transition table next to it, and the **FSM**
+and **Schematic** buttons walk between the two. `demo/pwm` is the worked example — three levels of
+components and three machines.
+
 Every file opens in the editor. The fold state is remembered per file by VS Code, never written to
-the JSON. (`<name>.rtlgraph-fsm.json` for state machines comes next.)
+the JSON.
 
 ### Your own RTL
 
@@ -108,6 +113,7 @@ the same symbols, and every inference or contract violation is listed under the 
 | `packages/vscode-ext` | The extension: custom editor, commands, agent spec and prompts (`assets/`) |
 | `demo/acc` | D01-2 accumulator: root, main component `acc/` with its schematic, golden SVGs |
 | `demo/base` | Shared primitives (`DFF INC ADD SUB MUX2 CMP_EQ`) |
+| `demo/pwm` | D02-2 PWM controller: three levels of components and three state machines |
 | `docs/DECISIONS.md` | Schema, layout, filter, editor and agent decisions |
 
 Only `packages/vscode-ext` imports `vscode`.
@@ -137,6 +143,6 @@ node packages/vscode-ext/dist/agent/rtlgraph-validate.mjs demo/acc/acc_top.rtlgr
 | M2 | Custom editor + the two-level filter | done — verified in a real VS Code |
 | M5 | Agent spec, validator, prompts (existing RTL → RTLGraph first) | done — pulled ahead of M3/M4 |
 | M6.5 | Component hierarchy: root + schematic files, frames, fold / unfold | done — pulled ahead |
-| — | FSM files (`*.rtlgraph-fsm.json`): diagram + table, Moore / Mealy | next |
+| — | FSM files (`*.rtlgraph-fsm.json`): diagram + table, Moore / Mealy | done — `demo/pwm` |
 | — | Code jump (node or net → `file:line`) | planned |
 | M3 | Manual placement + `layout` merge on re-extraction | planned |

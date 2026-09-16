@@ -71,6 +71,7 @@ cannot be recovered with confidence, record a diagnostic instead of guessing.
   |---|---|---|
   | `<top>.rtlgraph.json` | `PROJECT_FOLDER` | the **root** (`kind: "system"`) |
   | `<name>.rtlgraph-schematic.json` | the component's folder | that component's **schematic** (`kind: "component"`), Steps 4–7 |
+  | `<name>.rtlgraph-fsm.json` | the same folder | that component's **state machine** (`kind: "fsm"`), Step 7b — only when it has one |
 
   - **The root** holds the top's ports, exactly **one** `component` box — the main component
     (`module` = the top, `origin` = its `module` line) — and one net per port. Nothing else, even when
@@ -84,7 +85,6 @@ cannot be recovered with confidence, record a diagnostic instead of guessing.
   - **`source.root`** is the path from the schematic's folder to the folder its `source.files` are
     relative to: `"."` when the code sits in that folder, `".."` for `PROJECT_FOLDER/<main>/` over a
     flat project, `"../.."` one level deeper.
-  - `*.rtlgraph-fsm.json` (state machines) is reserved; do not write it yet.
 
 ### Step 3 — Decide how conforming the code is
 The project **conforms** when it follows the RTLGraph authoring contract (Workflow B):
@@ -216,6 +216,24 @@ that the line carries a name the element is known by:
 | `component` node | also its `module`, so a root box sits on the top's `module` line |
 | inferred `op_<net>` / `<net>_reg` | also the net (`op_CNT_D` → `CNT_D`) |
 | net | also any of its `aliases` |
+
+### Step 7b — State machines (`<name>.rtlgraph-fsm.json`)
+Write one **only when the component has a machine**: a register whose value names what the design is
+doing, read by logic that decides the next one — a `casex`/`case` on a state register, or an `always`
+block assigning a `*_STATE`/`*_state` register. A counter is not a machine; neither is a register that
+only holds data.
+
+1. Mark the state register in the schematic: `fsm: "<name>.rtlgraph-fsm.json"` on that `reg` node, and
+   `flow: "control"`. That is what puts it under **Seq → FSM** in the view and what the FSM button opens.
+2. Write the file next to the schematic (fields below). What matters is what the machine *means*:
+   - `machine.style` — `moore` when the outputs depend on the state alone, `mealy` when a transition
+     drives them. **Read it off the code, never guess**: outputs assigned per state → Moore.
+   - `machine.reset` — the state after reset; `machine.node` — the `reg` node id holding it.
+   - every state: `meaning` in words ("waiting to be set up"), `encoding` as the code writes it
+     (`2'd0`), and for Moore the `outputs` it drives.
+   - every transition: `when` **in words** ("the core is activated"), and `guard` for the condition as
+     the code writes it (`SET & ~STOP`). A state that stays put for a cycle is a transition to itself.
+3. Cover every state: one transition per `casex` row, so the diagram and the code say the same thing.
 
 ### Step 8 — Validate
 ```bash
@@ -451,6 +469,53 @@ is drawn as a generic box — that is normal, not an error.
 }
 ```
 
+### State machine — `<name>.rtlgraph-fsm.json`
+
+```jsonc
+{
+  "version": "0.1.0",
+  "kind": "fsm",
+  "title": "pwm",                              // the component's name
+  "created": "2026-09-16T00:00:00.000Z",
+  "modified": "2026-09-16T00:00:00.000Z",
+  "source": { "root": ".", "files": ["comb/control_path/pwm_fsm.v", "seq/pwm_top.v"], "top": "pwm_top" },
+  "machine": {
+    "name": "STATE",                           // what the code calls the machine
+    "style": "moore",                          // read off the code, never guessed
+    "reset": "IDLE",
+    "node": "STATE_FF",                        // the reg node in the schematic holding it
+    "inputs":  [{ "name": "SET", "meaning": "1 cycle: start the wave" }],
+    "outputs": [{ "name": "RUN_EN", "meaning": "1=the pulse generator is running" }]
+  },
+  "states": {
+    "IDLE": {
+      "meaning": "waiting to be set up: nothing is driven",   // required, in words
+      "encoding": "2'd0",
+      "outputs": { "RUN_EN": "0" },            // Moore: what this state drives
+      "origin": { "file": "comb/control_path/pwm_fsm.v", "line": 34 }
+    }
+    // ... one per state
+  },
+  "transitions": [
+    {
+      "from": "IDLE", "to": "LOAD",
+      "when": "the core is activated",         // required, in words
+      "guard": "SET",                          // the condition as the code writes it
+      "origin": { "file": "comb/control_path/pwm_fsm.v", "line": 33 }
+    }
+    // ... one per casex row, self-transitions included
+  ]
+}
+```
+
+| Field | Rule |
+|---|---|
+| top level | required: `version`, `kind` (`"fsm"`), `title`, `created`, `modified`, `source`, `machine`, `states`, `transitions`. Optional: `layout`, `view`, `diagnostics` |
+| `machine` | required `name`, `style` (`moore`/`mealy`), `reset` (a state id); optional `node` (the `reg` node id), `inputs`, `outputs` (`{ name, meaning? }`) |
+| state | required `meaning` (what the design is doing while it is there); optional `label`, `encoding`, `outputs` (Moore), `origin` |
+| transition | required `from`, `to` (state ids), `when` (in words); optional `guard` (the condition as written), `outputs` (Mealy), `origin` |
+| style | a Moore machine drives from its **states**, a Mealy one from its **transitions** — outputs on the wrong side are an error |
+
 ### Field reference
 
 | Field | Rule |
@@ -461,7 +526,7 @@ is drawn as a generic box — that is normal, not an error.
 | node `kind` | `port` · `reg` · `op` · `mux` · `control` · `module` · `blackbox` · `component` |
 | logic node (not `port`/`component`) | required `flow` (`data`/`control`), `time` (`comb`/`seq`), `module`, `ports` (`{ pin: "in"/"out"/"inout" }`). Optional `params`, `consts`, `label`, `group`, `origin` |
 | `component` node | required `name` (identifier), `module`, `ref` (a `*.rtlgraph-schematic.json` path relative to this file), `ports` — exactly the ports of that schematic, same directions. Optional `params`, `consts`, `label`, `origin`. No `flow`/`time` |
-| `reg` extras | `rstKind` (`sync`/`async`), `rstPriority` (`rst>en`/`en>rst`), `rstValue` |
+| `reg` extras | `rstKind` (`sync`/`async`), `rstPriority` (`rst>en`/`en>rst`), `rstValue`, `rstActive`/`enActive` (`high`/`low` — an active-low pin is drawn with a bubble), `fsm` (the `*.rtlgraph-fsm.json` this register's state is described in) |
 | `control` extras | `truthTable` { `inputs`, `outputs`, `rows`: [{ `in`, `out`, `note?` }], `default?`: { `out` }, `origin` } with values `"0"`/`"1"`/`"x"`; or `equations`: [{ `output`, `expr` }]. `note` is one short line saying what the row means ("reset: clear the counter"); keep a `default` row even when the listed cases already cover every input |
 | `blackbox` extras | `rdelay` |
 | port node | required `dir`, `flow` (`data`/`control`/`clock`/`reset`); no `time` |
@@ -506,5 +571,6 @@ Never use line numbers or counters in ids — the user's layout is matched by id
 - [ ] `flow`/`time` on every non-port node; clock nets `hidden`
 - [ ] Every node and net has an exact `origin`; control nodes have `truthTable.origin`
 - [ ] Contract violations and inferred elements listed in `diagnostics`; `contractCheck` set
+- [ ] A component with a state machine has `<name>.rtlgraph-fsm.json`, and its state register carries `fsm` and `flow: "control"`
 - [ ] Existing `layout`, `view`, `created` preserved; `modified` updated
 - [ ] `node .agent/rtlgraph-validate.mjs <top>.rtlgraph.json` reports `0 errors`
