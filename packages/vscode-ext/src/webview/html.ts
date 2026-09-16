@@ -28,8 +28,11 @@ body { display: flex; flex-direction: column; background: #ffffff; color: #11182
 #stage g.component { cursor: pointer; }
 #stage g.component .fold { cursor: pointer; pointer-events: all; }
 #stage g.component:hover rect.fold { stroke: #2563eb; }
-#stage g.selected > rect:first-child { stroke: #f59e0b; stroke-width: 3px; }
-#stage .branch { fill: none; stroke: #f59e0b; stroke-width: 6; stroke-opacity: 0.45; stroke-linecap: round; stroke-linejoin: round; }
+#stage g.selected > rect:first-child { stroke: #f59e0b; stroke-width: 3px; vector-effect: non-scaling-stroke; }
+/* The marks that say what is selected keep their size on screen: their widths
+   are in screen pixels (vector-effect), and the grips are drawn divided by the
+   zoom. Zoomed right in they used to swell into blobs over the wire. */
+#stage .branch { fill: none; stroke: #f59e0b; stroke-width: 5; stroke-opacity: 0.45; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
 body.editing #stage g.node { cursor: move; }
 body.editing #stage g.node.foreign { cursor: not-allowed; }
 body.editing #stage .resize { cursor: nwse-resize; pointer-events: all; }
@@ -65,8 +68,10 @@ body.editing #stage g.wire { cursor: pointer; }
 #canvas.panning { cursor: grabbing; }
 #stage { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
 #stage svg { display: block; }
-#stage svg.handles { position: absolute; left: 0; top: 0; background: none; }
-#stage .handle { fill: #ffffff; stroke: #f59e0b; stroke-width: 1.5; }
+/* The overlay covers the whole drawing, so it must let every click through to
+   the schematic under it; only the grips themselves take one. */
+#stage svg.handles { position: absolute; left: 0; top: 0; background: none; pointer-events: none; }
+#stage .handle { fill: #ffffff; stroke: #f59e0b; stroke-width: 1.5; vector-effect: non-scaling-stroke; pointer-events: all; }
 #stage .handle.segment.vertical { cursor: ew-resize; }
 #stage .handle.segment.horizontal { cursor: ns-resize; }
 #stage .handle.vertex { cursor: pointer; }

@@ -147,6 +147,13 @@ export function zoomAt(v: Viewport, factor: number, sx: number, sy: number): Vie
   return { zoom, x: sx - (sx - v.x) * k, y: sy - (sy - v.y) * k }
 }
 
+// A mark that belongs to the hand rather than to the drawing — a grip, a knob —
+// is given in screen pixels and drawn divided by the zoom, so it stays the same
+// size to aim at however far the schematic is zoomed.
+export function screenSize(pixels: number, zoom: number | undefined): number {
+  return pixels / (zoom !== undefined && zoom > 0 ? zoom : 1)
+}
+
 // Centre content of size (w, h) in a box of size (bw, bh), never enlarging past 1.5x.
 export function fitViewport(w: number, h: number, bw: number, bh: number, pad = 16): Viewport {
   if (w <= 0 || h <= 0 || bw <= 0 || bh <= 0) return { x: 0, y: 0, zoom: 1 }

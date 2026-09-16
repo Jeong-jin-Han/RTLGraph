@@ -9,7 +9,7 @@ import type { HostToWebview, ToolbarCommand, WebviewToHost } from '../protocol.t
 import {
   FLOW_LABELS, FLOWS, GROUP_LABELS, PRESET_LABELS, SEQ_KINDS, SEQ_LABELS,
   applyFold, componentInstances, defaultUnfolded, fitViewport, isGroupOn, isInstanceShown, normalizeFilter,
-  normalizeUnfolded, presetOf, toggleFlow, toggleGroup, toggleSeq, zoomAt,
+  normalizeUnfolded, presetOf, screenSize, toggleFlow, toggleGroup, toggleSeq, zoomAt,
   type FoldAction, type FoldScope, type ViewGroup, type Viewport,
 } from './state.ts'
 import {
@@ -217,9 +217,22 @@ const shapeOfSelected = (): Point[] | undefined => branchesOfSelected()?.[select
 
 // Grips live in their own overlay, not in the scene: the scene is what gets
 // exported, and these are only for the hand holding the mouse.
+//
+// They are sized in screen pixels, not in the drawing: a grip is something to
+// aim at, so it must stay the same size to the hand however far the schematic
+// is zoomed (NodeGraph sizes its arrow heads that way). The stage is scaled by
+// CSS, so the drawn size is divided by the zoom to come back to it.
+const GRIP_R = 3.5 // screen px
+const GRIP_SIDE = 7
+
 function drawHandles() {
+  // Drawing again replaces what was there, and nothing selected leaves nothing
+  // behind — a stale overlay would keep showing a selection that is gone.
+  stage.querySelectorAll('svg.handles').forEach(old => old.remove())
   const points = shapeOfSelected()
   if (!points || !layout) return
+  const r = screenSize(GRIP_R, viewport?.zoom)
+  const side = screenSize(GRIP_SIDE, viewport?.zoom)
   const ns = 'http://www.w3.org/2000/svg'
   const svg = document.createElementNS(ns, 'svg')
   svg.setAttribute('class', 'handles')
@@ -240,7 +253,7 @@ function drawHandles() {
     grip.setAttribute('class', `handle segment ${a.x === points[i + 1].x ? 'vertical' : 'horizontal'}`)
     grip.setAttribute('cx', String(at.x))
     grip.setAttribute('cy', String(at.y))
-    grip.setAttribute('r', '5')
+    grip.setAttribute('r', String(r))
     grip.dataset.index = String(i)
     svg.append(grip)
   })
@@ -248,10 +261,10 @@ function drawHandles() {
     if (i === 0 || i === points.length - 1) return // the pins
     const grip = document.createElementNS(ns, 'rect')
     grip.setAttribute('class', `handle vertex${i === selectedVertex ? ' active' : ''}`)
-    grip.setAttribute('x', String(p.x - 4))
-    grip.setAttribute('y', String(p.y - 4))
-    grip.setAttribute('width', '8')
-    grip.setAttribute('height', '8')
+    grip.setAttribute('x', String(p.x - side / 2))
+    grip.setAttribute('y', String(p.y - side / 2))
+    grip.setAttribute('width', String(side))
+    grip.setAttribute('height', String(side))
     grip.dataset.index = String(i)
     svg.append(grip)
   })
@@ -455,6 +468,7 @@ async function rasterize(scale: number): Promise<string> {
 function applyViewport() {
   const v = viewport ?? { x: 0, y: 0, zoom: 1 }
   stage.style.transform = `translate(${v.x}px, ${v.y}px) scale(${v.zoom})`
+  drawHandles() // the grips are sized in screen pixels, so zooming resizes them
 }
 
 function fit() {
@@ -488,6 +502,7 @@ function select(instance: string | undefined) {
   if (instance === selected && selectedWire === undefined) return
   selected = instance
   selectedWire = undefined
+  drawHandles()
   markSelection()
   updateComponentTools()
   report()
@@ -498,6 +513,7 @@ function selectWire(name: string | undefined, branch = 0) {
   selectedWire = name
   selectedBranch = branch
   selected = undefined
+  drawHandles()
   markSelection()
   updateComponentTools()
   report()

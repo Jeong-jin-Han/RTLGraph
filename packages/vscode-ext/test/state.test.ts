@@ -4,7 +4,7 @@ import { FILTER_PRESETS } from '@rtlgraph/ir'
 import type { ComponentGraph, HierarchyEntry } from '@rtlgraph/ir'
 import {
   applyFold, componentInstances, defaultUnfolded, fitViewport, isGroupOn, isInstanceShown, normalizeFilter,
-  normalizeUnfolded, presetOf, toggleFlow, toggleGroup, toggleSeq, zoomAt,
+  normalizeUnfolded, presetOf, screenSize, toggleFlow, toggleGroup, toggleSeq, zoomAt,
 } from '../src/webview/state.ts'
 
 test('every preset is recognised from its filter', () => {
@@ -43,6 +43,14 @@ test('stored filters are sanitised, and a flat one is read as the tree', () => {
   assert.equal(normalizeFilter({ flow: ['data'] }), undefined)
   assert.equal(normalizeFilter('all'), undefined)
   assert.equal(normalizeFilter(null), undefined)
+})
+
+test('a grip is the same size to the hand at every zoom', () => {
+  assert.equal(screenSize(7, 1), 7)
+  assert.equal(screenSize(7, 3.5), 2, 'zoomed in, it is drawn smaller so it lands the same size')
+  assert.equal(screenSize(7, 0.5), 14)
+  assert.equal(screenSize(7, undefined), 7)
+  assert.equal(screenSize(7, 0), 7, 'a zoom of zero is no zoom at all')
 })
 
 test('zooming keeps the point under the cursor fixed', () => {
