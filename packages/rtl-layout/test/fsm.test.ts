@@ -1,5 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import type { FsmGraph } from '@rtlgraph/ir'
 import { layoutFsm, resetStub } from '../src/fsm.ts'
 
@@ -89,3 +91,30 @@ test('the reset arrow points at the state the machine starts in', () => {
   assert.ok(segments[0].x1 >= 0, 'the stub stays on the page')
   assert.deepEqual(arrow[0], [idle.x, idle.y + idle.h / 2])
 })
+
+// The three machines of demo/pwm, at three depths of one design.
+const DEMO_MACHINES = [
+  'pwm/pwm/pwm.rtlgraph-fsm.json',
+  'pwm/pwm/pulse/pulse.rtlgraph-fsm.json',
+  'pwm/pwm/rdy/rdy.rtlgraph-fsm.json',
+]
+
+for (const file of DEMO_MACHINES) {
+  test(`demo/${file} fits on its page`, () => {
+    const graph = JSON.parse(readFileSync(join(import.meta.dirname, '../../../demo', file), 'utf8')) as FsmGraph
+    const layout = layoutFsm(graph)
+    assert.equal(layout.states.length, Object.keys(graph.states).length)
+    assert.equal(layout.edges.length, graph.transitions.length)
+    for (const e of layout.edges) {
+      const half = e.label.length * 3
+      assert.ok(e.labelAt.x - half >= 0 && e.labelAt.x + half <= layout.width, `${e.label} runs off the side`)
+      assert.ok(e.labelAt.y > 0 && e.labelAt.y < layout.height, `${e.label} runs off the top or bottom`)
+      // A condition written between two columns must not land on a state box.
+      const between = layout.states.filter(s => s.y < e.labelAt.y && e.labelAt.y < s.y + s.h)
+      for (const s of between) {
+        assert.ok(e.labelAt.x + half <= s.x || e.labelAt.x - half >= s.x + s.w, `${e.label} overlaps ${s.id}`)
+      }
+    }
+    for (const s of layout.states) assert.ok(s.x > 0 && s.y > 0 && s.x + s.w < layout.width && s.y + s.h < layout.height)
+  })
+}

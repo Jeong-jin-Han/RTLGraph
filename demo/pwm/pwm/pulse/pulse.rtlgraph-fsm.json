@@ -1,0 +1,47 @@
+{
+  "version": "0.1.0",
+  "kind": "fsm",
+  "title": "pulse",
+  "created": "2026-09-16T00:00:00.000Z",
+  "modified": "2026-09-16T00:00:00.000Z",
+  "source": {
+    "root": ".",
+    "files": ["comb/control_path/pulse_fsm.v", "seq/pulse_top.v"],
+    "top": "pulse_top",
+    "contractCheck": "pass"
+  },
+  "machine": {
+    "name": "PHASE",
+    "style": "moore",
+    "reset": "LOW",
+    "node": "PHASE_FF",
+    "inputs": [
+      { "name": "RUN", "meaning": "1=the core wants a wave" },
+      { "name": "ZERO", "meaning": "1=the counter timing this phase has run out" }
+    ],
+    "outputs": [
+      { "name": "PWM", "meaning": "the wave itself: the phase is the output" },
+      { "name": "CNT_LOAD", "meaning": "1=start the counter on the phase being entered" }
+    ]
+  },
+  "states": {
+    "LOW": {
+      "meaning": "the wave is low; the counter is timing the OFF half (PERIOD - DUTY cycles)",
+      "encoding": "1'b0",
+      "outputs": { "PWM": "0" },
+      "origin": { "file": "comb/control_path/pulse_fsm.v", "line": 32 }
+    },
+    "HIGH": {
+      "meaning": "the wave is high; the counter is timing the ON half (DUTY cycles)",
+      "encoding": "1'b1",
+      "outputs": { "PWM": "1" },
+      "origin": { "file": "comb/control_path/pulse_fsm.v", "line": 33 }
+    }
+  },
+  "transitions": [
+    { "from": "LOW", "to": "HIGH", "when": "the off half has run out while the core is running", "guard": "RUN & ZERO", "origin": { "file": "comb/control_path/pulse_fsm.v", "line": 34 } },
+    { "from": "LOW", "to": "LOW", "when": "the core is stopped, or the off half has cycles left", "guard": "~RUN | ~ZERO", "origin": { "file": "comb/control_path/pulse_fsm.v", "line": 32 } },
+    { "from": "HIGH", "to": "LOW", "when": "the on half has run out, or the core stopped", "guard": "~RUN | ZERO", "origin": { "file": "comb/control_path/pulse_fsm.v", "line": 35 } },
+    { "from": "HIGH", "to": "HIGH", "when": "the on half has cycles left", "guard": "RUN & ~ZERO", "origin": { "file": "comb/control_path/pulse_fsm.v", "line": 33 } }
+  ]
+}

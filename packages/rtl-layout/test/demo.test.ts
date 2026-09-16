@@ -17,9 +17,14 @@ const FILES = [
   'sys/sys/host/host.rtlgraph-schematic.json',
   'sys/sys/dev/dev.rtlgraph-schematic.json',
   'sys/sys/dev/inbuf/inbuf.rtlgraph-schematic.json',
+  'pwm/pwm/pwm.rtlgraph-schematic.json',
+  'pwm/pwm/pulse/pulse.rtlgraph-schematic.json',
+  'pwm/pwm/pulse/cnt/cnt.rtlgraph-schematic.json',
+  'pwm/pwm/rdy/rdy.rtlgraph-schematic.json',
   'acc/acc_top.rtlgraph.json',
   'sys/sys_top.rtlgraph.json',
   'updown/updown.rtlgraph.json',
+  'pwm/pwm_top.rtlgraph.json',
 ]
 
 for (const file of FILES) {

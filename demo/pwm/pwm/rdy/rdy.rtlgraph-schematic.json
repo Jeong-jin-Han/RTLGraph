@@ -1,0 +1,60 @@
+{
+  "version": "0.1.0",
+  "kind": "component",
+  "title": "rdy",
+  "created": "2026-09-16T00:00:00.000Z",
+  "modified": "2026-09-16T00:00:00.000Z",
+  "source": {
+    "root": ".",
+    "lib": "../../../base",
+    "files": ["seq/rdy_top.v", "comb/control_path/rdy_fsm.v"],
+    "libFiles": ["DFF.v"],
+    "top": "rdy_top",
+    "contractCheck": "pass"
+  },
+  "signals": {
+    "CLK":     { "width": 1, "flow": "clock",   "driver": "@CLK", "sinks": ["BUSY_FF:CLK"], "hidden": true, "origin": { "file": "seq/rdy_top.v", "line": 8 } },
+    "RST":     { "width": 1, "flow": "reset",   "driver": "@RST", "sinks": ["control_path:RST", "BUSY_FF:RST"], "origin": { "file": "seq/rdy_top.v", "line": 9 } },
+    "SET":     { "width": 1, "flow": "control", "driver": "@SET", "sinks": ["control_path:SET"], "meaning": "1 cycle: the core was activated", "origin": { "file": "seq/rdy_top.v", "line": 10 } },
+    "STOPPED": { "width": 1, "flow": "control", "driver": "@STOPPED", "sinks": ["control_path:STOPPED"], "meaning": "1=the core is not driving a wave", "origin": { "file": "seq/rdy_top.v", "line": 11 } },
+    "BUSY_Q":  { "width": 1, "flow": "control", "driver": "BUSY_FF:Q", "sinks": ["control_path:BUSY"], "meaning": "1=BUSY, 0=READY", "origin": { "file": "seq/rdy_top.v", "line": 15 } },
+    "BUSY_D":  { "width": 1, "flow": "control", "driver": "control_path:BUSY_D", "sinks": ["BUSY_FF:D"], "meaning": "the state the next cycle is in", "origin": { "file": "seq/rdy_top.v", "line": 16 } },
+    "RDY":     { "width": 1, "flow": "control", "driver": "control_path:RDY", "sinks": ["@RDY"], "meaning": "active-low: 0 while the core is activated", "origin": { "file": "seq/rdy_top.v", "line": 12 } }
+  },
+  "nodes": {
+    "@CLK":     { "kind": "port", "dir": "in",  "flow": "clock",   "origin": { "file": "seq/rdy_top.v", "line": 8 } },
+    "@RST":     { "kind": "port", "dir": "in",  "flow": "reset",   "origin": { "file": "seq/rdy_top.v", "line": 9 } },
+    "@SET":     { "kind": "port", "dir": "in",  "flow": "control", "origin": { "file": "seq/rdy_top.v", "line": 10 } },
+    "@STOPPED": { "kind": "port", "dir": "in",  "flow": "control", "origin": { "file": "seq/rdy_top.v", "line": 11 } },
+    "@RDY":     { "kind": "port", "dir": "out", "flow": "control", "origin": { "file": "seq/rdy_top.v", "line": 12 } },
+    "control_path": {
+      "kind": "control", "flow": "control", "time": "comb", "module": "rdy_fsm",
+      "label": "FSM code",
+      "ports": { "RST": "in", "SET": "in", "STOPPED": "in", "BUSY": "in", "BUSY_D": "out", "RDY": "out" },
+      "truthTable": {
+        "inputs": ["RST", "SET", "STOPPED", "BUSY"],
+        "outputs": ["BUSY_D", "RDY"],
+        "rows": [
+          { "in": ["1", "x", "x", "x"], "out": ["0", "1"], "note": "reset: ready" },
+          { "in": ["0", "1", "x", "0"], "out": ["1", "1"], "note": "ready, SET taken: busy from the next cycle" },
+          { "in": ["0", "1", "x", "1"], "out": ["1", "0"], "note": "busy already, SET again: stay busy" },
+          { "in": ["0", "0", "0", "1"], "out": ["1", "0"], "note": "busy, the core is still running" },
+          { "in": ["0", "0", "1", "1"], "out": ["0", "0"], "note": "busy, the core stopped: ready next cycle" },
+          { "in": ["0", "0", "0", "x"], "out": ["0", "1"], "note": "ready and nothing asked" }
+        ],
+        "default": { "out": ["0", "1"], "note": "anything else reads as ready" },
+        "origin": { "file": "comb/control_path/rdy_fsm.v", "line": 25 }
+      },
+      "origin": { "file": "seq/rdy_top.v", "line": 19 }
+    },
+    "BUSY_FF": {
+      "kind": "reg", "flow": "control", "time": "seq", "module": "DFF", "params": { "BW": 0 },
+      "label": "BUSY",
+      "fsm": "rdy.rtlgraph-fsm.json",
+      "ports": { "CLK": "in", "RST": "in", "EN": "in", "D": "in", "Q": "out" },
+      "consts": { "EN": "1'b1" },
+      "rstKind": "sync", "rstPriority": "rst>en", "rstValue": "0", "rstActive": "high",
+      "origin": { "file": "seq/rdy_top.v", "line": 29 }
+    }
+  }
+}

@@ -1,0 +1,95 @@
+{
+  "version": "0.1.0",
+  "kind": "component",
+  "title": "pwm",
+  "created": "2026-09-16T00:00:00.000Z",
+  "modified": "2026-09-16T00:00:00.000Z",
+  "source": {
+    "root": ".",
+    "lib": "../../base",
+    "files": ["seq/pwm_top.v", "comb/control_path/pwm_fsm.v"],
+    "libFiles": ["DFF.v"],
+    "top": "pwm_top",
+    "contractCheck": "pass"
+  },
+  "signals": {
+    "CLK":      { "width": 1, "flow": "clock",   "driver": "@CLK",    "sinks": ["u_pulse:CLK", "u_rdy:CLK", "STATE_FF:CLK", "PERIOD_FF:CLK", "DUTY_FF:CLK"], "hidden": true, "origin": { "file": "seq/pwm_top.v", "line": 9 } },
+    "RST":      { "width": 1, "flow": "reset",   "driver": "@RST",    "sinks": ["control_path:RST", "u_pulse:RST", "u_rdy:RST", "STATE_FF:RST", "PERIOD_FF:RST", "DUTY_FF:RST"], "origin": { "file": "seq/pwm_top.v", "line": 10 } },
+    "PERIOD":   { "width": 8, "flow": "data",    "driver": "@PERIOD", "sinks": ["PERIOD_FF:D"], "origin": { "file": "seq/pwm_top.v", "line": 11 } },
+    "DUTY":     { "width": 8, "flow": "data",    "driver": "@DUTY",   "sinks": ["DUTY_FF:D"], "origin": { "file": "seq/pwm_top.v", "line": 12 } },
+    "SET":      { "width": 1, "flow": "control", "driver": "@SET",    "sinks": ["control_path:SET", "u_rdy:SET"], "meaning": "1 cycle: take PERIOD and DUTY and start the wave", "origin": { "file": "seq/pwm_top.v", "line": 13 } },
+    "STOP":     { "width": 1, "flow": "control", "driver": "@STOP",   "sinks": ["control_path:STOP"], "meaning": "1 cycle: stop the wave", "origin": { "file": "seq/pwm_top.v", "line": 14 } },
+    "STATE_D":  { "width": 2, "flow": "control", "driver": "control_path:STATE_D", "sinks": ["STATE_FF:D"], "meaning": "the state the next cycle is in", "origin": { "file": "seq/pwm_top.v", "line": 20 } },
+    "STATE_Q":  { "width": 2, "flow": "control", "driver": "STATE_FF:Q", "sinks": ["control_path:STATE"], "meaning": "0=IDLE, 1=LOAD, 2=RUN", "origin": { "file": "seq/pwm_top.v", "line": 19 } },
+    "LOAD_EN":  { "width": 1, "flow": "control", "driver": "control_path:LOAD_EN", "sinks": ["PERIOD_FF:EN", "DUTY_FF:EN"], "meaning": "1=capture PERIOD and DUTY", "origin": { "file": "seq/pwm_top.v", "line": 21 } },
+    "RUN_EN":   { "width": 1, "flow": "control", "driver": "control_path:RUN_EN", "sinks": ["u_pulse:RUN"], "meaning": "1=the pulse generator is running", "origin": { "file": "seq/pwm_top.v", "line": 22 } },
+    "STOPPED":  { "width": 1, "flow": "control", "driver": "control_path:STOPPED", "sinks": ["u_rdy:STOPPED"], "meaning": "1=the core is not driving a wave", "origin": { "file": "seq/pwm_top.v", "line": 23 } },
+    "PERIOD_Q": { "width": 8, "flow": "data",    "driver": "PERIOD_FF:Q", "sinks": ["u_pulse:PERIOD"], "meaning": "the period the wave now runs at", "origin": { "file": "seq/pwm_top.v", "line": 25 } },
+    "DUTY_Q":   { "width": 8, "flow": "data",    "driver": "DUTY_FF:Q", "sinks": ["u_pulse:DUTY"], "meaning": "the ON cycles the wave now runs at", "origin": { "file": "seq/pwm_top.v", "line": 26 } },
+    "PWM":      { "width": 1, "flow": "data",    "driver": "u_pulse:PWM", "sinks": ["@PWM"], "origin": { "file": "seq/pwm_top.v", "line": 15 } },
+    "RDY":      { "width": 1, "flow": "control", "driver": "u_rdy:RDY", "sinks": ["@RDY"], "meaning": "active-low: 0 while the core is activated", "origin": { "file": "seq/pwm_top.v", "line": 16 } }
+  },
+  "nodes": {
+    "@CLK":    { "kind": "port", "dir": "in",  "flow": "clock",   "origin": { "file": "seq/pwm_top.v", "line": 9 } },
+    "@RST":    { "kind": "port", "dir": "in",  "flow": "reset",   "origin": { "file": "seq/pwm_top.v", "line": 10 } },
+    "@PERIOD": { "kind": "port", "dir": "in",  "flow": "data",    "origin": { "file": "seq/pwm_top.v", "line": 11 } },
+    "@DUTY":   { "kind": "port", "dir": "in",  "flow": "data",    "origin": { "file": "seq/pwm_top.v", "line": 12 } },
+    "@SET":    { "kind": "port", "dir": "in",  "flow": "control", "origin": { "file": "seq/pwm_top.v", "line": 13 } },
+    "@STOP":   { "kind": "port", "dir": "in",  "flow": "control", "origin": { "file": "seq/pwm_top.v", "line": 14 } },
+    "@PWM":    { "kind": "port", "dir": "out", "flow": "data",    "origin": { "file": "seq/pwm_top.v", "line": 15 } },
+    "@RDY":    { "kind": "port", "dir": "out", "flow": "control", "origin": { "file": "seq/pwm_top.v", "line": 16 } },
+    "control_path": {
+      "kind": "control", "flow": "control", "time": "comb", "module": "pwm_fsm",
+      "label": "FSM code",
+      "ports": { "RST": "in", "SET": "in", "STOP": "in", "STATE": "in", "STATE_D": "out", "LOAD_EN": "out", "RUN_EN": "out", "STOPPED": "out" },
+      "truthTable": {
+        "inputs": ["RST", "SET", "STOP", "STATE"],
+        "outputs": ["STATE_D", "LOAD_EN", "RUN_EN", "STOPPED"],
+        "rows": [
+          { "in": ["1", "x", "x", "xx"], "out": ["00", "0", "0", "1"], "note": "reset: idle" },
+          { "in": ["0", "x", "x", "01"], "out": ["10", "1", "0", "0"], "note": "LOAD: take PERIOD and DUTY, then run" },
+          { "in": ["0", "x", "1", "10"], "out": ["00", "0", "0", "1"], "note": "RUN: STOP asked, back to idle" },
+          { "in": ["0", "x", "x", "10"], "out": ["10", "0", "1", "0"], "note": "RUN: keep driving" },
+          { "in": ["0", "1", "x", "00"], "out": ["01", "0", "0", "1"], "note": "IDLE: SET asked, go and load" },
+          { "in": ["0", "0", "x", "00"], "out": ["00", "0", "0", "1"], "note": "IDLE: nothing asked" }
+        ],
+        "default": { "out": ["00", "0", "0", "1"], "note": "an unused state falls back to idle" },
+        "origin": { "file": "comb/control_path/pwm_fsm.v", "line": 28 }
+      },
+      "origin": { "file": "seq/pwm_top.v", "line": 29 }
+    },
+    "u_pulse": {
+      "kind": "component", "name": "pulse", "module": "pulse_top",
+      "ref": "pulse/pulse.rtlgraph-schematic.json",
+      "ports": { "CLK": "in", "RST": "in", "RUN": "in", "PERIOD": "in", "DUTY": "in", "PWM": "out" },
+      "origin": { "file": "seq/pwm_top.v", "line": 41 }
+    },
+    "u_rdy": {
+      "kind": "component", "name": "rdy", "module": "rdy_top",
+      "ref": "rdy/rdy.rtlgraph-schematic.json",
+      "ports": { "CLK": "in", "RST": "in", "SET": "in", "STOPPED": "in", "RDY": "out" },
+      "origin": { "file": "seq/pwm_top.v", "line": 51 }
+    },
+    "STATE_FF": {
+      "kind": "reg", "flow": "control", "time": "seq", "module": "DFF", "params": { "BW": 1 },
+      "label": "STATE",
+      "fsm": "pwm.rtlgraph-fsm.json",
+      "ports": { "CLK": "in", "RST": "in", "EN": "in", "D": "in", "Q": "out" },
+      "consts": { "EN": "1'b1" },
+      "rstKind": "sync", "rstPriority": "rst>en", "rstValue": "0", "rstActive": "high",
+      "origin": { "file": "seq/pwm_top.v", "line": 60 }
+    },
+    "PERIOD_FF": {
+      "kind": "reg", "flow": "data", "time": "seq", "module": "DFF", "params": { "BW": 7 },
+      "ports": { "CLK": "in", "RST": "in", "EN": "in", "D": "in", "Q": "out" },
+      "rstKind": "sync", "rstPriority": "rst>en", "rstValue": "0", "rstActive": "high", "enActive": "high",
+      "origin": { "file": "seq/pwm_top.v", "line": 69 }
+    },
+    "DUTY_FF": {
+      "kind": "reg", "flow": "data", "time": "seq", "module": "DFF", "params": { "BW": 7 },
+      "ports": { "CLK": "in", "RST": "in", "EN": "in", "D": "in", "Q": "out" },
+      "rstKind": "sync", "rstPriority": "rst>en", "rstValue": "0", "rstActive": "high", "enActive": "high",
+      "origin": { "file": "seq/pwm_top.v", "line": 77 }
+    }
+  }
+}

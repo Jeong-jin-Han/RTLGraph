@@ -1,0 +1,46 @@
+{
+  "version": "0.1.0",
+  "kind": "fsm",
+  "title": "rdy",
+  "created": "2026-09-16T00:00:00.000Z",
+  "modified": "2026-09-16T00:00:00.000Z",
+  "source": {
+    "root": ".",
+    "files": ["comb/control_path/rdy_fsm.v", "seq/rdy_top.v"],
+    "top": "rdy_top",
+    "contractCheck": "pass"
+  },
+  "machine": {
+    "name": "BUSY",
+    "style": "moore",
+    "reset": "READY",
+    "node": "BUSY_FF",
+    "inputs": [
+      { "name": "SET", "meaning": "1 cycle: the core was activated" },
+      { "name": "STOPPED", "meaning": "1=the core is not driving a wave" }
+    ],
+    "outputs": [
+      { "name": "RDY", "meaning": "active-low: 0 while the core is activated" }
+    ]
+  },
+  "states": {
+    "READY": {
+      "meaning": "the core is idle and can be set up; RDY is high",
+      "encoding": "1'b0",
+      "outputs": { "RDY": "1" },
+      "origin": { "file": "comb/control_path/rdy_fsm.v", "line": 32 }
+    },
+    "BUSY": {
+      "meaning": "the core was activated and has not reported a stop yet; RDY is held low",
+      "encoding": "1'b1",
+      "outputs": { "RDY": "0" },
+      "origin": { "file": "comb/control_path/rdy_fsm.v", "line": 30 }
+    }
+  },
+  "transitions": [
+    { "from": "READY", "to": "BUSY", "when": "the core is activated", "guard": "SET", "origin": { "file": "comb/control_path/rdy_fsm.v", "line": 28 } },
+    { "from": "READY", "to": "READY", "when": "nothing is asked", "guard": "~SET", "origin": { "file": "comb/control_path/rdy_fsm.v", "line": 32 } },
+    { "from": "BUSY", "to": "READY", "when": "the core reports that it stopped", "guard": "~SET & STOPPED", "origin": { "file": "comb/control_path/rdy_fsm.v", "line": 31 } },
+    { "from": "BUSY", "to": "BUSY", "when": "the core is still running, or is activated again", "guard": "SET | ~STOPPED", "origin": { "file": "comb/control_path/rdy_fsm.v", "line": 30 } }
+  ]
+}

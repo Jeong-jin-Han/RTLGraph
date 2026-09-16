@@ -1,0 +1,39 @@
+{
+  "version": "0.1.0",
+  "kind": "system",
+  "title": "pwm_top",
+  "created": "2026-09-16T00:00:00.000Z",
+  "modified": "2026-09-16T00:00:00.000Z",
+  "source": {
+    "root": ".",
+    "files": ["pwm/seq/pwm_top.v"],
+    "top": "pwm_top",
+    "contractCheck": "pass"
+  },
+  "signals": {
+    "CLK":    { "width": 1, "flow": "clock",   "driver": "@CLK",    "sinks": ["pwm:CLK"],    "hidden": true, "origin": { "file": "pwm/seq/pwm_top.v", "line": 9 } },
+    "RST":    { "width": 1, "flow": "reset",   "driver": "@RST",    "sinks": ["pwm:RST"],    "origin": { "file": "pwm/seq/pwm_top.v", "line": 10 } },
+    "PERIOD": { "width": 8, "flow": "data",    "driver": "@PERIOD", "sinks": ["pwm:PERIOD"], "meaning": "the number of cycles in one pulse period", "origin": { "file": "pwm/seq/pwm_top.v", "line": 11 } },
+    "DUTY":   { "width": 8, "flow": "data",    "driver": "@DUTY",   "sinks": ["pwm:DUTY"],   "meaning": "the number of ON cycles of a period", "origin": { "file": "pwm/seq/pwm_top.v", "line": 12 } },
+    "SET":    { "width": 1, "flow": "control", "driver": "@SET",    "sinks": ["pwm:SET"],    "meaning": "1 cycle: take PERIOD and DUTY and start the wave", "origin": { "file": "pwm/seq/pwm_top.v", "line": 13 } },
+    "STOP":   { "width": 1, "flow": "control", "driver": "@STOP",   "sinks": ["pwm:STOP"],   "meaning": "1 cycle: stop the wave", "origin": { "file": "pwm/seq/pwm_top.v", "line": 14 } },
+    "PWM":    { "width": 1, "flow": "data",    "driver": "pwm:PWM", "sinks": ["@PWM"],       "meaning": "the generated pulse", "origin": { "file": "pwm/seq/pwm_top.v", "line": 15 } },
+    "RDY":    { "width": 1, "flow": "control", "driver": "pwm:RDY", "sinks": ["@RDY"],       "meaning": "active-low: 0 while the core is activated", "origin": { "file": "pwm/seq/pwm_top.v", "line": 16 } }
+  },
+  "nodes": {
+    "@CLK":    { "kind": "port", "dir": "in",  "flow": "clock",   "origin": { "file": "pwm/seq/pwm_top.v", "line": 9 } },
+    "@RST":    { "kind": "port", "dir": "in",  "flow": "reset",   "origin": { "file": "pwm/seq/pwm_top.v", "line": 10 } },
+    "@PERIOD": { "kind": "port", "dir": "in",  "flow": "data",    "origin": { "file": "pwm/seq/pwm_top.v", "line": 11 } },
+    "@DUTY":   { "kind": "port", "dir": "in",  "flow": "data",    "origin": { "file": "pwm/seq/pwm_top.v", "line": 12 } },
+    "@SET":    { "kind": "port", "dir": "in",  "flow": "control", "origin": { "file": "pwm/seq/pwm_top.v", "line": 13 } },
+    "@STOP":   { "kind": "port", "dir": "in",  "flow": "control", "origin": { "file": "pwm/seq/pwm_top.v", "line": 14 } },
+    "@PWM":    { "kind": "port", "dir": "out", "flow": "data",    "origin": { "file": "pwm/seq/pwm_top.v", "line": 15 } },
+    "@RDY":    { "kind": "port", "dir": "out", "flow": "control", "origin": { "file": "pwm/seq/pwm_top.v", "line": 16 } },
+    "pwm": {
+      "kind": "component", "name": "pwm", "module": "pwm_top",
+      "ref": "pwm/pwm.rtlgraph-schematic.json",
+      "ports": { "CLK": "in", "RST": "in", "PERIOD": "in", "DUTY": "in", "SET": "in", "STOP": "in", "PWM": "out", "RDY": "out" },
+      "origin": { "file": "pwm/seq/pwm_top.v", "line": 8 }
+    }
+  }
+}

@@ -1,0 +1,77 @@
+{
+  "version": "0.1.0",
+  "kind": "component",
+  "title": "cnt",
+  "created": "2026-09-16T00:00:00.000Z",
+  "modified": "2026-09-16T00:00:00.000Z",
+  "source": {
+    "root": ".",
+    "lib": "../../../../base",
+    "files": ["seq/cnt_top.v", "comb/data_path/cnt_dp.v", "comb/control_path/cnt_cp.v"],
+    "libFiles": ["DFF.v", "SUB.v", "MUX2.v", "CMP_EQ.v"],
+    "top": "cnt_top",
+    "contractCheck": "pass"
+  },
+  "signals": {
+    "CLK":      { "width": 1, "flow": "clock",   "driver": "@CLK", "sinks": ["CNT_FF:CLK"], "hidden": true, "origin": { "file": "seq/cnt_top.v", "line": 9 } },
+    "RST":      { "width": 1, "flow": "reset",   "driver": "@RST", "sinks": ["CNT_FF:RST"], "meaning": "1=clear the counter, which also raises ZERO", "origin": { "file": "seq/cnt_top.v", "line": 10 } },
+    "LOAD":     { "width": 1, "flow": "control", "driver": "@LOAD", "sinks": ["control_path:LOAD"], "meaning": "1=take LOAD_VAL", "origin": { "file": "seq/cnt_top.v", "line": 11 } },
+    "DEC":      { "width": 1, "flow": "control", "driver": "@DEC", "sinks": ["control_path:DEC"], "meaning": "1=count one down", "origin": { "file": "seq/cnt_top.v", "line": 12 } },
+    "LOAD_VAL": { "width": 8, "flow": "data",    "driver": "@LOAD_VAL", "sinks": ["data_path.u_mux:d1"], "origin": { "file": "seq/cnt_top.v", "line": 13 } },
+    "DOWN":     { "width": 8, "flow": "data",    "driver": "data_path.u_sub:y", "sinks": ["data_path.u_mux:d0"], "meaning": "the value one below the current one", "origin": { "file": "comb/data_path/cnt_dp.v", "line": 16 } },
+    "CNT_D":    { "width": 8, "flow": "data",    "driver": "data_path.u_mux:y", "sinks": ["CNT_FF:D"], "origin": { "file": "seq/cnt_top.v", "line": 18 } },
+    "VAL":      { "width": 8, "flow": "data",    "driver": "CNT_FF:Q", "sinks": ["data_path.u_sub:a", "data_path.u_zero:a", "@VAL"], "meaning": "the cycles left in the phase now running", "origin": { "file": "seq/cnt_top.v", "line": 14 } },
+    "ZERO":     { "width": 1, "flow": "control", "driver": "data_path.u_zero:y", "sinks": ["@ZERO"], "meaning": "1=the counter has run out", "origin": { "file": "seq/cnt_top.v", "line": 15 } },
+    "CNT_EN":   { "width": 1, "flow": "control", "driver": "control_path:CNT_EN", "sinks": ["CNT_FF:EN"], "meaning": "1=the counter register takes a new value", "origin": { "file": "seq/cnt_top.v", "line": 19 } },
+    "CNT_SEL":  { "width": 1, "flow": "control", "driver": "control_path:CNT_SEL", "sinks": ["data_path.u_mux:sel"], "meaning": "1=take LOAD_VAL, 0=take the value one below", "origin": { "file": "seq/cnt_top.v", "line": 20 } }
+  },
+  "nodes": {
+    "@CLK":      { "kind": "port", "dir": "in",  "flow": "clock",   "origin": { "file": "seq/cnt_top.v", "line": 9 } },
+    "@RST":      { "kind": "port", "dir": "in",  "flow": "reset",   "origin": { "file": "seq/cnt_top.v", "line": 10 } },
+    "@LOAD":     { "kind": "port", "dir": "in",  "flow": "control", "origin": { "file": "seq/cnt_top.v", "line": 11 } },
+    "@DEC":      { "kind": "port", "dir": "in",  "flow": "control", "origin": { "file": "seq/cnt_top.v", "line": 12 } },
+    "@LOAD_VAL": { "kind": "port", "dir": "in",  "flow": "data",    "origin": { "file": "seq/cnt_top.v", "line": 13 } },
+    "@VAL":      { "kind": "port", "dir": "out", "flow": "data",    "origin": { "file": "seq/cnt_top.v", "line": 14 } },
+    "@ZERO":     { "kind": "port", "dir": "out", "flow": "control", "origin": { "file": "seq/cnt_top.v", "line": 15 } },
+    "data_path.u_sub": {
+      "kind": "op", "flow": "data", "time": "comb", "module": "SUB", "params": { "BW": 7 },
+      "ports": { "a": "in", "b": "in", "y": "out" },
+      "consts": { "b": "8'd1" },
+      "origin": { "file": "comb/data_path/cnt_dp.v", "line": 18 }
+    },
+    "data_path.u_mux": {
+      "kind": "mux", "flow": "data", "time": "comb", "module": "MUX2", "params": { "BW": 7 },
+      "ports": { "sel": "in", "d0": "in", "d1": "in", "y": "out" },
+      "origin": { "file": "comb/data_path/cnt_dp.v", "line": 24 }
+    },
+    "data_path.u_zero": {
+      "kind": "op", "flow": "data", "time": "comb", "module": "CMP_EQ", "params": { "BW": 7 },
+      "ports": { "a": "in", "b": "in", "y": "out" },
+      "consts": { "b": "8'd0" },
+      "origin": { "file": "comb/data_path/cnt_dp.v", "line": 31 }
+    },
+    "control_path": {
+      "kind": "control", "flow": "control", "time": "comb", "module": "cnt_cp",
+      "ports": { "LOAD": "in", "DEC": "in", "CNT_EN": "out", "CNT_SEL": "out" },
+      "truthTable": {
+        "inputs": ["LOAD", "DEC"],
+        "outputs": ["CNT_EN", "CNT_SEL"],
+        "rows": [
+          { "in": ["1", "x"], "out": ["1", "1"], "note": "load: take the new phase length" },
+          { "in": ["0", "1"], "out": ["1", "0"], "note": "count: take the value one below" },
+          { "in": ["0", "0"], "out": ["0", "0"], "note": "hold" }
+        ],
+        "default": { "out": ["0", "0"] },
+        "origin": { "file": "comb/control_path/cnt_cp.v", "line": 19 }
+      },
+      "origin": { "file": "seq/cnt_top.v", "line": 32 }
+    },
+    "CNT_FF": {
+      "kind": "reg", "flow": "data", "time": "seq", "module": "DFF", "params": { "BW": 7 },
+      "label": "CNT",
+      "ports": { "CLK": "in", "RST": "in", "EN": "in", "D": "in", "Q": "out" },
+      "rstKind": "sync", "rstPriority": "rst>en", "rstValue": "0", "rstActive": "high", "enActive": "high",
+      "origin": { "file": "seq/cnt_top.v", "line": 40 }
+    }
+  }
+}

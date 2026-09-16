@@ -1,0 +1,108 @@
+{
+  "version": "0.1.0",
+  "kind": "component",
+  "title": "pulse",
+  "created": "2026-09-16T00:00:00.000Z",
+  "modified": "2026-09-16T00:00:00.000Z",
+  "source": {
+    "root": ".",
+    "lib": "../../../base",
+    "files": ["seq/pulse_top.v", "comb/data_path/pulse_dp.v", "comb/control_path/pulse_fsm.v"],
+    "libFiles": ["DFF.v", "SUB.v", "MUX2.v"],
+    "top": "pulse_top",
+    "contractCheck": "pass"
+  },
+  "signals": {
+    "CLK":       { "width": 1, "flow": "clock",   "driver": "@CLK",  "sinks": ["u_cnt:CLK", "PHASE_FF:CLK"], "hidden": true, "origin": { "file": "seq/pulse_top.v", "line": 10 } },
+    "RST":       { "width": 1, "flow": "reset",   "driver": "@RST",  "sinks": ["control_path:RST", "PHASE_FF:RST"], "origin": { "file": "seq/pulse_top.v", "line": 11 } },
+    "RUN":       { "width": 1, "flow": "control", "driver": "@RUN",  "sinks": ["control_path:RUN"], "meaning": "1=the core wants a wave", "origin": { "file": "seq/pulse_top.v", "line": 12 } },
+    "PERIOD":    { "width": 8, "flow": "data",    "driver": "@PERIOD", "sinks": ["data_path.u_off:a"], "origin": { "file": "seq/pulse_top.v", "line": 13 } },
+    "DUTY":      { "width": 8, "flow": "data",    "driver": "@DUTY", "sinks": ["data_path.u_off:b", "data_path.u_high:a"], "origin": { "file": "seq/pulse_top.v", "line": 14 } },
+    "OFF":       { "width": 8, "flow": "data",    "driver": "data_path.u_off:y", "sinks": ["data_path.u_low:a"], "meaning": "PERIOD - DUTY: the cycles the wave is low", "origin": { "file": "comb/data_path/pulse_dp.v", "line": 16 } },
+    "HIGH_LEN":  { "width": 8, "flow": "data",    "driver": "data_path.u_high:y", "sinks": ["data_path.u_mux:d1"], "meaning": "one below the ON cycles: the counter counts to zero", "origin": { "file": "comb/data_path/pulse_dp.v", "line": 17 } },
+    "LOW_LEN":   { "width": 8, "flow": "data",    "driver": "data_path.u_low:y", "sinks": ["data_path.u_mux:d0"], "meaning": "one below the OFF cycles", "origin": { "file": "comb/data_path/pulse_dp.v", "line": 18 } },
+    "RELOAD":    { "width": 8, "flow": "data",    "driver": "data_path.u_mux:y", "sinks": ["u_cnt:LOAD_VAL"], "meaning": "how long the phase now starting lasts", "origin": { "file": "seq/pulse_top.v", "line": 18 } },
+    "ZERO":      { "width": 1, "flow": "control", "driver": "u_cnt:ZERO", "sinks": ["control_path:ZERO"], "meaning": "1=the phase now running has ended", "origin": { "file": "seq/pulse_top.v", "line": 19 } },
+    "PHASE_Q":   { "width": 1, "flow": "control", "driver": "PHASE_FF:Q", "sinks": ["control_path:PHASE", "@PWM"], "aliases": ["PWM"], "meaning": "1=the high half of the wave; this is PWM itself", "origin": { "file": "seq/pulse_top.v", "line": 20 } },
+    "PHASE_D":   { "width": 1, "flow": "control", "driver": "control_path:PHASE_D", "sinks": ["PHASE_FF:D"], "meaning": "the phase the next cycle is in", "origin": { "file": "seq/pulse_top.v", "line": 21 } },
+    "CNT_RST":   { "width": 1, "flow": "control", "driver": "control_path:CNT_RST", "sinks": ["u_cnt:RST"], "meaning": "1=hold the counter at zero while stopped", "origin": { "file": "seq/pulse_top.v", "line": 22 } },
+    "CNT_LOAD":  { "width": 1, "flow": "control", "driver": "control_path:CNT_LOAD", "sinks": ["u_cnt:LOAD"], "meaning": "1=start a new phase from RELOAD", "origin": { "file": "seq/pulse_top.v", "line": 23 } },
+    "CNT_DEC":   { "width": 1, "flow": "control", "driver": "control_path:CNT_DEC", "sinks": ["u_cnt:DEC"], "meaning": "1=one cycle of the current phase has passed", "origin": { "file": "seq/pulse_top.v", "line": 24 } },
+    "LOAD_HIGH": { "width": 1, "flow": "control", "driver": "control_path:LOAD_HIGH", "sinks": ["data_path.u_mux:sel"], "meaning": "1=the phase being started is the high one", "origin": { "file": "seq/pulse_top.v", "line": 25 } }
+  },
+  "nodes": {
+    "@CLK":    { "kind": "port", "dir": "in",  "flow": "clock",   "origin": { "file": "seq/pulse_top.v", "line": 10 } },
+    "@RST":    { "kind": "port", "dir": "in",  "flow": "reset",   "origin": { "file": "seq/pulse_top.v", "line": 11 } },
+    "@RUN":    { "kind": "port", "dir": "in",  "flow": "control", "origin": { "file": "seq/pulse_top.v", "line": 12 } },
+    "@PERIOD": { "kind": "port", "dir": "in",  "flow": "data",    "origin": { "file": "seq/pulse_top.v", "line": 13 } },
+    "@DUTY":   { "kind": "port", "dir": "in",  "flow": "data",    "origin": { "file": "seq/pulse_top.v", "line": 14 } },
+    "@PWM":    { "kind": "port", "dir": "out", "flow": "data",    "origin": { "file": "seq/pulse_top.v", "line": 15 } },
+    "data_path.u_off": {
+      "kind": "op", "flow": "data", "time": "comb", "module": "SUB", "params": { "BW": 7 },
+      "ports": { "a": "in", "b": "in", "y": "out" },
+      "origin": { "file": "comb/data_path/pulse_dp.v", "line": 20 }
+    },
+    "data_path.u_high": {
+      "kind": "op", "flow": "data", "time": "comb", "module": "SUB", "params": { "BW": 7 },
+      "ports": { "a": "in", "b": "in", "y": "out" },
+      "consts": { "b": "8'd1" },
+      "origin": { "file": "comb/data_path/pulse_dp.v", "line": 26 }
+    },
+    "data_path.u_low": {
+      "kind": "op", "flow": "data", "time": "comb", "module": "SUB", "params": { "BW": 7 },
+      "ports": { "a": "in", "b": "in", "y": "out" },
+      "consts": { "b": "8'd1" },
+      "origin": { "file": "comb/data_path/pulse_dp.v", "line": 32 }
+    },
+    "data_path.u_mux": {
+      "kind": "mux", "flow": "data", "time": "comb", "module": "MUX2", "params": { "BW": 7 },
+      "ports": { "sel": "in", "d0": "in", "d1": "in", "y": "out" },
+      "origin": { "file": "comb/data_path/pulse_dp.v", "line": 38 }
+    },
+    "control_path": {
+      "kind": "control", "flow": "control", "time": "comb", "module": "pulse_fsm",
+      "label": "FSM code",
+      "ports": { "RST": "in", "RUN": "in", "ZERO": "in", "PHASE": "in", "PHASE_D": "out", "CNT_RST": "out", "CNT_LOAD": "out", "CNT_DEC": "out", "LOAD_HIGH": "out" },
+      "truthTable": {
+        "inputs": ["RST", "RUN", "ZERO", "PHASE"],
+        "outputs": ["PHASE_D", "CNT_RST", "CNT_LOAD", "CNT_DEC", "LOAD_HIGH"],
+        "rows": [
+          { "in": ["1", "x", "x", "x"], "out": ["0", "1", "0", "0", "0"], "note": "reset: low, counter cleared" },
+          { "in": ["0", "0", "x", "x"], "out": ["0", "1", "0", "0", "0"], "note": "stopped: the same standing still" },
+          { "in": ["0", "1", "0", "0"], "out": ["0", "0", "0", "1", "0"], "note": "low phase, still counting" },
+          { "in": ["0", "1", "0", "1"], "out": ["1", "0", "0", "1", "0"], "note": "high phase, still counting" },
+          { "in": ["0", "1", "1", "0"], "out": ["1", "0", "1", "0", "1"], "note": "low phase ended: start the high one" },
+          { "in": ["0", "1", "1", "1"], "out": ["0", "0", "1", "0", "0"], "note": "high phase ended: start the low one" }
+        ],
+        "default": { "out": ["0", "1", "0", "0", "0"], "note": "anything else stands still" },
+        "origin": { "file": "comb/control_path/pulse_fsm.v", "line": 30 }
+      },
+      "origin": { "file": "seq/pulse_top.v", "line": 47 }
+    },
+    "u_cnt": {
+      "kind": "component", "name": "cnt", "module": "cnt_top",
+      "ref": "cnt/cnt.rtlgraph-schematic.json",
+      "ports": { "CLK": "in", "RST": "in", "LOAD": "in", "DEC": "in", "LOAD_VAL": "in", "VAL": "out", "ZERO": "out" },
+      "origin": { "file": "seq/pulse_top.v", "line": 28 }
+    },
+    "PHASE_FF": {
+      "kind": "reg", "flow": "control", "time": "seq", "module": "DFF", "params": { "BW": 0 },
+      "label": "PHASE",
+      "fsm": "pulse.rtlgraph-fsm.json",
+      "ports": { "CLK": "in", "RST": "in", "EN": "in", "D": "in", "Q": "out" },
+      "consts": { "EN": "1'b1" },
+      "rstKind": "sync", "rstPriority": "rst>en", "rstValue": "0", "rstActive": "high",
+      "origin": { "file": "seq/pulse_top.v", "line": 60 }
+    }
+  },
+  "diagnostics": [
+    {
+      "severity": "info",
+      "code": "unconnected-output",
+      "msg": "u_cnt.VAL is left open: only the zero flag is used",
+      "file": "seq/pulse_top.v",
+      "line": 35,
+      "node": "u_cnt"
+    }
+  ]
+}

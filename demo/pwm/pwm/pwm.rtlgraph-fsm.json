@@ -1,0 +1,55 @@
+{
+  "version": "0.1.0",
+  "kind": "fsm",
+  "title": "pwm",
+  "created": "2026-09-16T00:00:00.000Z",
+  "modified": "2026-09-16T00:00:00.000Z",
+  "source": {
+    "root": ".",
+    "files": ["comb/control_path/pwm_fsm.v", "seq/pwm_top.v"],
+    "top": "pwm_top",
+    "contractCheck": "pass"
+  },
+  "machine": {
+    "name": "STATE",
+    "style": "moore",
+    "reset": "IDLE",
+    "node": "STATE_FF",
+    "inputs": [
+      { "name": "SET", "meaning": "1 cycle: take PERIOD and DUTY and start the wave" },
+      { "name": "STOP", "meaning": "1 cycle: stop the wave" }
+    ],
+    "outputs": [
+      { "name": "LOAD_EN", "meaning": "1=capture PERIOD and DUTY" },
+      { "name": "RUN_EN", "meaning": "1=the pulse generator is running" },
+      { "name": "STOPPED", "meaning": "1=the core is not driving a wave" }
+    ]
+  },
+  "states": {
+    "IDLE": {
+      "meaning": "waiting to be set up: nothing is driven and the settings are left alone",
+      "encoding": "2'd0",
+      "outputs": { "LOAD_EN": "0", "RUN_EN": "0", "STOPPED": "1" },
+      "origin": { "file": "comb/control_path/pwm_fsm.v", "line": 34 }
+    },
+    "LOAD": {
+      "meaning": "one cycle in which PERIOD and DUTY are captured into their registers",
+      "encoding": "2'd1",
+      "outputs": { "LOAD_EN": "1", "RUN_EN": "0", "STOPPED": "0" },
+      "origin": { "file": "comb/control_path/pwm_fsm.v", "line": 30 }
+    },
+    "RUN": {
+      "meaning": "the pulse generator is driving the wave at the captured settings",
+      "encoding": "2'd2",
+      "outputs": { "LOAD_EN": "0", "RUN_EN": "1", "STOPPED": "0" },
+      "origin": { "file": "comb/control_path/pwm_fsm.v", "line": 32 }
+    }
+  },
+  "transitions": [
+    { "from": "IDLE", "to": "LOAD", "when": "the core is activated", "guard": "SET", "origin": { "file": "comb/control_path/pwm_fsm.v", "line": 33 } },
+    { "from": "IDLE", "to": "IDLE", "when": "nothing is asked", "guard": "~SET", "origin": { "file": "comb/control_path/pwm_fsm.v", "line": 34 } },
+    { "from": "LOAD", "to": "RUN", "when": "the settings have been captured; always after one cycle", "guard": "1", "origin": { "file": "comb/control_path/pwm_fsm.v", "line": 30 } },
+    { "from": "RUN", "to": "RUN", "when": "no stop has been asked", "guard": "~STOP", "origin": { "file": "comb/control_path/pwm_fsm.v", "line": 32 } },
+    { "from": "RUN", "to": "IDLE", "when": "the core is told to stop", "guard": "STOP", "origin": { "file": "comb/control_path/pwm_fsm.v", "line": 31 } }
+  ]
+}

@@ -20,6 +20,9 @@ const PITCH = 12 // spacing between the lanes back edges run in
 const LOOP_H = 26
 const ARROW = 7
 const RESET_STUB = 26
+const LABEL_CHAR = 6 // width of one character of a transition label
+const LABEL_H = 12   // and the height of the line it sits on
+const LABEL_PAD = 24 // room left around a label inside its lane
 
 export interface FsmStateBox {
   id: string
@@ -93,9 +96,9 @@ const head = (x: number, y: number, dir: 'right' | 'left' | 'up' | 'down'): [num
 
 const seg = (x1: number, y1: number, x2: number, y2: number): Segment => ({ x1, y1, x2, y2 })
 
-// Transition labels are set two sizes down; 6px a character is close enough to
-// keep them on the page.
-const labelWidth = (e: FsmEdge) => e.label.length * 6
+// Transition labels are set two sizes down; these are close enough to keep them
+// on the page without measuring text.
+const labelWidth = (e: FsmEdge) => e.label.length * LABEL_CHAR
 
 export function layoutFsm(graph: FsmGraph): FsmLayout {
   const depth = columns(graph)
@@ -113,6 +116,18 @@ export function layoutFsm(graph: FsmGraph): FsmLayout {
   const colWidth = new Map<number, number>()
   for (const [c, members] of byColumn) colWidth.set(c, Math.max(...members.map(id => widthOf(label(id), graph.states[id].encoding))))
 
+  // The lane after a column is as wide as the widest label that has to fit in
+  // it: a transition to the very next column writes its condition there, and a
+  // label narrower than the text is a label over a state box.
+  const gapAfter = new Map<number, number>()
+  for (const c of order) gapAfter.set(c, COL_GAP)
+  for (const t of graph.transitions) {
+    const from = depth.get(t.from)
+    const to = depth.get(t.to)
+    if (from === undefined || to === undefined || to - from !== 1) continue
+    gapAfter.set(from, Math.max(gapAfter.get(from) ?? COL_GAP, t.when.length * LABEL_CHAR + LABEL_PAD))
+  }
+
   const rows = Math.max(...[...byColumn.values()].map(m => m.length))
   const contentH = rows * STATE_H + (rows - 1) * ROW_GAP
   // Self-loops stand above their state and carry a label above that, so the top
@@ -129,8 +144,9 @@ export function layoutFsm(graph: FsmGraph): FsmLayout {
       boxes.set(id, { id, label: label(id), encoding: graph.states[id].encoding, x, y, w, h: STATE_H, reset: id === graph.machine.reset })
       y += STATE_H + ROW_GAP
     }
-    x += w + COL_GAP
+    x += w + (gapAfter.get(c) ?? COL_GAP)
   }
+  const rightmost = x - (gapAfter.get(order[order.length - 1]) ?? COL_GAP)
   const bottom = top + contentH
 
   // Back edges share the space under the diagram; each gets a lane of its own so
@@ -159,11 +175,44 @@ export function layoutFsm(graph: FsmGraph): FsmLayout {
     if (edge) edges.push(edge)
   })
 
-  // A label is wider than the lane it sits in; the page grows to hold it rather
-  // than letting the text run off the edge of an exported figure.
-  const right = Math.max(x - COL_GAP, ...edges.map(e => e.labelAt.x + labelWidth(e) / 2))
-  const height = (lanes > 0 ? bottom + PITCH * lanes + ARROW : bottom) + MARGIN
-  return { states: [...boxes.values()], edges, width: right + MARGIN, height }
+  // Whatever the routing did — a loop above the top row, a label wider than its
+  // lane, a lane under the last state — the page is the bounding box of it all
+  // with a margin, and everything is moved inside. An exported figure with a
+  // sentence hanging off the edge is worse than a slightly bigger page.
+  const states = [...boxes.values()]
+  const box = bounds(states, edges, rightmost, lanes > 0 ? bottom + PITCH * lanes + ARROW : bottom)
+  const dx = MARGIN - box.minX
+  const dy = MARGIN - box.minY
+  return {
+    states: states.map(s => ({ ...s, x: s.x + dx, y: s.y + dy })),
+    edges: edges.map(e => ({
+      ...e,
+      segments: e.segments.map(g => ({ x1: g.x1 + dx, y1: g.y1 + dy, x2: g.x2 + dx, y2: g.y2 + dy })),
+      arrow: e.arrow.map(([px, py]) => [px + dx, py + dy] as [number, number]),
+      labelAt: { x: e.labelAt.x + dx, y: e.labelAt.y + dy },
+    })),
+    width: box.maxX - box.minX + 2 * MARGIN,
+    height: box.maxY - box.minY + 2 * MARGIN,
+  }
+}
+
+// Everything drawn, label text included. The reset stub hangs to the left of the
+// state it points at, so that much room is always kept on that side.
+function bounds(states: FsmStateBox[], edges: FsmEdge[], rightmost: number, lowest: number) {
+  const xs: number[] = [rightmost]
+  const ys: number[] = [lowest]
+  for (const s of states) {
+    xs.push(s.x - RESET_STUB, s.x + s.w)
+    ys.push(s.y, s.y + s.h)
+  }
+  for (const e of edges) {
+    for (const g of e.segments) xs.push(g.x1, g.x2), ys.push(g.y1, g.y2)
+    for (const [px, py] of e.arrow) xs.push(px), ys.push(py)
+    const half = labelWidth(e) / 2
+    xs.push(e.labelAt.x - (e.labelAnchor === 'start' ? 0 : half), e.labelAt.x + (e.labelAnchor === 'end' ? 0 : half))
+    ys.push(e.labelAt.y - LABEL_H, e.labelAt.y)
+  }
+  return { minX: Math.min(...xs), maxX: Math.max(...xs), minY: Math.min(...ys), maxY: Math.max(...ys) }
 }
 
 function route(
