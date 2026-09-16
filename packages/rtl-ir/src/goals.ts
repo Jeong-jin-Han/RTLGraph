@@ -2,18 +2,25 @@ import type { ComponentGraph, Diagnostic } from './types.ts'
 import { parseEndpoint } from './endpoint.ts'
 
 // What is still missing from a schematic, in the way a type checker states what
-// is left to prove: one line per obligation, each naming the pin that needs a
-// connection and what would satisfy it. The editor shows these while the reader
-// is changing the picture — cutting a wire leaves a hole, and the hole is the
-// point: it says what the RTL would have to do.
+// is left to prove. Each obligation leads with what to do — "Drive CNT_FF:D" —
+// and then says which connection is missing, from which endpoint to which, so a
+// reader knows the answer before reading the reason. The editor shows these while
+// the reader is changing the picture: cutting a wire leaves a hole, and the hole
+// is the point, because it says what the RTL would have to do.
 
 export interface Goal {
   id: string // stable: the endpoint or net the obligation is about
-  what: string // the obligation, in one line
-  why?: string // where it comes from, when that is not obvious
+  what: string // the obligation, the action first
+  why?: string // the reason behind it
+  from?: string // the endpoint the connection should leave, when it is known
+  to?: string // and the one it should reach
   node?: string
   signal?: string
 }
+
+// "data_path.u_inc:y → CNT_FF:D", with the open end left open.
+export const goalLink = (goal: Goal): string | undefined =>
+  goal.from === undefined && goal.to === undefined ? undefined : `${goal.from ?? '?'} → ${goal.to ?? '?'}`
 
 const endpointsOf = (graph: ComponentGraph, cut: ReadonlySet<string>) => {
   const driven = new Set<string>() // input endpoints a net reaches
@@ -37,8 +44,10 @@ export function connectionGoals(graph: ComponentGraph, cut: readonly string[] = 
     const s = graph.signals[name]
     goals.push({
       id: `cut:${name}`,
-      what: `connect ${s.driver} to ${s.sinks.join(', ') || 'something'} again, or take the net out of the RTL`,
-      why: `you cut ${name}`,
+      what: `Connect ${name} again`,
+      why: `you cut it; the RTL still carries it, so either draw it again or take it out of the code`,
+      from: s.driver,
+      to: s.sinks.join(', ') || undefined,
       signal: name,
     })
   }
@@ -47,7 +56,13 @@ export function connectionGoals(graph: ComponentGraph, cut: readonly string[] = 
     if (node.kind === 'port') {
       // An output port of this component has to be driven by something inside it.
       if (node.dir === 'out' && !driven.has(id)) {
-        goals.push({ id: `port:${id}`, what: `drive the output port ${id.replace(/^@/, '')}`, node: id })
+        goals.push({
+          id: `port:${id}`,
+          what: `Drive the output port ${id.replace(/^@/, '')}`,
+          why: 'an output port carries a value out of this component, so something inside has to reach it',
+          to: id,
+          node: id,
+        })
       }
       continue
     }
@@ -55,10 +70,22 @@ export function connectionGoals(graph: ComponentGraph, cut: readonly string[] = 
     for (const [pin, dir] of Object.entries(node.ports)) {
       const ref = `${id}:${pin}`
       if (dir === 'in' && !driven.has(ref) && !Object.hasOwn(consts, pin)) {
-        goals.push({ id: `in:${ref}`, what: `connect something to ${ref}`, node: id })
+        goals.push({
+          id: `in:${ref}`,
+          what: `Drive ${ref}`,
+          why: 'no net reaches this input and it is not tied off, so it reads as nothing',
+          to: ref,
+          node: id,
+        })
       }
       if (dir === 'out' && !drives.has(ref)) {
-        goals.push({ id: `out:${ref}`, what: `${ref} drives nothing; use it or leave it unconnected on purpose`, node: id })
+        goals.push({
+          id: `out:${ref}`,
+          what: `Use ${ref}, or leave it open on purpose`,
+          why: 'this output drives nothing',
+          from: ref,
+          node: id,
+        })
       }
     }
   }
@@ -70,7 +97,7 @@ export const goalsAsDiagnostics = (goals: readonly Goal[]): Diagnostic[] =>
   goals.map(goal => ({
     severity: 'warn',
     code: goal.id.startsWith('cut:') ? 'cut' : 'undriven',
-    msg: goal.why ? `${goal.what} (${goal.why})` : goal.what,
+    msg: [goal.what, goalLink(goal), goal.why].filter(Boolean).join(' — '),
     ...(goal.node ? { node: goal.node } : {}),
     ...(goal.signal ? { signal: goal.signal } : {}),
   }))

@@ -43,8 +43,13 @@ body.editing #stage g.wire { cursor: pointer; }
 #goals p { color: #6b7280; margin: 4px 0; }
 #goals ol { margin: 0; padding-left: 18px; }
 #goals li { margin: 6px 0; cursor: pointer; }
-#goals li.active { font-weight: 600; color: #1d4ed8; }
+#goals li.active .what { color: #1d4ed8; }
+#goals li .what { font-weight: 600; }
+/* which connection is missing, from one endpoint to the other */
+#goals li .link { font-family: ui-monospace, monospace; color: #b45309; margin: 1px 0; }
 #goals li .why { display: block; color: #6b7280; font-weight: 400; }
+#goals .hints { margin: 6px 0 0; padding-left: 18px; color: #6b7280; }
+#goals .hints li { margin: 3px 0; cursor: default; }
 #goals .candidates { margin: 2px 0 0; font-family: ui-monospace, monospace; color: #374151; }
 /* A state machine: the diagram on the left, what it means on the right. The
    table is the same thing the design was built from, so it is read next to the
@@ -64,7 +69,8 @@ body.editing #stage g.wire { cursor: pointer; }
 #table tbody tr.selected { background: #fee2e2; }
 #stage g.fsm-edge { cursor: pointer; }
 #stage g.fsm-edge:hover text { fill: #1d4ed8; }
-#canvas { flex: 1; position: relative; overflow: hidden; background: #ffffff; cursor: grab; touch-action: none; }
+/* Dragging a box or a wire must not sweep up the labels as if they were text. */
+#canvas { flex: 1; position: relative; overflow: hidden; background: #ffffff; cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; }
 #canvas.panning { cursor: grabbing; }
 #stage { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
 #stage svg { display: block; }

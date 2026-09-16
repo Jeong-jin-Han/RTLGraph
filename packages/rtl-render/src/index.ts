@@ -301,9 +301,16 @@ function drawLevel(
 
 function sceneOf(canvas: Canvas, width: number, height: number, crop: boolean): Scene {
   let view = { x: 0, y: 0, w: width, h: height }
-  if (crop && canvas.xs.length > 0) {
-    const [x0, y0] = [Math.min(...canvas.xs) - CROP_MARGIN, Math.min(...canvas.ys) - CROP_MARGIN]
-    view = { x: x0, y: y0, w: Math.max(...canvas.xs) + CROP_MARGIN - x0, h: Math.max(...canvas.ys) + CROP_MARGIN - y0 }
+  if (canvas.xs.length > 0) {
+    const [minX, minY] = [Math.min(...canvas.xs) - CROP_MARGIN, Math.min(...canvas.ys) - CROP_MARGIN]
+    const [maxX, maxY] = [Math.max(...canvas.xs) + CROP_MARGIN, Math.max(...canvas.ys) + CROP_MARGIN]
+    // Cropping shrinks the page to what is drawn. Not cropping keeps the page the
+    // layout planned — so switching the filter never moves anything — but it still
+    // grows to hold what sticks out of it: a wire dragged up out of the box would
+    // otherwise be cut off by the view box, which is what the reader saw.
+    const [x0, y0] = crop ? [minX, minY] : [Math.min(0, minX), Math.min(0, minY)]
+    const [x1, y1] = crop ? [maxX, maxY] : [Math.max(width, maxX), Math.max(height, maxY)]
+    view = { x: x0, y: y0, w: x1 - x0, h: y1 - y0 }
   }
   return { view, background: PALETTE.background, fontFamily: FONT_FAMILY, fontSize: FONT_SIZE, groups: canvas.groups }
 }

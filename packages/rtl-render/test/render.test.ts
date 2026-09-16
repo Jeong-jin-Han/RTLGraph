@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { FILTER_PRESETS, loadHierarchy, type ComponentGraph, type FilterPreset } from '@rtlgraph/ir'
-import { DIM_OPACITY, renderHierarchySvg, renderSvg } from '../src/index.ts'
+import { buildScene, DIM_OPACITY, renderHierarchySvg, renderSvg } from '../src/index.ts'
 
 const DEMO = join(import.meta.dirname, '../../../demo/acc/acc')
 const graph = JSON.parse(readFileSync(join(DEMO, 'acc.rtlgraph-schematic.json'), 'utf8')) as ComponentGraph
@@ -206,4 +206,19 @@ test('matches the golden three-level SVG', () => {
   const svg = renderHierarchySvg(sysRoot, { isUnfolded: () => true })
   if (process.env.UPDATE_GOLDEN) writeFileSync(file, svg)
   assert.equal(svg, readFileSync(file, 'utf8'))
+})
+
+test('the page grows around a wire dragged out of the layout box', () => {
+  const dragged = structuredClone(graph)
+  // The reader pulled this net up above everything, the way a corner grip does.
+  dragged.layout = { nodes: {}, wires: { ACC_SEL: { points: [{ x: 120, y: -90 }, { x: 320, y: -90 }] } } }
+
+  const uncropped = buildScene(dragged, { crop: false })
+  assert.ok(uncropped.view.y < -90, `the top of the page (${uncropped.view.y}) is above the wire`)
+  assert.equal(uncropped.view.x, 0, 'the sides the layout planned are kept')
+  assert.ok(uncropped.view.h > buildScene(graph, { crop: false }).view.h)
+
+  // Nothing moved for the filter: the page is the same whichever parts are lit.
+  const filtered = buildScene(dragged, { crop: false, filter: FILTER_PRESETS.registers })
+  assert.deepEqual(filtered.view, uncropped.view)
 })

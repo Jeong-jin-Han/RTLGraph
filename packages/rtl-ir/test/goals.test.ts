@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { candidatesFor, connectionGoals, goalsAsDiagnostics, type ComponentGraph } from '../src/index.ts'
+import { candidatesFor, connectionGoals, goalLink, goalsAsDiagnostics, type ComponentGraph } from '../src/index.ts'
 
 const graph = JSON.parse(
   readFileSync(join(import.meta.dirname, '../../../demo/acc/acc/acc.rtlgraph-schematic.json'), 'utf8'),
@@ -18,8 +18,16 @@ test('cutting a wire states what the cut left undone', () => {
   const goals = connectionGoals(graph, ['CNT_D'])
   assert.deepEqual(ids(goals), ['cut:CNT_D', 'in:CNT_FF:D', 'out:data_path.u_inc:y'])
   const cut = goals.find(g => g.id === 'cut:CNT_D')!
-  assert.match(cut.what, /connect data_path\.u_inc:y to CNT_FF:D again/)
-  assert.equal(cut.why, 'you cut CNT_D')
+  // What to do first, then which connection is missing, then why.
+  assert.equal(cut.what, 'Connect CNT_D again')
+  assert.equal(goalLink(cut), 'data_path.u_inc:y → CNT_FF:D')
+  assert.match(cut.why!, /you cut it/)
+
+  const input = goals.find(g => g.id === 'in:CNT_FF:D')!
+  assert.equal(input.what, 'Drive CNT_FF:D')
+  assert.equal(goalLink(input), '? → CNT_FF:D', 'the end that is still open is shown as open')
+  const output = goals.find(g => g.id === 'out:data_path.u_inc:y')!
+  assert.equal(goalLink(output), 'data_path.u_inc:y → ?')
   // The file still says what the RTL does; only the sketch has the hole.
   assert.ok(Object.hasOwn(graph.signals, 'CNT_D'))
 })

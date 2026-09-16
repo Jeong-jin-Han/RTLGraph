@@ -1,5 +1,5 @@
 import {
-  candidatesFor, connectionGoals, FILTER_PRESETS, graphFileKind, hierarchyEntries, loadHierarchy, parseEndpoint,
+  candidatesFor, connectionGoals, FILTER_PRESETS, goalLink, graphFileKind, hierarchyEntries, loadHierarchy, parseEndpoint,
   validateFsmGraph,
   type Diagnostic, type FilterPreset, type FsmGraph, type Goal, type HierarchyEntry, type Layout, type ViewFilter,
 } from '@rtlgraph/ir'
@@ -53,6 +53,9 @@ let selectedVertex: number | undefined // a corner of the selected branch
 // A state machine file is drawn instead of a schematic; the two never mix.
 let fsm: FsmGraph | undefined
 let selectedTransition: number | undefined
+// The page the scene was drawn on. It is the layout's box, grown to hold
+// anything the reader dragged outside it, so its origin can be negative.
+let view = { x: 0, y: 0, w: 0, h: 0 }
 let selectedBranch = 0 // which way through a net that reaches several sinks
 
 const isUnfolded = (instance: string) => unfolded.includes(instance)
@@ -236,9 +239,9 @@ function drawHandles() {
   const ns = 'http://www.w3.org/2000/svg'
   const svg = document.createElementNS(ns, 'svg')
   svg.setAttribute('class', 'handles')
-  svg.setAttribute('width', String(layout.width))
-  svg.setAttribute('height', String(layout.height))
-  svg.setAttribute('viewBox', `0 0 ${layout.width} ${layout.height}`)
+  svg.setAttribute('width', String(view.w))
+  svg.setAttribute('height', String(view.h))
+  svg.setAttribute('viewBox', `${view.x} ${view.y} ${view.w} ${view.h}`)
 
   // The branch under the hand, marked here rather than by recolouring the net —
   // a net that fans out would otherwise light up all the way to every sink.
@@ -292,7 +295,9 @@ function render() {
   }
   // Full layout, no cropping: switching the filter must not move anything.
   // controls: the fold markers are for clicking here; exports leave them out.
-  stage.innerHTML = sceneToSvg(buildHierarchyScene(arranged(), { filter, layout, crop: false, isUnfolded, controls: true, editing }))
+  const scene = buildHierarchyScene(arranged(), { filter, layout, crop: false, isUnfolded, controls: true, editing })
+  view = scene.view
+  stage.innerHTML = sceneToSvg(scene)
   drawHandles()
   markSelection()
   showGoals()
@@ -317,7 +322,9 @@ function renderFsm() {
   editButton.hidden = resetButton.hidden = true
   schematicButton.hidden = false
   fsmButton.hidden = true
-  stage.innerHTML = sceneToSvg(buildFsmScene(fsm, { selected: selectedTransition }))
+  const diagram = buildFsmScene(fsm, { selected: selectedTransition })
+  view = diagram.view
+  stage.innerHTML = sceneToSvg(diagram)
   showFsmTable()
   report()
 }
@@ -394,20 +401,29 @@ function showGoals() {
   if (goals.length === 0) {
     goalsPanel.replaceChildren(
       el('h2', { textContent: 'Nothing missing' }),
-      el('p', { textContent: 'Every pin of this file is connected or tied off. Drag a box to move it, drag a frame corner to resize it, click a wire and press Delete to cut it.' }),
+      el('p', { textContent: 'Every pin of this file is connected or tied off.' }),
+      el('ul', { className: 'hints' },
+        el('li', { textContent: 'Drag a box to move it' }),
+        el('li', { textContent: 'Drag a frame corner to resize it' }),
+        el('li', { textContent: 'Click a wire, then Delete to cut it — what the cut leaves undone is listed here' }),
+      ),
     )
     return
   }
   const list = el('ol')
   for (const goal of goals) {
-    const item = el('li', { textContent: goal.what })
+    // The action first, then which connection is missing, then the reason.
+    const item = el('li', {}, el('span', { className: 'what', textContent: goal.what }))
+    const link = goalLink(goal)
+    if (link) item.append(el('div', { className: 'link', textContent: link }))
     if (goal.why) item.append(el('span', { className: 'why', textContent: goal.why }))
     if (goal.id === activeGoal) {
       item.classList.add('active')
       const options = candidatesFor(root.graph, goal, arrangement.cut ?? [])
+      const open = goal.from === undefined ? 'drive it from' : 'take it to'
       item.append(el('div', {
         className: 'candidates',
-        textContent: options.length > 0 ? `could come from: ${options.slice(0, 8).join(', ')}` : 'nothing free to connect it to',
+        textContent: options.length > 0 ? `${open}: ${options.slice(0, 8).join(', ')}` : 'nothing free to connect it to',
       }))
     }
     item.addEventListener('click', () => {
@@ -419,7 +435,7 @@ function showGoals() {
   }
   goalsPanel.replaceChildren(
     el('h2', { textContent: `${goals.length} connection${goals.length === 1 ? '' : 's'} to settle` }),
-    el('p', { textContent: 'The file still describes the RTL; these are what the sketch would need from it.' }),
+    el('p', { textContent: 'Each one says what to do, then which connection is missing. The file still describes the RTL — these are what the sketch owes it.' }),
     list,
   )
 }
@@ -472,9 +488,9 @@ function applyViewport() {
 }
 
 function fit() {
-  if (!layout) return
+  if (view.w <= 0) return
   const box = canvas.getBoundingClientRect()
-  viewport = fitViewport(layout.width, layout.height, box.width, box.height)
+  viewport = fitViewport(view.w, view.h, box.width, box.height)
   applyViewport()
   persist()
 }
@@ -593,7 +609,8 @@ canvas.addEventListener('pointerdown', event => {
   // In edit mode a press on a wire takes hold of the straight run under it: a
   // corner grip picks the corner instead, and everything else pans as before.
   const frame = canvas.getBoundingClientRect()
-  const pressedAt = { x: (event.clientX - frame.left - v.x) / v.zoom, y: (event.clientY - frame.top - v.y) / v.zoom }
+  // Stage pixels are the page's own coordinates, which start at the view box.
+  const pressedAt = { x: (event.clientX - frame.left - v.x) / v.zoom + view.x, y: (event.clientY - frame.top - v.y) / v.zoom + view.y }
   const handle = editing ? handleAt(event.target) : null
   const pressedWire = editing ? wireAt(event.target) : undefined
   if (editing && (handle !== null || (pressedWire !== undefined && belongsToThisFile(pressedWire)))) {
