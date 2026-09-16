@@ -900,3 +900,6 @@ function unwobble(points: Point[], clear: (segments: Segment[]) => boolean): Poi
   }
   return undefined
 }
+
+// State machines (<component>.rtlgraph-fsm.json) place their own way.
+export * from './fsm.ts'

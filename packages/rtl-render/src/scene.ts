@@ -80,7 +80,7 @@ function itemToSvg(item: Item): string {
 export function sceneToSvg(scene: Scene): string {
   const { x, y, w, h } = scene.view
   const lines = [
-    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${x} ${y} ${w} ${h}" width="${w}" height="${h}" font-family="${scene.fontFamily}" font-size="${scene.fontSize}">`,
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${x} ${y} ${w} ${h}" width="${w}" height="${h}" font-family="${esc(scene.fontFamily)}" font-size="${scene.fontSize}">`,
     `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${scene.background}"/>`,
   ]
   for (const g of scene.groups) {

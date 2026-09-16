@@ -6,35 +6,19 @@ import {
   type ChildPlacement, type LayoutResult, type NestedLayout, type NodeBox,
 } from '@rtlgraph/layout'
 import { sceneToSvg, type Group, type Item, type Scene } from './scene.ts'
+import { FONT_FAMILY, FONT_SIZE, PALETTE } from './palette.ts'
 import { renderScenePdf, type PdfResult } from './pdf.ts'
 
 export type { Group, Item, Paint, Scene } from './scene.ts'
 export type { PdfResult } from './pdf.ts'
 export { sceneToSvg } from './scene.ts'
+export { PALETTE, FONT_FAMILY, FONT_SIZE } from './palette.ts'
 export { renderScenePdf } from './pdf.ts'
 
 // IR -> picture as pure functions. The editor webview and every export format
 // draw the same Scene, so there is one renderer (NodeGraph kept two and they
 // drifted apart).
 
-// Fixed palette: colours carry meaning (data / control / reset), so they must
-// not follow the VS Code theme.
-export const PALETTE = {
-  background: '#ffffff',
-  ink: '#111827',
-  muted: '#6b7280',
-  nodeFill: '#ffffff',
-  muxFill: '#f3f4f6',
-  controlFill: '#eef2ff',
-  controlStroke: '#4f46e5',
-  componentFill: '#f8fafc',
-  frameStroke: '#94a3b8',
-
-  data: '#111827',
-  control: '#2563eb',
-  reset: '#dc2626',
-  clock: '#9ca3af',
-} as const
 
 export interface RenderOptions {
   filter?: ViewFilter
@@ -64,8 +48,6 @@ export interface HierarchyRenderOptions {
 }
 
 const CROP_MARGIN = 24
-const FONT_FAMILY = 'Arial, Helvetica, sans-serif'
-const FONT_SIZE = 12
 
 function wireStyle(s: Signal): { color: string; width: number; dash?: string } {
   if (s.flow === 'data') return { color: PALETTE.data, width: s.width > 1 ? 2 : 1.25 }
@@ -382,3 +364,6 @@ export function renderHierarchySvg(root: HierarchyEntry, options: HierarchyRende
 export function renderHierarchyPdf(root: HierarchyEntry, options: HierarchyRenderOptions = {}): PdfResult {
   return renderScenePdf(buildHierarchyScene(root, options))
 }
+
+// State machines draw from the same Scene; see fsm.ts.
+export * from './fsm.ts'
