@@ -59,6 +59,22 @@ test('a register holding state is told apart from one holding data', () => {
   assert.deepEqual([...rest.litNodes].sort(), ['@ACC', 'ACC_FF', 'OUT_FF'])
 })
 
+test('each group is picked apart on its own: control logic plus plain registers', () => {
+  // Comb → control path, Seq → the registers that hold data. Neither group's
+  // kinds mean anything in the other: "control" here is a block of logic, and
+  // the registers it steers are still plain registers.
+  const v = visibleElements(graph, { comb: ['control'], seq: ['reg'] })
+  assert.deepEqual([...v.litNodes].sort(), ['@ACC', '@MODE', '@RST', '@SHOW', 'ACC_FF', 'CNT_FF', 'OUT_FF', 'control_path'])
+  assert.deepEqual([...v.litSignals].sort(), ['ACC_RST', 'CNT_RST', 'MODE', 'OUT_EN', 'OUT_Q', 'OUT_RST', 'RST', 'SHOW'])
+})
+
+test('a group switched off lights nothing of its own', () => {
+  const combOff = visibleElements(graph, { comb: [], seq: ['reg', 'fsm'] })
+  assert.ok(![...combOff.litNodes].some(id => (graph.nodes[id] as { time?: string }).time === 'comb'))
+  const seqOff = visibleElements(graph, FILTER_PRESETS.comb)
+  assert.ok(![...seqOff.litNodes].some(id => graph.nodes[id].kind === 'reg'))
+})
+
 test('controlpath lights the control block and its inputs', () => {
   assert.deepEqual(lit('controlpath'), {
     nodes: ['@MODE', '@RST', '@SHOW', 'control_path'],

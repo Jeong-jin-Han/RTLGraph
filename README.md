@@ -19,8 +19,9 @@ RTL folder ──[AI agent + .agent/RTLGRAPH_SPEC.md]──→ *.rtlgraph.json +
 2. Open this repository in VS Code and press **F5** (**Run RTLGraph**). An *Extension Development
    Host* window opens on `demo/`.
 3. In that window open `acc/acc_top.rtlgraph.json`: the root appears with its one main component
-   `acc` unfolded as a frame around its schematic. Toggle **Data / Control** and **Comb / Seq**, pick
-   a preset, drag to pan, scroll to zoom.
+   `acc` unfolded as a frame around its schematic. The filter is two buttons deep — **Comb** switches
+   the combinational half on and opens **Data / Control**, **Seq** switches the registers on and opens
+   **Registers / FSM** — or pick a preset. Drag to pan, scroll to zoom.
 4. Components: click a box or frame to select it, then **Fold** / **Unfold** asks whether to act on it
    only or on everything inside it too; with nothing selected (`Esc`) they act on the whole hierarchy.
    Double-click a box to toggle just that one. **Open** shows its own `*.rtlgraph-schematic.json`.
@@ -51,7 +52,8 @@ A figure holds the schematic and nothing else: the fold markers stay in the edit
 only wraps one main component is left out — the export draws that component, laid out as in its
 frame, without the frame or the doubled port pills.
 
-The file name carries the view (`all`, `datapath`, `controlpath`, `comb`, `registers`, `fsm`, or the raw filter).
+The file name carries the view (`all`, `datapath`, `controlpath`, `comb`, `registers`, `fsm`, or the
+groups spelled out, e.g. `comb-control.seq-off`).
 The folder is the `rtlgraph.export.folder` setting, default `.out-${name}` — hidden, like NodeGraph's
 `.<name>-imgs`; set it to `out-${name}` for a visible folder. PDF text uses the built-in Helvetica font, so non-Latin labels
 (e.g. Hangul) show as `?` there — you are warned, and SVG/PNG show them correctly.
@@ -132,7 +134,7 @@ node packages/vscode-ext/dist/agent/rtlgraph-validate.mjs demo/acc/acc_top.rtlgr
 |---|---|---|
 | M0 | `rtl-ir` + hand-written golden IR + registry | done |
 | M1 | `rtl-layout` + `rtl-render` (IR → SVG, no VS Code) | done — `datapath` preset matches slide p.31 |
-| M2 | Custom editor + 2-axis filter | done — verified in a real VS Code |
+| M2 | Custom editor + the two-level filter | done — verified in a real VS Code |
 | M5 | Agent spec, validator, prompts (existing RTL → RTLGraph first) | done — pulled ahead of M3/M4 |
 | M6.5 | Component hierarchy: root + schematic files, frames, fold / unfold | done — pulled ahead |
 | — | FSM files (`*.rtlgraph-fsm.json`): diagram + table, Moore / Mealy | next |

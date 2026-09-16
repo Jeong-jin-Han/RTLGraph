@@ -1,14 +1,19 @@
-import type { Flow, HierarchyEntry, ViewFilter, ViewTime } from '@rtlgraph/ir'
+import type { Flow, HierarchyEntry, SeqKind, ViewFilter } from '@rtlgraph/ir'
 import { FILTER_PRESETS, hierarchyEntries, type FilterPreset } from '@rtlgraph/ir'
 
 // Pure view-state logic of the webview, kept out of the DOM code so it can be
 // tested under node.
 
-export const FLOWS: readonly Flow[] = ['data', 'control']
-export const TIMES: readonly ViewTime[] = ['comb', 'reg', 'fsm']
+// ── the filter, as the toolbar shows it: two groups, each with its own kinds ──
 
+export type ViewGroup = 'comb' | 'seq'
+export const GROUPS: readonly ViewGroup[] = ['comb', 'seq']
+export const FLOWS: readonly Flow[] = ['data', 'control']
+export const SEQ_KINDS: readonly SeqKind[] = ['reg', 'fsm']
+
+export const GROUP_LABELS: Record<ViewGroup, string> = { comb: 'Comb', seq: 'Seq' }
 export const FLOW_LABELS: Record<Flow, string> = { data: 'Data', control: 'Control' }
-export const TIME_LABELS: Record<ViewTime, string> = { comb: 'Comb', reg: 'Registers', fsm: 'FSM' }
+export const SEQ_LABELS: Record<SeqKind, string> = { reg: 'Registers', fsm: 'FSM' }
 export const PRESET_LABELS: Record<FilterPreset, string> = {
   all: 'All',
   datapath: 'Datapath',
@@ -18,36 +23,63 @@ export const PRESET_LABELS: Record<FilterPreset, string> = {
   fsm: 'State registers only',
 }
 
+export const isGroupOn = (filter: ViewFilter, group: ViewGroup): boolean => filter[group].length > 0
+
 // Accepts anything (stored state, a hand-edited file) and returns a filter in
 // canonical order, or undefined when it is not a usable filter.
 export function normalizeFilter(value: unknown): ViewFilter | undefined {
   if (typeof value !== 'object' || value === null) return undefined
-  const { flow, time } = value as { flow?: unknown; time?: unknown }
-  if (!Array.isArray(flow) || !Array.isArray(time)) return undefined
-  // "seq" was one axis value before the registers and the state registers were
-  // told apart; a filter stored back then still means both of them.
-  const asked = time.includes('seq') ? [...time, 'reg', 'fsm'] : time
-  const f = FLOWS.filter(x => flow.includes(x))
-  const t = TIMES.filter(x => asked.includes(x))
-  return f.length > 0 && t.length > 0 ? { flow: f, time: t } : undefined
+  const v = value as { comb?: unknown; seq?: unknown; flow?: unknown; time?: unknown }
+  const { comb, seq } = Array.isArray(v.comb) || Array.isArray(v.seq) ? v : asTree(v)
+  if (!Array.isArray(comb) || !Array.isArray(seq)) return undefined
+  const c = FLOWS.filter(x => comb.includes(x))
+  const s = SEQ_KINDS.filter(x => seq.includes(x))
+  return c.length > 0 || s.length > 0 ? { comb: c, seq: s } : undefined
 }
 
-// Toggling never empties an axis: the last checked box stays checked.
+// The flat `{ flow, time }` filter of earlier files, read as the tree. `time`
+// once said "seq" before the registers and the state registers were told apart,
+// and the flow it was paired with says which registers were meant.
+function asTree(value: { flow?: unknown; time?: unknown }): { comb: unknown[]; seq: unknown[] } {
+  const flow = Array.isArray(value.flow) ? value.flow : []
+  const time = Array.isArray(value.time) ? value.time : []
+  const sequential = time.includes('seq') ? [...time, 'reg', 'fsm'] : time
+  const seq = SEQ_KINDS.filter(
+    kind => sequential.includes(kind) && flow.includes(kind === 'reg' ? 'data' : 'control'),
+  )
+  return { comb: time.includes('comb') ? flow : [], seq }
+}
+
+// A group is switched on with every kind under it, and cannot be switched off
+// while it is the only one on — that would light nothing at all.
+export function toggleGroup(filter: ViewFilter, group: ViewGroup): ViewFilter {
+  if (!isGroupOn(filter, group)) {
+    return group === 'comb' ? { ...filter, comb: [...FLOWS] } : { ...filter, seq: [...SEQ_KINDS] }
+  }
+  const other: ViewGroup = group === 'comb' ? 'seq' : 'comb'
+  return isGroupOn(filter, other) ? { ...filter, [group]: [] } : filter
+}
+
+// A kind can only be touched while its group is on, and the last one stays on:
+// a group with nothing under it is the group switched off, which is what the
+// group button is for.
 export function toggleFlow(filter: ViewFilter, flow: Flow): ViewFilter {
-  const next = FLOWS.filter(x => (x === flow ? !filter.flow.includes(x) : filter.flow.includes(x)))
-  return next.length > 0 ? { flow: next, time: [...filter.time] } : filter
+  if (!isGroupOn(filter, 'comb')) return filter
+  const next = FLOWS.filter(x => (x === flow ? !filter.comb.includes(x) : filter.comb.includes(x)))
+  return next.length > 0 ? { ...filter, comb: next } : filter
 }
 
-export function toggleTime(filter: ViewFilter, time: ViewTime): ViewFilter {
-  const next = TIMES.filter(x => (x === time ? !filter.time.includes(x) : filter.time.includes(x)))
-  return next.length > 0 ? { flow: [...filter.flow], time: next } : filter
+export function toggleSeq(filter: ViewFilter, kind: SeqKind): ViewFilter {
+  if (!isGroupOn(filter, 'seq')) return filter
+  const next = SEQ_KINDS.filter(x => (x === kind ? !filter.seq.includes(x) : filter.seq.includes(x)))
+  return next.length > 0 ? { ...filter, seq: next } : filter
 }
 
 const sameSet = <T>(a: readonly T[], b: readonly T[]) => a.length === b.length && a.every(x => b.includes(x))
 
 export function presetOf(filter: ViewFilter): FilterPreset | undefined {
   return (Object.keys(FILTER_PRESETS) as FilterPreset[]).find(
-    key => sameSet(FILTER_PRESETS[key].flow, filter.flow) && sameSet(FILTER_PRESETS[key].time, filter.time),
+    key => sameSet(FILTER_PRESETS[key].comb, filter.comb) && sameSet(FILTER_PRESETS[key].seq, filter.seq),
   )
 }
 

@@ -13,9 +13,9 @@ export const IR_VERSION = '0.1.0'
 export type GraphKind = 'system' | 'component'
 export type Flow = 'data' | 'control'
 export type Time = 'comb' | 'seq'
-// What the view's second axis sorts by. `seq` is one fact about a node; a reader
-// wants the registers that hold data apart from the ones that hold a state.
-export type ViewTime = 'comb' | 'reg' | 'fsm'
+// How the view sorts the sequential side. `seq` is one fact about a node; a
+// reader wants the registers that hold data apart from the ones that hold a state.
+export type SeqKind = 'reg' | 'fsm'
 export type SignalFlow = Flow | 'clock' | 'reset'
 export type PortDir = 'in' | 'out' | 'inout'
 export type Severity = 'error' | 'warn' | 'info'
@@ -164,9 +164,17 @@ export interface Layout {
   collapsed?: string[] // group ids
 }
 
+// Two levels, the way a top module is drawn (D02 "Top module illustration":
+// Registers | Data-path | Control-path | Registers for FSM):
+//
+//   Comb ─┬─ data     Seq ─┬─ reg
+//         └─ control       └─ fsm
+//
+// A group with no kind chosen is off, and its kinds mean nothing until it is
+// back on. Both groups off would light nothing, so the editor forbids it.
 export interface ViewFilter {
-  flow: Flow[]
-  time: ViewTime[]
+  comb: Flow[]
+  seq: SeqKind[]
 }
 
 export interface View {

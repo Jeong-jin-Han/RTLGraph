@@ -18,6 +18,12 @@ body { display: flex; flex-direction: column; background: #ffffff; color: #11182
 #toolbar .spacer { flex: 1; }
 #toolbar .group { display: inline-flex; align-items: center; gap: 6px; }
 #toolbar .selection { font-family: ui-monospace, monospace; color: #374151; }
+/* A filter group: the parent switches its half on, the kinds under it are smaller
+   and sit inside the same frame so the nesting is visible before you click. */
+#toolbar .filter { gap: 3px; padding: 2px 4px; border: 1px solid #e5e7eb; border-radius: 6px; background: #ffffff; }
+#toolbar .filter .parent { font-weight: 600; }
+#toolbar .filter .child { height: 20px; padding: 0 8px; border-style: dashed; }
+#toolbar .filter .child[aria-pressed="true"] { border-style: solid; }
 #toolbar button:disabled { opacity: 0.5; cursor: default; }
 #stage g.component { cursor: pointer; }
 #stage g.component .fold { cursor: pointer; pointer-events: all; }

@@ -59,7 +59,7 @@ export async function run(): Promise<void> {
   log('*.rtlgraph.json opens in the RTLGraph editor by default')
 
   const first = await until('the first render', renderState)
-  assert.deepEqual(first, { filter: { flow: ['data', 'control'], time: ['comb', 'reg', 'fsm'] }, nodes: 17, signals: 23, dim: 0, unfolded: ['acc'], editing: false, goals: 0 })
+  assert.deepEqual(first, { filter: { comb: ['data', 'control'], seq: ['reg', 'fsm'] }, nodes: 17, signals: 23, dim: 0, unfolded: ['acc'], editing: false, goals: 0 })
   log('the root opens its one main component: 5 root elements + 12 inside the frame, 4 + 15 nets + 4 frame connectors')
 
   await vscode.commands.executeCommand('rtlgraph.setPreset', 'datapath')
@@ -67,7 +67,7 @@ export async function run(): Promise<void> {
     const state = await renderState()
     return state && state.dim > 0 ? state : undefined
   })
-  assert.deepEqual([datapath.filter, datapath.nodes, datapath.signals], [{ flow: ['data'], time: ['comb', 'reg', 'fsm'] }, 17, 23])
+  assert.deepEqual([datapath.filter, datapath.nodes, datapath.signals], [{ comb: ['data'], seq: ['reg'] }, 17, 23])
   log(`the datapath preset fades what it passes over instead of removing it (${datapath.dim} of 40 faded, nothing cut)`)
 
   // ── export the current (datapath, unfolded) view; a folder of its own leaves the user's exports alone ──
@@ -110,7 +110,7 @@ export async function run(): Promise<void> {
   await until('the editor to close', async () => ((await renderState()) === undefined ? true : undefined))
   await vscode.commands.executeCommand('vscode.open', uri)
   const reopened = await until('the render after reopening', renderState)
-  assert.deepEqual([reopened.filter, reopened.unfolded, reopened.nodes], [{ flow: ['data'], time: ['comb', 'reg', 'fsm'] }, [], 5])
+  assert.deepEqual([reopened.filter, reopened.unfolded, reopened.nodes], [{ comb: ['data'], seq: ['reg'] }, [], 5])
   log('the chosen filter and fold state survive closing and reopening the file')
 
   const document = vscode.workspace.textDocuments.find(d => d.uri.toString() === uri.toString())
@@ -156,6 +156,6 @@ export async function run(): Promise<void> {
   const child = await vscode.commands.executeCommand<string>('rtlgraph.openComponent', 'acc')
   assert.equal(child, join(dirname(graphFile), 'acc/acc.rtlgraph-schematic.json'))
   const childState = await renderWith('the component schematic', 12)
-  assert.deepEqual(childState, { filter: { flow: ['data', 'control'], time: ['comb', 'reg', 'fsm'] }, nodes: 12, signals: 15, dim: 0, unfolded: [], editing: false, goals: 0 })
+  assert.deepEqual(childState, { filter: { comb: ['data', 'control'], seq: ['reg', 'fsm'] }, nodes: 12, signals: 15, dim: 0, unfolded: [], editing: false, goals: 0 })
   log('Open Component Schematic shows acc/acc.rtlgraph-schematic.json on its own (12 elements, 15 nets)')
 }

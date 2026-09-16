@@ -3,30 +3,43 @@ import assert from 'node:assert/strict'
 import { FILTER_PRESETS } from '@rtlgraph/ir'
 import type { ComponentGraph, HierarchyEntry } from '@rtlgraph/ir'
 import {
-  applyFold, componentInstances, defaultUnfolded, fitViewport, isInstanceShown, normalizeFilter, normalizeUnfolded,
-  presetOf, toggleFlow, toggleTime, zoomAt,
+  applyFold, componentInstances, defaultUnfolded, fitViewport, isGroupOn, isInstanceShown, normalizeFilter,
+  normalizeUnfolded, presetOf, toggleFlow, toggleGroup, toggleSeq, zoomAt,
 } from '../src/webview/state.ts'
 
 test('every preset is recognised from its filter', () => {
   for (const [key, filter] of Object.entries(FILTER_PRESETS)) assert.equal(presetOf(filter), key)
-  assert.equal(presetOf({ flow: ['control'], time: ['reg'] }), undefined)
+  assert.equal(presetOf({ comb: ['control'], seq: ['reg'] }), undefined)
 })
 
-test('toggles keep canonical order and never empty an axis', () => {
+test('a group switches its half on and off, but never both off', () => {
   const all = FILTER_PRESETS.all
-  assert.deepEqual(toggleFlow(all, 'data'), { flow: ['control'], time: ['comb', 'reg', 'fsm'] })
-  assert.deepEqual(toggleFlow({ flow: ['control'], time: ['reg'] }, 'data'), { flow: ['data', 'control'], time: ['reg'] })
-  assert.deepEqual(toggleFlow({ flow: ['data'], time: ['reg'] }, 'data'), { flow: ['data'], time: ['reg'] })
-  assert.deepEqual(toggleTime(all, 'comb'), { flow: ['data', 'control'], time: ['reg', 'fsm'] })
-  assert.deepEqual(toggleTime({ flow: ['data'], time: ['fsm'] }, 'fsm'), { flow: ['data'], time: ['fsm'] })
-  assert.equal(presetOf(toggleFlow(all, 'control')), 'datapath')
-  assert.equal(presetOf(toggleTime(toggleTime(all, 'comb'), 'fsm')), 'registers')
+  assert.deepEqual(toggleGroup(all, 'seq'), { comb: ['data', 'control'], seq: [] })
+  assert.deepEqual(toggleGroup(toggleGroup(all, 'seq'), 'seq'), all, 'back on with every kind')
+  assert.deepEqual(toggleGroup({ comb: ['data'], seq: [] }, 'seq'), { comb: ['data'], seq: ['reg', 'fsm'] })
+  const only = FILTER_PRESETS.registers
+  assert.equal(toggleGroup(only, 'seq'), only, 'the last group on stays on: nothing would be lit')
+  assert.equal(presetOf(toggleGroup(all, 'seq')), 'comb')
 })
 
-test('stored filters are sanitised, and an old "seq" still means both kinds', () => {
-  assert.deepEqual(normalizeFilter({ flow: ['control', 'data', 'junk'], time: ['reg'] }), { flow: ['data', 'control'], time: ['reg'] })
-  assert.deepEqual(normalizeFilter({ flow: ['data'], time: ['seq'] }), { flow: ['data'], time: ['reg', 'fsm'] })
-  assert.equal(normalizeFilter({ flow: [], time: ['reg'] }), undefined)
+test('a kind can only be picked while its group is on, and one always stays', () => {
+  const all = FILTER_PRESETS.all
+  assert.deepEqual(toggleFlow(all, 'data'), { comb: ['control'], seq: ['reg', 'fsm'] })
+  assert.deepEqual(toggleSeq(all, 'fsm'), { comb: ['data', 'control'], seq: ['reg'] })
+  assert.deepEqual(toggleSeq({ comb: ['data'], seq: ['reg'] }, 'reg'), { comb: ['data'], seq: ['reg'] })
+  const combOnly = FILTER_PRESETS.comb
+  assert.equal(toggleSeq(combOnly, 'reg'), combOnly, 'Seq is off, so its kinds do nothing')
+  assert.equal(toggleFlow(FILTER_PRESETS.registers, 'data'), FILTER_PRESETS.registers)
+  assert.ok(isGroupOn(combOnly, 'comb') && !isGroupOn(combOnly, 'seq'))
+})
+
+test('stored filters are sanitised, and a flat one is read as the tree', () => {
+  assert.deepEqual(normalizeFilter({ comb: ['control', 'data', 'junk'], seq: [] }), { comb: ['data', 'control'], seq: [] })
+  // before the groups: flow × time, where "seq" predates telling the registers apart
+  assert.deepEqual(normalizeFilter({ flow: ['data'], time: ['seq'] }), { comb: [], seq: ['reg'] })
+  assert.deepEqual(normalizeFilter({ flow: ['data', 'control'], time: ['comb', 'reg', 'fsm'] }), FILTER_PRESETS.all)
+  assert.deepEqual(normalizeFilter({ flow: ['control'], time: ['comb', 'reg', 'fsm'] }), FILTER_PRESETS.controlpath)
+  assert.equal(normalizeFilter({ comb: [], seq: [] }), undefined)
   assert.equal(normalizeFilter({ flow: ['data'] }), undefined)
   assert.equal(normalizeFilter('all'), undefined)
   assert.equal(normalizeFilter(null), undefined)

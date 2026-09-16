@@ -24,9 +24,10 @@ test('export folder: default, custom patterns, and nothing outside the graph dir
 
 test('file names carry the view: a preset name or the raw filter', () => {
   assert.equal(viewName(FILTER_PRESETS.datapath), 'datapath')
-  assert.equal(viewName({ flow: ['control'], time: ['reg'] }), 'control.reg')
+  assert.equal(viewName({ comb: ['control'], seq: ['reg'] }), 'comb-control.seq-reg')
+  assert.equal(viewName({ comb: ['data'], seq: [] }), 'comb-data.seq-off')
   assert.equal(exportFileName('acc_top', FILTER_PRESETS.all, 'pdf'), 'acc_top.all.pdf')
-  assert.equal(exportFileName('acc_top', { flow: ['data', 'control'], time: ['comb'] }, 'png'), 'acc_top.comb.png')
+  assert.equal(exportFileName('acc_top', { comb: ['data', 'control'], seq: [] }, 'png'), 'acc_top.comb.png')
 })
 
 test('the manifest setting defaults to the same folder pattern', () => {

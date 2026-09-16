@@ -6,9 +6,10 @@ import { layoutHierarchy, PORT_PIN, type NestedLayout } from '@rtlgraph/layout'
 import { buildHierarchyScene, sceneToSvg } from '@rtlgraph/render'
 import type { HostToWebview, ToolbarCommand, WebviewToHost } from '../protocol.ts'
 import {
-  FLOW_LABELS, FLOWS, PRESET_LABELS, TIME_LABELS, TIMES,
-  applyFold, componentInstances, defaultUnfolded, fitViewport, isInstanceShown, normalizeFilter, normalizeUnfolded,
-  presetOf, toggleFlow, toggleTime, zoomAt, type FoldAction, type FoldScope, type Viewport,
+  FLOW_LABELS, FLOWS, GROUP_LABELS, PRESET_LABELS, SEQ_KINDS, SEQ_LABELS,
+  applyFold, componentInstances, defaultUnfolded, fitViewport, isGroupOn, isInstanceShown, normalizeFilter,
+  normalizeUnfolded, presetOf, toggleFlow, toggleGroup, toggleSeq, zoomAt,
+  type FoldAction, type FoldScope, type ViewGroup, type Viewport,
 } from './state.ts'
 import {
   belongsToThisFile, branchAt, branchesOf, cleared, emptyLayout, isArranged, isCut, midpoint,
@@ -66,14 +67,23 @@ function el<K extends keyof HTMLElementTagNameMap>(tag: K, props: Record<string,
   return node
 }
 
+// The filter is a tree: the group button switches its half of the schematic on,
+// and only then can the kinds under it be picked apart.
+const groupButton = (group: ViewGroup, title: string) => {
+  const button = el('button', { type: 'button', textContent: GROUP_LABELS[group], className: 'parent', title })
+  button.addEventListener('click', () => setFilter(toggleGroup(filter, group)))
+  return button
+}
+const combButton = groupButton('comb', 'Combinational logic: the data path and the control path')
 const flowButtons = FLOWS.map(flow => {
-  const button = el('button', { type: 'button', textContent: FLOW_LABELS[flow] })
+  const button = el('button', { type: 'button', textContent: FLOW_LABELS[flow], className: 'child' })
   button.addEventListener('click', () => setFilter(toggleFlow(filter, flow)))
   return button
 })
-const timeButtons = TIMES.map(time => {
-  const button = el('button', { type: 'button', textContent: TIME_LABELS[time] })
-  button.addEventListener('click', () => setFilter(toggleTime(filter, time)))
+const seqButton = groupButton('seq', 'Registers: the ones holding data and the ones holding a state')
+const seqButtons = SEQ_KINDS.map(kind => {
+  const button = el('button', { type: 'button', textContent: SEQ_LABELS[kind], className: 'child' })
+  button.addEventListener('click', () => setFilter(toggleSeq(filter, kind)))
   return button
 })
 const presetSelect = el('select', { title: 'View preset' })
@@ -110,8 +120,8 @@ resetButton.addEventListener('click', () => {
 
 const toolbar = el('div', { id: 'toolbar' },
   fitButton, rootButton, editButton, resetButton,
-  el('span', { className: 'label', textContent: 'flow' }), ...flowButtons,
-  el('span', { className: 'label', textContent: 'time' }), ...timeButtons,
+  el('span', { className: 'group filter' }, combButton, ...flowButtons),
+  el('span', { className: 'group filter' }, seqButton, ...seqButtons),
   el('span', { className: 'label', textContent: 'preset' }), presetSelect,
   componentTools,
   el('span', { className: 'spacer' }), exportButton,
@@ -232,8 +242,17 @@ function drawHandles() {
 }
 
 function render() {
-  flowButtons.forEach((b, i) => b.setAttribute('aria-pressed', String(filter.flow.includes(FLOWS[i]))))
-  timeButtons.forEach((b, i) => b.setAttribute('aria-pressed', String(filter.time.includes(TIMES[i]))))
+  // A kind is only reachable while its group is on, so it greys out with it.
+  combButton.setAttribute('aria-pressed', String(isGroupOn(filter, 'comb')))
+  seqButton.setAttribute('aria-pressed', String(isGroupOn(filter, 'seq')))
+  flowButtons.forEach((b, i) => {
+    b.setAttribute('aria-pressed', String(filter.comb.includes(FLOWS[i])))
+    b.disabled = !isGroupOn(filter, 'comb')
+  })
+  seqButtons.forEach((b, i) => {
+    b.setAttribute('aria-pressed', String(filter.seq.includes(SEQ_KINDS[i])))
+    b.disabled = !isGroupOn(filter, 'seq')
+  })
   presetSelect.value = presetOf(filter) ?? ''
   updateComponentTools()
   if (!root || !layout) {

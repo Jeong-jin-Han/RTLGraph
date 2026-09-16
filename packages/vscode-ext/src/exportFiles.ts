@@ -29,7 +29,8 @@ export function exportFolderName(pattern: string | undefined, name: string): str
 }
 
 export function viewName(filter: ViewFilter): string {
-  return presetOf(filter) ?? `${filter.flow.join('+')}.${filter.time.join('+')}`
+  const group = (kinds: readonly string[]) => (kinds.length > 0 ? kinds.join('+') : 'off')
+  return presetOf(filter) ?? `comb-${group(filter.comb)}.seq-${group(filter.seq)}`
 }
 
 export function exportFileName(name: string, filter: ViewFilter, format: ExportFormat): string {
