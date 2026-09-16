@@ -22,10 +22,14 @@ RTL folder ──[AI agent + .agent/RTLGRAPH_SPEC.md]──→ *.rtlgraph.json +
    `acc` unfolded as a frame around its schematic. The filter is two buttons deep — **Comb** switches
    the combinational half on and opens **Data / Control**, **Seq** switches the registers on and opens
    **Registers / FSM** — or pick a preset. Drag to pan, scroll to zoom.
-4. Components: click a box or frame to select it, then **Fold** / **Unfold** asks whether to act on it
+4. **Edit** arranges the picture by hand and writes it under `layout` in the file, nothing else:
+   drag a box or a component frame to move it, a frame corner to resize it, a straight run of a wire
+   sideways, right-click a wire to turn its corner the other way round, and Delete to cut a link —
+   what a cut leaves undone is listed on the right, the way a proof assistant lists its goals.
+5. Components: click a box or frame to select it, then **Fold** / **Unfold** asks whether to act on it
    only or on everything inside it too; with nothing selected (`Esc`) they act on the whole hierarchy.
    Double-click a box to toggle just that one. **Open** shows its own `*.rtlgraph-schematic.json`.
-5. `Ctrl+Shift+P` → type `RTLGraph`:
+6. `Ctrl+Shift+P` → type `RTLGraph`:
 
    | Command | What it does |
    |---|---|

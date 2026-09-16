@@ -232,3 +232,38 @@ export function branchAt(paths: readonly Point[][], at: Point): number {
   })
   return best
 }
+
+// Which corner the hand is nearest, if it is near one at all. A corner is a
+// point the reader can act on; the pins at the two ends are not.
+export function vertexAt(points: readonly Point[], at: Point, within: number): number | undefined {
+  let best: number | undefined
+  let closest = within
+  for (let i = 1; i < points.length - 1; i++) {
+    const d = Math.hypot(at.x - points[i].x, at.y - points[i].y)
+    if (d <= closest) {
+      closest = d
+      best = i
+    }
+  }
+  return best
+}
+
+// Turns a corner a quarter turn: a run that went along and then down goes down
+// and then along instead. There are only two ways round a corner, so doing it
+// twice brings the wire back — which is what makes it a good right-click.
+export function turnedCorner(points: readonly Point[], index: number): Point[] {
+  if (index <= 0 || index >= points.length - 1) return [...points]
+  const [before, corner, after] = [points[index - 1], points[index], points[index + 1]]
+  // The corner is where the two runs meet; the other way round is the opposite
+  // meeting point of the same rectangle.
+  const turned = { x: corner.x === before.x ? after.x : before.x, y: corner.y === before.y ? after.y : before.y }
+  if (turned.x === corner.x && turned.y === corner.y) return [...points] // nothing to turn
+  return tidied([...points.slice(0, index), turned, ...points.slice(index + 1)])
+}
+
+// The right-click: turn the corner under the hand, else the first corner of the
+// run — "bend it the other way, from the start".
+export function turnedAt(points: readonly Point[], at: Point, within: number): Point[] {
+  const corner = vertexAt(points, at, within) ?? (points.length > 2 ? 1 : undefined)
+  return corner === undefined ? [...points] : turnedCorner(points, corner)
+}

@@ -116,3 +116,17 @@ test('fan-out taps get junction dots', () => {
   assert.ok(layout.wires.CNT_Q.junctions.length >= 1)
   assert.equal(layout.wires['data_path.ADD_OUT'].junctions.length, 0)
 })
+
+test('cutting a link takes the wire away and moves nothing else', () => {
+  const before = layoutComponent(graph)
+  const after = layoutComponent({ ...graph, layout: { nodes: {}, cut: ['CNT_D'] } })
+
+  assert.equal(after.wires.CNT_D, undefined, 'the cut wire is not drawn')
+  assert.deepEqual(Object.keys(after.nodes), Object.keys(before.nodes))
+  for (const id of Object.keys(before.nodes)) assert.deepEqual(after.nodes[id], before.nodes[id], id)
+  for (const name of Object.keys(before.wires)) {
+    if (name === 'CNT_D') continue
+    assert.deepEqual(after.wires[name], before.wires[name], name)
+  }
+  assert.deepEqual([after.width, after.height], [before.width, before.height])
+})

@@ -14,7 +14,7 @@ import {
 } from './state.ts'
 import {
   belongsToThisFile, branchAt, branchesOf, cleared, emptyLayout, isArranged, isCut, midpoint,
-  movedSegment, movedTo, removedVertex, resizedTo, segmentAt, shapedTo, withCut, type Point,
+  movedSegment, movedTo, removedVertex, resizedTo, segmentAt, shapedTo, turnedAt, withCut, type Point,
 } from './edit.ts'
 
 declare function acquireVsCodeApi(): {
@@ -227,6 +227,7 @@ const shapeOfSelected = (): Point[] | undefined => branchesOfSelected()?.[select
 // CSS, so the drawn size is divided by the zoom to come back to it.
 const GRIP_R = 3.5 // screen px
 const GRIP_SIDE = 7
+const TURN_REACH = 14 // how near a corner a right-click has to land to turn it
 
 function drawHandles() {
   // Drawing again replaces what was there, and nothing selected leaves nothing
@@ -403,9 +404,10 @@ function showGoals() {
       el('h2', { textContent: 'Nothing missing' }),
       el('p', { textContent: 'Every pin of this file is connected or tied off.' }),
       el('ul', { className: 'hints' },
-        el('li', { textContent: 'Drag a box to move it' }),
+        el('li', { textContent: 'Drag a box or a component frame to move it' }),
         el('li', { textContent: 'Drag a frame corner to resize it' }),
-        el('li', { textContent: 'Click a wire, then Delete to cut it — what the cut leaves undone is listed here' }),
+        el('li', { textContent: 'Drag a straight run of a wire sideways; right-click it to turn its corner the other way' }),
+        el('li', { textContent: 'Click a wire, then Delete to cut it (or a corner grip to take that corner out)' }),
       ),
     )
     return
@@ -590,7 +592,9 @@ canvas.addEventListener('wheel', event => {
 const groupAt = (target: EventTarget | null, selector: string, attribute: string) =>
   (target instanceof Element ? target.closest(selector)?.getAttribute(attribute) : undefined) ?? undefined
 const componentAt = (target: EventTarget | null) => groupAt(target, 'g.component', 'data-node-id')
-const nodeAt = (target: EventTarget | null) => groupAt(target, 'g.node', 'data-node-id')
+// Both kinds of box can be arranged by hand: a symbol and a component's frame.
+const nodeAt = (target: EventTarget | null) =>
+  groupAt(target, 'g.node', 'data-node-id') ?? groupAt(target, 'g.component', 'data-node-id')
 const wireAt = (target: EventTarget | null) => groupAt(target, 'g.wire', 'data-signal')
 const markerAt = (target: EventTarget | null) => target instanceof Element && target.closest('.fold') !== null
 const handleAt = (target: EventTarget | null) =>
@@ -647,7 +651,8 @@ canvas.addEventListener('pointerdown', event => {
     }
   }
 
-  const id = nodeAt(event.target)
+  // The fold marker is a button, not a handle: pressing it must not drag the frame.
+  const id = markerAt(event.target) ? undefined : nodeAt(event.target)
   const box = id !== undefined ? layout?.nodes[id] : undefined
   const arranging = editing && id !== undefined && box !== undefined && belongsToThisFile(id)
   const resizing = arranging && gripAt(event.target)
@@ -694,6 +699,29 @@ canvas.addEventListener('pointerdown', event => {
   }
   canvas.addEventListener('pointermove', move)
   canvas.addEventListener('pointerup', up, { once: true })
+})
+
+// Right-click on a wire: turn its corner a quarter turn. Two ways round a corner
+// means clicking again brings it back, so it is a way of trying a route rather
+// than a command to remember.
+canvas.addEventListener('contextmenu', event => {
+  if (!editing) return
+  const v = viewport ?? { x: 0, y: 0, zoom: 1 }
+  const frame = canvas.getBoundingClientRect()
+  const at = { x: (event.clientX - frame.left - v.x) / v.zoom + view.x, y: (event.clientY - frame.top - v.y) / v.zoom + view.y }
+  const name = wireAt(event.target) ?? selectedWire
+  if (name === undefined || !belongsToThisFile(name)) return
+  event.preventDefault()
+  if (name !== selectedWire) selectWire(name)
+  const ways = branchesOfSelected()
+  if (ways && ways.length > 1 && wireAt(event.target) !== undefined) selectWire(name, branchAt(ways, at))
+  const branches = branchesOfSelected()
+  const shape = shapeOfSelected()
+  if (!shape) return
+  const turned = turnedAt(shape, at, TURN_REACH / (viewport?.zoom ?? 1))
+  arrangement = shapedTo(arrangement, name, (branches ?? [shape]).map((path, i) => (i === selectedBranch ? turned : path)))
+  selectedVertex = undefined
+  saveArrangement()
 })
 
 window.addEventListener('keydown', event => {

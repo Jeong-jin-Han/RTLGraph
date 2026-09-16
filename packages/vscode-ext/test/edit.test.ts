@@ -1,7 +1,10 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import type { Layout } from '@rtlgraph/ir'
-import { belongsToThisFile, cleared, emptyLayout, isArranged, isCut, movedTo, resizedTo, shapedTo, withCut, withoutCut } from '../src/webview/edit.ts'
+import {
+  belongsToThisFile, cleared, emptyLayout, isArranged, isCut, movedTo, resizedTo, shapedTo,
+  turnedAt, vertexAt, withCut, withoutCut,
+} from '../src/webview/edit.ts'
 
 test('only what this file draws can be arranged here', () => {
   assert.ok(belongsToThisFile('CNT_FF'))
@@ -53,4 +56,27 @@ test('a net with several branches keeps one path each', () => {
   ])
   assert.deepEqual(two.wires!.SUM_Q.paths!.length, 2)
   assert.equal(two.wires!.SUM_Q.points, undefined, 'the short form is only for one path')
+})
+
+test('a right-click turns the corner under the hand the other way round', () => {
+  // along, then down: (0,0) → (40,0) → (40,30)
+  const elbow = [{ x: 0, y: 0 }, { x: 40, y: 0 }, { x: 40, y: 30 }]
+  const turned = turnedAt(elbow, { x: 40, y: 0 }, 8)
+  assert.deepEqual(turned, [{ x: 0, y: 0 }, { x: 0, y: 30 }, { x: 40, y: 30 }], 'down, then along')
+  assert.deepEqual(turnedAt(turned, { x: 0, y: 30 }, 8), elbow, 'and back again')
+})
+
+test('with no corner under the hand it turns the first one', () => {
+  const zig = [{ x: 0, y: 0 }, { x: 20, y: 0 }, { x: 20, y: 30 }, { x: 60, y: 30 }]
+  assert.deepEqual(turnedAt(zig, { x: 55, y: 30 }, 4)[1], { x: 0, y: 30 })
+  // A straight run has no corner to turn, so it is left alone.
+  const straight = [{ x: 0, y: 0 }, { x: 40, y: 0 }]
+  assert.deepEqual(turnedAt(straight, { x: 20, y: 0 }, 8), straight)
+})
+
+test('the pins at the ends are never taken for a corner', () => {
+  const elbow = [{ x: 0, y: 0 }, { x: 40, y: 0 }, { x: 40, y: 30 }]
+  assert.equal(vertexAt(elbow, { x: 0, y: 0 }, 8), undefined)
+  assert.equal(vertexAt(elbow, { x: 40, y: 0 }, 8), 1)
+  assert.equal(vertexAt(elbow, { x: 20, y: 0 }, 8), undefined, 'the middle of a run is not a corner')
 })

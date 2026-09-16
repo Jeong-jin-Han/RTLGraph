@@ -237,7 +237,11 @@ export function layoutComponent(graph: ComponentGraph, options: LayoutOptions = 
   const refOf = (id: string, pin: string) => (pin === PORT_PIN ? id : `${id}:${pin}`)
   const nodeOf = (ref: string) => parseEndpoint(ref).node
   const pinOf = (ref: string) => parseEndpoint(ref).port ?? PORT_PIN
-  const routedNet = (name: string) => !signals[name].hidden && !cut.has(name)
+  // Cutting a link takes the wire off the page and nothing else: the net keeps
+  // its place in the plan — its row, its port, its track in the channel — so the
+  // picture around it does not shift when the reader removes one line.
+  const plannedNet = (name: string) => !signals[name].hidden
+  const routedNet = (name: string) => plannedNet(name) && !cut.has(name)
 
   // ── shapes of instances, then port nodes facing the pin they connect to ──
   const shapes = new Map<string, Shape>()
@@ -246,7 +250,7 @@ export function layoutComponent(graph: ComponentGraph, options: LayoutOptions = 
 
   const portNets = new Map<string, string[]>()
   for (const name of signalNames) {
-    if (!routedNet(name)) continue
+    if (!plannedNet(name)) continue
     for (const ref of [signals[name].driver, ...signals[name].sinks]) {
       if (nodes[nodeOf(ref)].kind === 'port') portNets.set(nodeOf(ref), [...(portNets.get(nodeOf(ref)) ?? []), name])
     }
@@ -334,7 +338,7 @@ export function layoutComponent(graph: ComponentGraph, options: LayoutOptions = 
   const huggedRow = boundary && directPort.size > 0 ? row.get(controls[0]) : undefined
   const directNets = new Set<string>()
   for (const id of directPort.keys()) directNets.add(portNets.get(id)![0])
-  const channelNet = (name: string) => routedNet(name) && !directNets.has(name)
+  const channelNet = (name: string) => plannedNet(name) && !directNets.has(name)
   for (const id of portNets.keys()) {
     const port = nodes[id] as PortNode
     const hug = directPort.get(id)
@@ -431,13 +435,23 @@ export function layoutComponent(graph: ComponentGraph, options: LayoutOptions = 
   const neighbours = new Map<string, string[]>()
   for (const name of signalNames) {
     const s = signals[name]
-    if (s.flow !== 'data' || !routedNet(name)) continue
+    if (!plannedNet(name)) continue
     const d = nodeOf(s.driver)
     for (const ref of s.sinks) {
       const k = nodeOf(ref)
       if (!x.has(d) || !x.has(k) || row.get(d) === row.get(k)) continue
-      neighbours.set(d, [...(neighbours.get(d) ?? []), k])
-      neighbours.set(k, [...(neighbours.get(k) ?? []), d])
+      // Boxes are ordered by the data between them — that is what the picture is
+      // about. A port has nothing else to go on, so its control and reset nets
+      // pull it toward the pin they feed as well; without that RST and EN stood
+      // in the order they were declared and their wires crossed on the way in.
+      const link = (from: string, to: string) => neighbours.set(from, [...(neighbours.get(from) ?? []), to])
+      if (s.flow === 'data') {
+        link(d, k)
+        link(k, d)
+        continue
+      }
+      if (nodes[d].kind === 'port') link(d, k)
+      if (nodes[k].kind === 'port') link(k, d)
     }
   }
   const center = (id: string) => x.get(id)! + W(id) / 2
@@ -807,10 +821,14 @@ function tidyWires(
       : [Math.min(s.x1, s.x2), Math.max(s.x1, s.x2), Math.min(t.x1, t.x2), Math.max(t.x1, t.x2)]
     return Math.min(p2, q2) - Math.max(p1, q1) > 0
   }
+  // A run that touches a box's edge is fine — that is what a pin is — but one
+  // that goes even a pixel inside it is not. The test used to allow a pixel of
+  // slack on every side, and a wire one pixel below a port pill's top edge slid
+  // straight through the pill.
   const throughBox = (s: Segment) =>
     Object.values(boxes).some(b =>
-      Math.min(s.x1, s.x2) < b.x + b.w - 1 && Math.max(s.x1, s.x2) > b.x + 1 &&
-      Math.min(s.y1, s.y2) < b.y + b.h - 1 && Math.max(s.y1, s.y2) > b.y + 1)
+      Math.min(s.x1, s.x2) < b.x + b.w && Math.max(s.x1, s.x2) > b.x &&
+      Math.min(s.y1, s.y2) < b.y + b.h && Math.max(s.y1, s.y2) > b.y)
   const overlapsAnother = (name: string, s: Segment) =>
     Object.entries(wires).some(([other, w]) => other !== name && w.segments.some(t => spans(s, t)))
 
