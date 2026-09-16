@@ -13,6 +13,9 @@ export const IR_VERSION = '0.1.0'
 export type GraphKind = 'system' | 'component'
 export type Flow = 'data' | 'control'
 export type Time = 'comb' | 'seq'
+// What the view's second axis sorts by. `seq` is one fact about a node; a reader
+// wants the registers that hold data apart from the ones that hold a state.
+export type ViewTime = 'comb' | 'reg' | 'fsm'
 export type SignalFlow = Flow | 'clock' | 'reset'
 export type PortDir = 'in' | 'out' | 'inout'
 export type Severity = 'error' | 'warn' | 'info'
@@ -163,7 +166,7 @@ export interface Layout {
 
 export interface ViewFilter {
   flow: Flow[]
-  time: Time[]
+  time: ViewTime[]
 }
 
 export interface View {

@@ -1,20 +1,21 @@
-import type { Flow, HierarchyEntry, Time, ViewFilter } from '@rtlgraph/ir'
+import type { Flow, HierarchyEntry, ViewFilter, ViewTime } from '@rtlgraph/ir'
 import { FILTER_PRESETS, hierarchyEntries, type FilterPreset } from '@rtlgraph/ir'
 
 // Pure view-state logic of the webview, kept out of the DOM code so it can be
 // tested under node.
 
 export const FLOWS: readonly Flow[] = ['data', 'control']
-export const TIMES: readonly Time[] = ['comb', 'seq']
+export const TIMES: readonly ViewTime[] = ['comb', 'reg', 'fsm']
 
 export const FLOW_LABELS: Record<Flow, string> = { data: 'Data', control: 'Control' }
-export const TIME_LABELS: Record<Time, string> = { comb: 'Comb', seq: 'Seq' }
+export const TIME_LABELS: Record<ViewTime, string> = { comb: 'Comb', reg: 'Registers', fsm: 'FSM' }
 export const PRESET_LABELS: Record<FilterPreset, string> = {
   all: 'All',
   datapath: 'Datapath',
   controlpath: 'Control path',
   comb: 'Combinational only',
-  seq: 'Sequential only',
+  registers: 'Registers only',
+  fsm: 'State registers only',
 }
 
 // Accepts anything (stored state, a hand-edited file) and returns a filter in
@@ -23,8 +24,11 @@ export function normalizeFilter(value: unknown): ViewFilter | undefined {
   if (typeof value !== 'object' || value === null) return undefined
   const { flow, time } = value as { flow?: unknown; time?: unknown }
   if (!Array.isArray(flow) || !Array.isArray(time)) return undefined
+  // "seq" was one axis value before the registers and the state registers were
+  // told apart; a filter stored back then still means both of them.
+  const asked = time.includes('seq') ? [...time, 'reg', 'fsm'] : time
   const f = FLOWS.filter(x => flow.includes(x))
-  const t = TIMES.filter(x => time.includes(x))
+  const t = TIMES.filter(x => asked.includes(x))
   return f.length > 0 && t.length > 0 ? { flow: f, time: t } : undefined
 }
 
@@ -34,7 +38,7 @@ export function toggleFlow(filter: ViewFilter, flow: Flow): ViewFilter {
   return next.length > 0 ? { flow: next, time: [...filter.time] } : filter
 }
 
-export function toggleTime(filter: ViewFilter, time: Time): ViewFilter {
+export function toggleTime(filter: ViewFilter, time: ViewTime): ViewFilter {
   const next = TIMES.filter(x => (x === time ? !filter.time.includes(x) : filter.time.includes(x)))
   return next.length > 0 ? { flow: [...filter.flow], time: next } : filter
 }

@@ -15,7 +15,7 @@ test('keeps user positions for surviving ids and reports added/removed nodes', (
   const prev = fixture()
   prev.created = '2020-01-01T00:00:00.000Z'
   prev.layout = { grid: 20, nodes: { R_FF: { x: 40, y: 400 }, 'dp.u_inc': { x: 40, y: 240 } } }
-  prev.view = { filter: { flow: ['data'], time: ['comb', 'seq'] } }
+  prev.view = { filter: { flow: ['data'], time: ['comb', 'reg'] } }
 
   // Re-extraction after an edit: the incrementer is renamed, positions come back empty.
   const next = fixture()

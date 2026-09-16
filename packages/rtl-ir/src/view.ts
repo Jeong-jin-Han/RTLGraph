@@ -1,4 +1,4 @@
-import type { ComponentGraph, Flow, RtlNode, Signal, ViewFilter } from './types.ts'
+import type { ComponentGraph, Flow, RtlNode, Signal, ViewFilter, ViewTime } from './types.ts'
 import { parseEndpoint } from './endpoint.ts'
 
 // The two-axis filter (draft 01 §4). Shared by the editor and every export so
@@ -10,17 +10,27 @@ import { parseEndpoint } from './endpoint.ts'
 // stays on the page; what the filter does not pick is drawn dim.
 
 export const FILTER_PRESETS = {
-  all: { flow: ['data', 'control'], time: ['comb', 'seq'] },
-  datapath: { flow: ['data'], time: ['comb', 'seq'] },
-  controlpath: { flow: ['control'], time: ['comb', 'seq'] },
+  all: { flow: ['data', 'control'], time: ['comb', 'reg', 'fsm'] },
+  datapath: { flow: ['data'], time: ['comb', 'reg', 'fsm'] },
+  controlpath: { flow: ['control'], time: ['comb', 'reg', 'fsm'] },
   comb: { flow: ['data', 'control'], time: ['comb'] },
-  seq: { flow: ['data', 'control'], time: ['seq'] },
+  registers: { flow: ['data', 'control'], time: ['reg'] },
+  fsm: { flow: ['data', 'control'], time: ['fsm'] },
 } satisfies Record<string, ViewFilter>
 
 export type FilterPreset = keyof typeof FILTER_PRESETS
 
 // Clock and reset nets belong to the control axis.
 export const signalAxis = (s: Signal): Flow => (s.flow === 'data' ? 'data' : 'control')
+
+// Which side of the second axis a box sits on. A register that holds a machine's
+// state — it names an FSM file, or its output only steers control — is read very
+// differently from one holding data, so they are separated.
+export function timeAxis(node: RtlNode): ViewTime | undefined {
+  if (node.kind === 'port' || node.kind === 'component') return undefined
+  if (node.time === 'comb') return 'comb'
+  return node.kind === 'reg' && (node.fsm !== undefined || node.flow === 'control') ? 'fsm' : 'reg'
+}
 
 export interface VisibleElements {
   nodes: Set<string> // drawn at all — everything except the nets marked hidden
@@ -30,7 +40,7 @@ export interface VisibleElements {
 }
 
 const isEverything = (filter: ViewFilter) =>
-  filter.flow.length === 2 && filter.time.length === 2
+  filter.flow.length === 2 && filter.time.length === 3
 
 export function visibleElements(graph: ComponentGraph, filter: ViewFilter): VisibleElements {
   const nodes = new Set<string>()
@@ -40,8 +50,10 @@ export function visibleElements(graph: ComponentGraph, filter: ViewFilter): Visi
 
   // A box is picked by the filter on both axes; a port or a component box has
   // neither, so it follows the nets that reach it.
-  const picked = (n: RtlNode | undefined) =>
-    !!n && n.kind !== 'port' && n.kind !== 'component' && filter.flow.includes(n.flow) && filter.time.includes(n.time)
+  const picked = (n: RtlNode | undefined) => {
+    const axis = n ? timeAxis(n) : undefined
+    return !!n && axis !== undefined && filter.flow.includes((n as { flow: Flow }).flow) && filter.time.includes(axis)
+  }
 
   const litNodes = new Set<string>()
   const litSignals = new Set<string>()

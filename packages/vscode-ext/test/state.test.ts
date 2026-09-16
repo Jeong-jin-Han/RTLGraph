@@ -9,22 +9,24 @@ import {
 
 test('every preset is recognised from its filter', () => {
   for (const [key, filter] of Object.entries(FILTER_PRESETS)) assert.equal(presetOf(filter), key)
-  assert.equal(presetOf({ flow: ['control'], time: ['seq'] }), undefined)
+  assert.equal(presetOf({ flow: ['control'], time: ['reg'] }), undefined)
 })
 
 test('toggles keep canonical order and never empty an axis', () => {
   const all = FILTER_PRESETS.all
-  assert.deepEqual(toggleFlow(all, 'data'), { flow: ['control'], time: ['comb', 'seq'] })
-  assert.deepEqual(toggleFlow({ flow: ['control'], time: ['seq'] }, 'data'), { flow: ['data', 'control'], time: ['seq'] })
-  assert.deepEqual(toggleFlow({ flow: ['data'], time: ['seq'] }, 'data'), { flow: ['data'], time: ['seq'] })
-  assert.deepEqual(toggleTime(all, 'seq'), { flow: ['data', 'control'], time: ['comb'] })
-  assert.deepEqual(toggleTime({ flow: ['data'], time: ['comb'] }, 'comb'), { flow: ['data'], time: ['comb'] })
+  assert.deepEqual(toggleFlow(all, 'data'), { flow: ['control'], time: ['comb', 'reg', 'fsm'] })
+  assert.deepEqual(toggleFlow({ flow: ['control'], time: ['reg'] }, 'data'), { flow: ['data', 'control'], time: ['reg'] })
+  assert.deepEqual(toggleFlow({ flow: ['data'], time: ['reg'] }, 'data'), { flow: ['data'], time: ['reg'] })
+  assert.deepEqual(toggleTime(all, 'comb'), { flow: ['data', 'control'], time: ['reg', 'fsm'] })
+  assert.deepEqual(toggleTime({ flow: ['data'], time: ['fsm'] }, 'fsm'), { flow: ['data'], time: ['fsm'] })
   assert.equal(presetOf(toggleFlow(all, 'control')), 'datapath')
+  assert.equal(presetOf(toggleTime(toggleTime(all, 'comb'), 'fsm')), 'registers')
 })
 
-test('stored filters are sanitised', () => {
-  assert.deepEqual(normalizeFilter({ flow: ['control', 'data', 'junk'], time: ['seq'] }), { flow: ['data', 'control'], time: ['seq'] })
-  assert.equal(normalizeFilter({ flow: [], time: ['seq'] }), undefined)
+test('stored filters are sanitised, and an old "seq" still means both kinds', () => {
+  assert.deepEqual(normalizeFilter({ flow: ['control', 'data', 'junk'], time: ['reg'] }), { flow: ['data', 'control'], time: ['reg'] })
+  assert.deepEqual(normalizeFilter({ flow: ['data'], time: ['seq'] }), { flow: ['data'], time: ['reg', 'fsm'] })
+  assert.equal(normalizeFilter({ flow: [], time: ['reg'] }), undefined)
   assert.equal(normalizeFilter({ flow: ['data'] }), undefined)
   assert.equal(normalizeFilter('all'), undefined)
   assert.equal(normalizeFilter(null), undefined)

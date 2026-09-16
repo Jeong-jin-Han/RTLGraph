@@ -32,7 +32,7 @@ RTL folder ──[AI agent + .agent/RTLGRAPH_SPEC.md]──→ *.rtlgraph.json +
    | `RTLGraph: Export Schematic (SVG / PNG / PDF)` | Exports the current view (also the **Export…** toolbar button) |
    | `RTLGraph: Fold Components` / `Unfold Components` | The selected component (only it, or with everything inside), else all |
    | `RTLGraph: Open Component Schematic` | Opens the selected component's own schematic file |
-   | `RTLGraph: Set View Preset` | All · Datapath · Control path · Combinational only · Sequential only |
+   | `RTLGraph: Set View Preset` | All · Datapath · Control path · Combinational only · Registers only · State registers only |
    | `RTLGraph: Fit View` | Fit the schematic to the window |
 
 ### Export
@@ -51,7 +51,7 @@ A figure holds the schematic and nothing else: the fold markers stay in the edit
 only wraps one main component is left out — the export draws that component, laid out as in its
 frame, without the frame or the doubled port pills.
 
-The file name carries the view (`all`, `datapath`, `controlpath`, `comb`, `seq`, or the raw filter).
+The file name carries the view (`all`, `datapath`, `controlpath`, `comb`, `registers`, `fsm`, or the raw filter).
 The folder is the `rtlgraph.export.folder` setting, default `.out-${name}` — hidden, like NodeGraph's
 `.<name>-imgs`; set it to `out-${name}` for a visible folder. PDF text uses the built-in Helvetica font, so non-Latin labels
 (e.g. Hangul) show as `?` there — you are warned, and SVG/PNG show them correctly.

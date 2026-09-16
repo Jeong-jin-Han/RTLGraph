@@ -42,8 +42,21 @@ test('comb lights the combinational boxes and the nets between them', () => {
   })
 })
 
-test('seq lights the registers; a net into one is only half sequential', () => {
-  assert.deepEqual(lit('seq'), { nodes: ['@ACC', 'ACC_FF', 'CNT_FF', 'OUT_FF'], signals: ['OUT_Q'] })
+test('registers lights the registers; a net into one is only half sequential', () => {
+  assert.deepEqual(lit('registers'), { nodes: ['@ACC', 'ACC_FF', 'CNT_FF', 'OUT_FF'], signals: ['OUT_Q'] })
+})
+
+test('a register holding state is told apart from one holding data', () => {
+  // acc keeps its state in the control block, so nothing here is an FSM register.
+  assert.deepEqual(lit('fsm'), { nodes: [], signals: [] })
+
+  const machine = structuredClone(graph)
+  const register = machine.nodes.CNT_FF as { fsm?: string }
+  register.fsm = 'acc.rtlgraph-fsm.json' // now it holds a machine's state
+  const v = visibleElements(machine, FILTER_PRESETS.fsm)
+  assert.deepEqual([...v.litNodes].sort(), ['CNT_FF'])
+  const rest = visibleElements(machine, FILTER_PRESETS.registers)
+  assert.deepEqual([...rest.litNodes].sort(), ['@ACC', 'ACC_FF', 'OUT_FF'])
 })
 
 test('controlpath lights the control block and its inputs', () => {
