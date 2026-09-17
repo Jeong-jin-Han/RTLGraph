@@ -1,6 +1,6 @@
 import * as vscode from 'vscode'
 import { randomBytes } from 'node:crypto'
-import { FILTER_PRESETS, graphFileKind, hierarchyEntries, loadHierarchy } from '@rtlgraph/ir'
+import { FILTER_PRESETS, graphFileKind, hierarchyEntries, loadHierarchy, originOf } from '@rtlgraph/ir'
 import type { HostToWebview, RenderState, WebviewToHost } from './protocol.ts'
 import type { ExportSource } from './export.ts'
 import { collectHierarchyFiles } from './hierarchyFiles.ts'
@@ -16,6 +16,7 @@ interface Panel {
   document: vscode.TextDocument
   source: () => ExportSource
   componentUri: (instance: string) => vscode.Uri | undefined
+  sourceAt: (of: { node?: string; signal?: string }) => { uri: vscode.Uri; line: number } | undefined
   rendered?: RenderState
 }
 
@@ -50,6 +51,10 @@ export class RtlGraphEditorProvider implements vscode.CustomTextEditorProvider {
 
   static activeComponentUri(instance: string): vscode.Uri | undefined {
     return RtlGraphEditorProvider.active?.componentUri(instance)
+  }
+
+  static activeSource(of: { node?: string; signal?: string }): { uri: vscode.Uri; line: number } | undefined {
+    return RtlGraphEditorProvider.active?.sourceAt(of)
   }
 
   static activeDocument(): vscode.TextDocument | undefined {
@@ -109,6 +114,14 @@ export class RtlGraphEditorProvider implements vscode.CustomTextEditorProvider {
         const { root } = loadHierarchy(rootName, path => (path === rootName ? document.getText() : files[path]))
         const entry = hierarchyEntries(root).find(e => e.instance === instance)
         return entry && entry.instance !== '' ? fileUri(entry.path) : undefined
+      },
+
+      // "acc/CNT_FF" is the node CNT_FF of the component drawn as acc: the path
+      // says which file describes it, and that file says where the code is.
+      sourceAt: of => {
+        const { root } = loadHierarchy(rootName, path => (path === rootName ? document.getText() : files[path]))
+        const at = originOf(root, of)
+        return at ? { uri: vscode.Uri.joinPath(document.uri, '..', at.path), line: at.line } : undefined
       },
     }
 
@@ -179,6 +192,15 @@ export class RtlGraphEditorProvider implements vscode.CustomTextEditorProvider {
             const change = new vscode.WorkspaceEdit()
             change.replace(document.uri, new vscode.Range(document.positionAt(edit.start), document.positionAt(edit.end)), edit.text)
             void vscode.workspace.applyEdit(change)
+          }
+        } else if (message.type === 'openSource') {
+          const at = panel.sourceAt(message)
+          const what = message.node ?? message.signal
+          if (!at) void vscode.window.showWarningMessage(`RTLGraph: ${what} does not say which line of the code it came from.`)
+          else {
+            const line = Math.max(0, at.line - 1)
+            void vscode.window.showTextDocument(at.uri, { selection: new vscode.Range(line, 0, line, 0), preview: false })
+              .then(undefined, () => vscode.window.showWarningMessage(`RTLGraph: cannot open ${at.uri.path.split('/').pop()}.`))
           }
         } else if (message.type === 'command') {
           RtlGraphEditorProvider.active = panel

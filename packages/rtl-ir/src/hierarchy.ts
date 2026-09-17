@@ -119,3 +119,30 @@ export function hierarchyEntries(root: HierarchyEntry | undefined): HierarchyEnt
   if (!root) return []
   return [root, ...Object.values(root.children).flatMap(hierarchyEntries)]
 }
+
+// Where the code behind a drawn element is, as a path relative to the folder of
+// the root file. The id carries the instance path ("sys/u_dev/u_inbuf/BUF_FF"),
+// which says which schematic describes it; that schematic says where its sources
+// are, and the element itself says the line.
+export function originOf(
+  root: HierarchyEntry | undefined,
+  of: { node?: string; signal?: string },
+): { path: string; line: number } | undefined {
+  const id = of.node ?? of.signal
+  if (!root || id === undefined) return undefined
+  const parts = id.split('/')
+  const own = parts.pop()!
+  const entry = hierarchyEntries(root).find(e => e.instance === parts.join('/'))
+  if (!entry) return undefined
+  const origin = of.node !== undefined ? entry.graph.nodes[own]?.origin : entry.graph.signals[own]?.origin
+  if (!origin) return undefined
+  const folder = entry.path.split('/').slice(0, -1)
+  const parts2 = [...folder, ...entry.graph.source.root.split('/'), ...origin.file.split('/')]
+  const path: string[] = []
+  for (const part of parts2) {
+    if (part === '' || part === '.') continue
+    if (part === '..') path.pop()
+    else path.push(part)
+  }
+  return { path: path.join('/'), line: origin.line }
+}

@@ -159,6 +159,16 @@ export async function run(): Promise<void> {
   assert.deepEqual(childState, { filter: { comb: ['data', 'control'], seq: ['reg', 'fsm'] }, nodes: 12, signals: 15, dim: 0, unfolded: [], editing: false, goals: 0 })
   log('Open Component Schematic shows acc/acc.rtlgraph-schematic.json on its own (12 elements, 15 nets)')
 
+  // ── the code behind a box ──
+  await vscode.commands.executeCommand('vscode.open', uri)
+  await until('the acc root once more', renderState)
+  const code = await vscode.commands.executeCommand<string>('rtlgraph.openCode', 'acc')
+  assert.equal(code, `${join(dirname(graphFile), 'acc/seq/acc_top.v')}:3`)
+  const opened = vscode.window.activeTextEditor
+  assert.equal(opened?.document.uri.fsPath, join(dirname(graphFile), 'acc/seq/acc_top.v'))
+  assert.equal(opened?.selection.start.line, 2, 'the cursor is on the line the box came from')
+  log('Open Code jumps from a box to the line of Verilog it came from')
+
   // ── state machines: demo/pwm, three levels with a machine at two of them ──
   const demo = dirname(dirname(graphFile))
   const pwmSchematic = vscode.Uri.file(join(demo, 'pwm/pwm/pwm.rtlgraph-schematic.json'))

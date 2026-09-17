@@ -74,6 +74,10 @@
         "title": "RTLGraph: Open the Component Schematic"
       },
       {
+        "command": "rtlgraph.openCode",
+        "title": "RTLGraph: Open the Code of the Selected Box"
+      },
+      {
         "command": "rtlgraph.fitView",
         "title": "RTLGraph: Fit View"
       },

@@ -22,6 +22,8 @@ export type ToolbarCommand =
 
 export type WebviewToHost =
   | { type: 'ready' }
+  // Jump to the code a node or a net came from: every element carries an origin.
+  | { type: 'openSource'; node?: string; signal?: string }
   | { type: 'setFilter'; filter: ViewFilter }
   | { type: 'setFold'; unfolded: string[] }
   | { type: 'setLayout'; layout: Layout } // what the reader arranged by hand

@@ -259,6 +259,24 @@ export function activate(context: vscode.ExtensionContext): void {
       return uri.fsPath
     }),
 
+    // The code behind what is drawn. Optional argument: the node id (the webview's
+    // right-click menu passes what was clicked); without it, the selected box.
+    vscode.commands.registerCommand('rtlgraph.openCode', async (id?: unknown) => {
+      const target = typeof id === 'string' ? id : RtlGraphEditorProvider.activeRenderState()?.selected
+      if (target === undefined) {
+        void vscode.window.showWarningMessage('RTLGraph: select a box first.')
+        return undefined
+      }
+      const at = RtlGraphEditorProvider.activeSource({ node: target })
+      if (!at) {
+        void vscode.window.showWarningMessage(`RTLGraph: ${target} does not say which line of the code it came from.`)
+        return undefined
+      }
+      const line = Math.max(0, at.line - 1)
+      await vscode.window.showTextDocument(at.uri, { selection: new vscode.Range(line, 0, line, 0), preview: false })
+      return `${at.uri.fsPath}:${at.line}`
+    }),
+
     vscode.commands.registerCommand('rtlgraph.fitView', () => RtlGraphEditorProvider.postToActive({ type: 'fitView' })),
 
     vscode.commands.registerCommand('rtlgraph.setPreset', async (preset?: string) => {

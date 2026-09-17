@@ -4,7 +4,7 @@ import {
   validateFsmGraph,
   type Diagnostic, type FilterPreset, type FsmGraph, type Goal, type HierarchyEntry, type Layout, type ViewFilter,
 } from '@rtlgraph/ir'
-import { layoutHierarchy, linkEnds, linkKey, PORT_PIN, type NestedLayout } from '@rtlgraph/layout'
+import { displayName, layoutHierarchy, linkEnds, linkKey, PORT_PIN, type NestedLayout } from '@rtlgraph/layout'
 import { buildFsmScene, buildHierarchyScene, fsmTable, sceneToSvg } from '@rtlgraph/render'
 import type { HostToWebview, ToolbarCommand, WebviewToHost } from '../protocol.ts'
 import {
@@ -114,10 +114,9 @@ const commandButton = (text: string, command: ToolbarCommand) => {
 }
 const foldButton = commandButton('Fold', 'rtlgraph.fold')
 const unfoldButton = commandButton('Unfold', 'rtlgraph.unfold')
-const openButton = commandButton('Open', 'rtlgraph.openComponent')
 const selectionLabel = el('span', { className: 'selection' })
 const componentTools = el('span', { className: 'group' },
-  el('span', { className: 'label', textContent: 'components' }), selectionLabel, foldButton, unfoldButton, openButton)
+  el('span', { className: 'label', textContent: 'components' }), selectionLabel, foldButton, unfoldButton)
 
 const exportButton = el('button', { type: 'button', textContent: 'Export…', title: 'Export the current view as SVG, PNG or PDF' })
 exportButton.addEventListener('click', () => vscode.postMessage({ type: 'export' }))
@@ -153,6 +152,29 @@ const goalsPanel = el('aside', { id: 'goals', hidden: true })
 const tablePanel = el('aside', { id: 'table', hidden: true })
 const middle = el('div', { id: 'middle' }, canvas, goalsPanel, tablePanel)
 const problems = el('details', { id: 'problems', hidden: true })
+// Right-click menu: where to go from what was clicked. A box knows the line of
+// code it came from, and a component box knows its own schematic as well, so the
+// question "which one?" is answered here instead of by a toolbar button.
+const menu = el('div', { id: 'menu', hidden: true })
+canvas.append(menu)
+
+function showMenu(at: { x: number; y: number }, items: { label: string; run: () => void }[]) {
+  if (items.length === 0) return closeMenu()
+  menu.replaceChildren(...items.map(item => {
+    const button = el('button', { type: 'button', textContent: item.label })
+    button.addEventListener('click', () => {
+      closeMenu()
+      item.run()
+    })
+    return button
+  }))
+  menu.style.left = `${at.x}px`
+  menu.style.top = `${at.y}px`
+  menu.hidden = false
+}
+
+const closeMenu = () => { menu.hidden = true }
+
 // One line saying what just happened, or what stopped it happening.
 const noticeBar = el('div', { id: 'notice', hidden: true })
 canvas.append(noticeBar)
@@ -173,8 +195,6 @@ function updateComponentTools() {
   selectionLabel.textContent = selected ?? selectedWire ?? 'none selected'
   foldButton.title = selected ? `Fold ${selected}: only it, or it and everything inside` : 'Fold every component'
   unfoldButton.title = selected ? `Unfold ${selected}: only it, or it and everything inside` : 'Unfold every component'
-  openButton.title = selected ? `Open the schematic of ${selected}` : 'Select a component box to open its schematic'
-  openButton.disabled = selected === undefined
   editButton.setAttribute('aria-pressed', String(editing))
   resetButton.hidden = !editing || !isArranged(arrangement)
   // Only worth offering when something in this file names a machine.
@@ -723,6 +743,7 @@ const CLICK_SLOP = 4
 // taken from the press. While arranging, a press on a box drags it and a press
 // on a frame's corner resizes it; otherwise the press pans.
 canvas.addEventListener('pointerdown', event => {
+  closeMenu()
   if (event.button !== 0) return
   const v = viewport ?? { x: 0, y: 0, zoom: 1 }
   const start = { px: event.clientX, py: event.clientY, v, target: event.target }
@@ -838,15 +859,42 @@ canvas.addEventListener('pointerdown', event => {
   canvas.addEventListener('pointerup', up, { once: true })
 })
 
-// Right-click on a wire: turn its corner a quarter turn. Two ways round a corner
-// means clicking again brings it back, so it is a way of trying a route rather
-// than a command to remember.
+// Right-click. On a box it asks where to go — the schematic inside it, or the
+// line of code it came from. On a wire, while arranging, it turns the corner a
+// quarter turn instead: two ways round a corner means clicking again brings it
+// back, so it is a way of trying a route rather than a command to remember.
 canvas.addEventListener('contextmenu', event => {
-  if (!editing) return
+  closeMenu()
   const v = viewport ?? { x: 0, y: 0, zoom: 1 }
   const frame = canvas.getBoundingClientRect()
   const at = { x: (event.clientX - frame.left - v.x) / v.zoom + view.x, y: (event.clientY - frame.top - v.y) / v.zoom + view.y }
-  const name = wireAt(event.target) ?? selectedWire
+  const onWire = wireAt(event.target)
+  const id = nodeAt(event.target)
+
+  if (id !== undefined && (onWire === undefined || !editing)) {
+    event.preventDefault()
+    const instance = componentAt(event.target)
+    const open = instance !== undefined ? [{
+      label: `Open the schematic of ${displayName(instance)}`,
+      run: () => vscode.postMessage({ type: 'command', command: 'rtlgraph.openComponent' }),
+    }] : []
+    if (instance !== undefined) select(instance)
+    showMenu({ x: event.clientX - frame.left, y: event.clientY - frame.top }, [
+      ...open,
+      { label: `Open the code of ${displayName(id)}`, run: () => vscode.postMessage({ type: 'openSource', node: id }) },
+    ])
+    return
+  }
+  if (onWire !== undefined && !editing) {
+    event.preventDefault()
+    showMenu({ x: event.clientX - frame.left, y: event.clientY - frame.top }, [
+      { label: `Open the code of ${displayName(onWire)}`, run: () => vscode.postMessage({ type: 'openSource', signal: onWire }) },
+    ])
+    return
+  }
+
+  if (!editing) return
+  const name = onWire ?? selectedWire
   if (name === undefined || !belongsToThisFile(name)) return
   event.preventDefault()
   if (name !== selectedWire) selectWire(name)
@@ -862,6 +910,7 @@ canvas.addEventListener('contextmenu', event => {
 })
 
 window.addEventListener('keydown', event => {
+  if (event.key === 'Escape') closeMenu()
   if (event.key === 'Escape' && fsm) {
     if (selectedTransition !== undefined) selectTransition(selectedTransition)
     return

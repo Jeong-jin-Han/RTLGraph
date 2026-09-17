@@ -72,6 +72,10 @@ body.editing #stage g.wire { cursor: pointer; }
 /* Dragging a box or a wire must not sweep up the labels as if they were text. */
 #canvas { flex: 1; position: relative; overflow: hidden; background: #ffffff; cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; }
 #canvas.panning { cursor: grabbing; }
+/* Where to go from what was right-clicked. */
+#menu { position: absolute; z-index: 2; min-width: 180px; padding: 4px; border: 1px solid #d1d5db; border-radius: 6px; background: #ffffff; box-shadow: 0 6px 20px rgba(15, 23, 42, 0.18); display: flex; flex-direction: column; }
+#menu button { font: inherit; text-align: left; padding: 5px 10px; border: 0; border-radius: 4px; background: none; color: #111827; cursor: pointer; }
+#menu button:hover { background: #eef2ff; }
 /* What just happened, or what stopped it: one line, gone in a few seconds. */
 #notice { position: absolute; left: 10px; bottom: 10px; max-width: 70%; padding: 5px 10px; border: 1px solid #fcd34d; border-radius: 4px; background: #fffbeb; color: #92400e; pointer-events: none; }
 #stage { position: absolute; left: 0; top: 0; transform-origin: 0 0; }

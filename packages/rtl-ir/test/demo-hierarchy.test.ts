@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { checkSources, hierarchyEntries, loadHierarchy, validateFsmGraph } from '../src/index.ts'
+import { checkSources, hierarchyEntries, loadHierarchy, originOf, validateFsmGraph } from '../src/index.ts'
 
 // Every demo project that has RTLGraph files: the root, and each component
 // schematic it reaches. demo/sys is the deep one (a component inside a component).
@@ -100,4 +100,33 @@ test('a component box is reused wherever the same schematic is referred to', () 
   // Instance paths stay unique even when two boxes point at one file.
   const instances = hierarchyEntries(loadHierarchy(PROJECTS.sys.root, reader('sys')).root).map(e => e.instance)
   assert.equal(new Set(instances).size, instances.length)
+})
+
+test('every drawn element says which line of the code it came from', () => {
+  const root = loadHierarchy(PROJECTS.sys.root, reader('sys')).root!
+  // Three levels down, through a schematic whose sources sit in its own folder.
+  assert.deepEqual(originOf(root, { node: 'sys/u_dev/u_inbuf/BUF_FF' }), { path: 'sys/dev/inbuf/seq/inbuf_top.v', line: 15 })
+  assert.deepEqual(originOf(root, { signal: 'sys/u_dev/BUF_EN' }), { path: 'sys/dev/seq/dev_top.v', line: 17 })
+  assert.deepEqual(originOf(root, { node: 'sys' }), { path: 'sys/seq/sys_top.v', line: 8 }, 'the box in the root')
+  assert.equal(originOf(root, { node: 'sys/u_dev/nobody' }), undefined)
+  assert.equal(originOf(root, { node: 'nowhere/u_x' }), undefined)
+
+  // Every origin a demo names is a file that is really there, at a real line.
+  for (const [project, { root: file }] of Object.entries(PROJECTS)) {
+    const read = reader(project)
+    const tree = loadHierarchy(file, read).root!
+    for (const entry of hierarchyEntries(tree)) {
+      const ids = [
+        ...Object.keys(entry.graph.nodes).map(id => ({ node: [entry.instance, id].filter(Boolean).join('/') })),
+        ...Object.keys(entry.graph.signals).map(name => ({ signal: [entry.instance, name].filter(Boolean).join('/') })),
+      ]
+      for (const of of ids) {
+        const at = originOf(tree, of)
+        if (!at) continue // an element without an origin is the validator's business
+        const text = read(at.path)
+        assert.ok(text !== undefined, `${project}: ${at.path} (${JSON.stringify(of)})`)
+        assert.ok(at.line >= 1 && at.line <= text!.split('\n').length, `${project}: ${at.path}:${at.line}`)
+      }
+    }
+  }
 })

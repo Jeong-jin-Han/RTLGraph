@@ -31,7 +31,9 @@ RTL folder ──[AI agent + .agent/RTLGRAPH_SPEC.md]──→ *.rtlgraph.json +
    lists it (with everything else the sketch owes the code) the way a proof assistant lists its goals.
 5. Components: click a box or frame to select it, then **Fold** / **Unfold** asks whether to act on it
    only or on everything inside it too; with nothing selected (`Esc`) they act on the whole hierarchy.
-   Double-click a box to toggle just that one. **Open** shows its own `*.rtlgraph-schematic.json`.
+   Double-click a box to toggle just that one. **Right-click any box** to ask where to go: into a
+   component's own schematic, or straight to the line of Verilog it came from (a net's right-click
+   menu opens its line too).
 6. `Ctrl+Shift+P` → type `RTLGraph`:
 
    | Command | What it does |
@@ -40,6 +42,7 @@ RTL folder ──[AI agent + .agent/RTLGRAPH_SPEC.md]──→ *.rtlgraph.json +
    | `RTLGraph: Export Schematic (SVG / PNG / PDF)` | Exports the current view (also the **Export…** toolbar button) |
    | `RTLGraph: Fold Components` / `Unfold Components` | The selected component (only it, or with everything inside), else all |
    | `RTLGraph: Open Component Schematic` | Opens the selected component's own schematic file |
+   | `RTLGraph: Open the Code of the Selected Box` | Jumps to the `origin` line the box came from |
    | `RTLGraph: Set View Preset` | All · Datapath · Control path · Combinational only · Registers only · State registers only |
    | `RTLGraph: Fit View` | Fit the schematic to the window |
 
@@ -151,5 +154,5 @@ node packages/vscode-ext/dist/agent/rtlgraph-validate.mjs demo/acc/acc_top.rtlgr
 | M5 | Agent spec, validator, prompts (existing RTL → RTLGraph first) | done — pulled ahead of M3/M4 |
 | M6.5 | Component hierarchy: root + schematic files, frames, fold / unfold | done — pulled ahead |
 | — | FSM files (`*.rtlgraph-fsm.json`): diagram + table, Moore / Mealy | done — `demo/pwm` |
-| — | Code jump (node or net → `file:line`) | planned |
+| — | Code jump (node or net → `file:line`) | done — right-click a box |
 | M3 | Manual placement + `layout` merge on re-extraction | planned |
