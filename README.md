@@ -56,7 +56,14 @@ acc/acc_top.rtlgraph.json
 acc/.out-acc_top/acc_top.datapath.svg   vector; Inkscape, Illustrator, web pages
 acc/.out-acc_top/acc_top.datapath.png   2× image; slides, chat
 acc/.out-acc_top/acc_top.datapath.pdf   vector; papers, reports
+acc/.out-acc_top/acc_top.control.xlsx   the tables behind it; Excel, LibreOffice
 ```
+
+**XLSX** is the drawing read back as the tables it was made from — the way D02 builds a machine in a
+spreadsheet before any Verilog. A schematic or a root gives one tab of control signals per level
+(what drives each, what reads it, what it means) and one tab per control block's truth table; a
+`*.rtlgraph-fsm.json` gives the machine, its states and every transition. Written without a
+dependency, like the PDF.
 
 A figure holds the schematic and nothing else: the fold markers stay in the editor, and a root that
 only wraps one main component is left out — the export draws that component, laid out as in its
@@ -120,6 +127,7 @@ the same symbols, and every inference or contract violation is listed under the 
 | `packages/rtl-registry` | Symbols for the `base/` primitives, width and port checks |
 | `packages/rtl-layout` | Row-based placement and orthogonal wire routing |
 | `packages/rtl-render` | IR → SVG, shared by the editor and HTML export |
+| `packages/rtl-sheet` | IR → XLSX: control signals, truth tables, a machine's transitions |
 | `packages/vscode-ext` | The extension: custom editor, commands, agent spec and prompts (`assets/`) |
 | `demo/acc` | D01-2 accumulator: root, main component `acc/` with its schematic, golden SVGs |
 | `demo/base` | Shared primitives (`DFF INC ADD SUB MUX2 CMP_EQ`) |

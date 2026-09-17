@@ -6,8 +6,8 @@ import { presetOf } from './webview/state.ts'
 //   acc/acc.rtlgraph-schematic.json + datapath filter + pdf  ->  acc/.out-acc/acc.datapath.pdf
 //   acc_top.rtlgraph.json (root) + all + svg                  ->  .out-acc_top/acc_top.all.svg
 
-export type ExportFormat = 'svg' | 'png' | 'pdf'
-export const EXPORT_FORMATS: readonly ExportFormat[] = ['svg', 'png', 'pdf']
+export type ExportFormat = 'svg' | 'png' | 'pdf' | 'xlsx'
+export const EXPORT_FORMATS: readonly ExportFormat[] = ['svg', 'png', 'pdf', 'xlsx']
 
 // Setting rtlgraph.export.folder; ${name} is the graph's name: the component name for a
 // schematic, the top module for a root file.
@@ -34,5 +34,7 @@ export function viewName(filter: ViewFilter): string {
 }
 
 export function exportFileName(name: string, filter: ViewFilter, format: ExportFormat): string {
-  return `${name}.${viewName(filter)}.${format}`
+  // The workbook is the tables behind the drawing, not the drawing: the filter
+  // does not change what is in it, so its name says what it holds instead.
+  return format === 'xlsx' ? `${name}.control.xlsx` : `${name}.${viewName(filter)}.${format}`
 }

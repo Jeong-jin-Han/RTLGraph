@@ -1,6 +1,7 @@
 import * as vscode from 'vscode'
-import { graphFileKind, loadHierarchy, validateFsmGraph, type FsmGraph, type ViewFilter } from '@rtlgraph/ir'
+import { graphFileKind, hierarchyEntries, loadHierarchy, validateFsmGraph, type FsmGraph, type ViewFilter } from '@rtlgraph/ir'
 import { renderFsmPdf, renderFsmSvg, renderHierarchyPdf, renderHierarchySvg } from '@rtlgraph/render'
+import { controlSheets, fsmSheets, renderXlsx } from '@rtlgraph/sheet'
 import { exportFileName, exportFolderName, graphBaseName, type ExportFormat } from './exportFiles.ts'
 
 export interface ExportSource {
@@ -66,6 +67,12 @@ export async function exportSchematic(source: ExportSource, formats: readonly Ex
         warnings.push(`the PDF fonts cannot draw ${pdf.unsupportedText.join(' ')} (shown as "?"); the SVG and PNG show it correctly.`)
       }
       bytes = pdf.bytes
+    } else if (format === 'xlsx') {
+      // Every control block of the design, and every machine of the one opened:
+      // the tables the drawing came from, in the form they were made in.
+      bytes = renderXlsx(fsm
+        ? fsmSheets(fsm)
+        : hierarchyEntries(root).flatMap(entry => controlSheets(entry.graph, entry.instance || entry.graph.title)))
     } else {
       bytes = await source.rasterize(2)
     }

@@ -152,10 +152,11 @@ export function activate(context: vscode.ExtensionContext): void {
       if (!chosen || chosen.length === 0) {
         const picked = await vscode.window.showQuickPick(
           [
-            { label: 'All', description: 'SVG, PNG and PDF', formats: [...EXPORT_FORMATS] },
+            { label: 'All', description: 'SVG, PNG, PDF and the tables as XLSX', formats: [...EXPORT_FORMATS] },
             { label: 'SVG', description: 'vector — edit in Inkscape or Illustrator, embed in web pages', formats: ['svg' as const] },
             { label: 'PNG', description: 'image at 2× — slides, chat, documents', formats: ['png' as const] },
             { label: 'PDF', description: 'vector — papers and reports', formats: ['pdf' as const] },
+            { label: 'XLSX', description: 'the tables behind it — control signals, truth tables, a machine', formats: ['xlsx' as const] },
           ],
           { placeHolder: `Export the current view (${viewName(source.filter)})` },
         )

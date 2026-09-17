@@ -197,13 +197,35 @@ export async function run(): Promise<void> {
   await vscode.commands.executeCommand('vscode.open', vscode.Uri.file(machine))
   await until('the diagram again', async () => (await renderState())?.fsm)
   const fsmOut = join(demo, 'pwm/pwm/.out-e2e-pwm')
-  const drawn = await vscode.commands.executeCommand<string[]>('rtlgraph.export', ['svg'])
+  const drawn = await vscode.commands.executeCommand<string[]>('rtlgraph.export', ['svg', 'xlsx'])
   try {
-    assert.deepEqual(drawn, [join(fsmOut, 'pwm.fsm.svg')])
+    assert.deepEqual(drawn, [join(fsmOut, 'pwm.fsm.svg'), join(fsmOut, 'pwm.fsm.xlsx')])
     const svg = readFileSync(drawn![0], 'utf8')
     assert.ok(svg.includes('>IDLE<') && svg.includes('>the core is activated<'))
-    log('Export writes pwm.fsm.svg with the states and their conditions')
+    // The workbook is a zip whose directory names the five parts a sheet needs.
+    const book = readFileSync(drawn![1])
+    assert.deepEqual([...book.subarray(0, 4)], [0x50, 0x4b, 0x03, 0x04])
+    const inside = book.toString('latin1')
+    assert.ok(inside.includes('xl/worksheets/sheet3.xml') && inside.includes('the core is activated'))
+    log('Export writes pwm.fsm.svg and pwm.fsm.xlsx: the diagram and the table it was built from')
   } finally {
     rmSync(fsmOut, { recursive: true, force: true })
+  }
+
+  // ── the control tables of a whole design ──
+  await vscode.commands.executeCommand('vscode.open', vscode.Uri.file(join(demo, 'pwm/pwm_top.rtlgraph.json')))
+  await until('the pwm root', renderState)
+  const bookOut = join(demo, 'pwm/.out-e2e-pwm_top')
+  const tables = await vscode.commands.executeCommand<string[]>('rtlgraph.export', ['xlsx'])
+  try {
+    assert.deepEqual(tables, [join(bookOut, 'pwm_top.control.xlsx')])
+    const inside = readFileSync(tables![0]).toString('latin1')
+    // Every level's control blocks are in it, named by the instance they belong to.
+    for (const what of ['pwm signals', 'pwm/u_pulse', 'pwm/u_pulse/u_cnt', 'the counter has run out']) {
+      assert.ok(inside.includes(what), what)
+    }
+    log('Export writes pwm_top.control.xlsx with every control block of the three levels')
+  } finally {
+    rmSync(bookOut, { recursive: true, force: true })
   }
 }

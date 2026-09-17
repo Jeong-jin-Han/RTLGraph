@@ -115,7 +115,8 @@
     "@rtlgraph/ir": "0.1.0",
     "@rtlgraph/layout": "0.1.0",
     "@rtlgraph/registry": "0.1.0",
-    "@rtlgraph/render": "0.1.0"
+    "@rtlgraph/render": "0.1.0",
+    "@rtlgraph/sheet": "0.1.0"
   },
   "devDependencies": {
     "@types/vscode": "~1.85.0",
