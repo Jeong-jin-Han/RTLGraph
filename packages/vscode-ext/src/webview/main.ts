@@ -1,6 +1,6 @@
 import {
-  candidatesFor, canConnect, connectionGoals, facing, FILTER_PRESETS, goalLink, graphFileKind, hierarchyEntries,
-  loadHierarchy, parseEndpoint,
+  candidatesFor, canConnect, connectedEndpoints, connectionGoals, facing, FILTER_PRESETS, goalLink, graphFileKind,
+  hierarchyEntries, loadHierarchy, parseEndpoint,
   validateFsmGraph,
   type Diagnostic, type FilterPreset, type FsmGraph, type Goal, type HierarchyEntry, type Layout, type ViewFilter,
 } from '@rtlgraph/ir'
@@ -15,8 +15,8 @@ import {
 } from './state.ts'
 import {
   belongsToThisFile, branchAt, branchesOf, cleared, emptyLayout, isArranged, isCut, midpoint,
-  movedSegment, movedTo, removedVertex, resizedTo, segmentAt, shapedTo, turnedAt, withCut, withLink,
-  withoutCut, withoutLink, type Point,
+  linkDecision, movedSegment, movedTo, removedVertex, resizedTo, segmentAt, shapedTo, turnedAt, withCut,
+  withLink, withoutCut, withoutLink, type Point,
 } from './edit.ts'
 
 declare function acquireVsCodeApi(): {
@@ -153,7 +153,18 @@ const goalsPanel = el('aside', { id: 'goals', hidden: true })
 const tablePanel = el('aside', { id: 'table', hidden: true })
 const middle = el('div', { id: 'middle' }, canvas, goalsPanel, tablePanel)
 const problems = el('details', { id: 'problems', hidden: true })
+// One line saying what just happened, or what stopped it happening.
+const noticeBar = el('div', { id: 'notice', hidden: true })
+canvas.append(noticeBar)
 document.body.append(toolbar, middle, problems)
+
+let noticeTimer: ReturnType<typeof setTimeout> | undefined
+function notice(text: string) {
+  noticeBar.textContent = text
+  noticeBar.hidden = false
+  clearTimeout(noticeTimer)
+  noticeTimer = setTimeout(() => { noticeBar.hidden = true }, 4000)
+}
 
 // ── rendering ──
 function updateComponentTools() {
@@ -273,6 +284,12 @@ function drawHandles() {
         mark.setAttribute('cy', String(at.y))
         mark.setAttribute('r', String(state === ' target' ? dot * 1.8 : dot))
         mark.dataset.ref = ref
+        // Which pin this is, and which way it faces: the dots look alike, and a
+        // reader cannot tell an input on the right from an output.
+        const title = document.createElementNS(ns, 'title')
+        const way = facing(root!.graph, ref)
+        title.textContent = `${ref}${way ? ` — ${way === 'source' ? 'drives' : 'reads'}` : ''}`
+        mark.append(title)
         svg.append(mark)
       }
     }
@@ -669,10 +686,16 @@ function targetUnder(from: string, clientX: number, clientY: number, at: Point):
   const id = nodeAt(element)
   const box = id !== undefined && belongsToThisFile(id) ? layout?.nodes[id] : undefined
   if (!box) return undefined
+  // A pin with nothing on it yet is what the hand usually means; among equals,
+  // the nearest one.
+  const busy = connectedEndpoints(root!.graph, arrangement.cut ?? [], arrangement.links ?? [])
+  const occupied = (ref: string) => (facing(root!.graph, ref) === 'source' ? busy.drives : busy.driven).has(ref)
   const options = Object.entries(box.pins)
     .map(([pin, p]) => ({ ref: refOf(id!, pin), p }))
     .filter(({ ref }) => canLink(from, ref))
-    .sort((u, v) => Math.hypot(u.p.x - at.x, u.p.y - at.y) - Math.hypot(v.p.x - at.x, v.p.y - at.y))
+    .sort((u, v) =>
+      Number(occupied(u.ref)) - Number(occupied(v.ref)) ||
+      Math.hypot(u.p.x - at.x, u.p.y - at.y) - Math.hypot(v.p.x - at.x, v.p.y - at.y))
   return options[0]?.ref
 }
 
@@ -680,13 +703,17 @@ function targetUnder(from: string, clientX: number, clientY: number, at: Point):
 // undone; anything else is the reader's own sketch, which the goals then ask the
 // RTL for.
 function linkPins(a: string, b: string) {
-  if (!root || !canLink(a, b)) return
-  const [from, to] = facing(root.graph, a) === 'source' ? [a, b] : [b, a]
-  const net = Object.entries(root.graph.signals).find(([, s]) => s.driver === from && s.sinks.includes(to))
-  if (net && isCut(arrangement, net[0])) arrangement = withoutCut(arrangement, net[0])
-  else if (net) return // the RTL already carries it and it is already drawn
-  else arrangement = withLink(arrangement, from, to)
-  selectWire(net ? net[0] : linkKey(from, to))
+  if (!root) return
+  const decision = linkDecision(root.graph, arrangement, a, b)
+  if (decision.kind === 'none') {
+    // Silence was the worst part of this: say what stopped it.
+    notice(decision.why)
+    drawHandles()
+    return
+  }
+  arrangement = decision.kind === 'uncut' ? withoutCut(arrangement, decision.net) : withLink(arrangement, decision.from, decision.to)
+  selectWire(decision.kind === 'uncut' ? decision.net : linkKey(decision.from, decision.to))
+  notice(decision.kind === 'uncut' ? `${decision.net} is back` : `drew ${decision.from} → ${decision.to}`)
   saveArrangement()
 }
 

@@ -43,6 +43,15 @@ export const canConnect = (graph: ComponentGraph, from: string, to: string): boo
   return from !== to && a !== undefined && b !== undefined && a !== b
 }
 
+// Which endpoints already have something on them: a net of the RTL that is not
+// cut, or a link the reader drew. The editor prefers a free pin when a link is
+// dropped over a box, and the goals ask about the ones left over.
+export const connectedEndpoints = (
+  graph: ComponentGraph,
+  cut: readonly string[] = [],
+  links: readonly DrawnLink[] = [],
+): { driven: Set<string>; drives: Set<string> } => endpointsOf(graph, new Set(cut), links)
+
 const endpointsOf = (graph: ComponentGraph, cut: ReadonlySet<string>, links: readonly DrawnLink[]) => {
   const driven = new Set<string>() // input endpoints a net reaches
   const drives = new Set<string>() // output endpoints a net leaves

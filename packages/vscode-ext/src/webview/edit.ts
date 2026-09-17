@@ -1,4 +1,4 @@
-import type { Layout } from '@rtlgraph/ir'
+import { facing, type ComponentGraph, type Layout } from '@rtlgraph/ir'
 
 // The arrangement the reader makes by hand, as plain functions on a Layout so the
 // DOM code stays about pointers and the rules stay testable.
@@ -291,4 +291,33 @@ export function turnedCorner(points: readonly Point[], index: number): Point[] {
 export function turnedAt(points: readonly Point[], at: Point, within: number): Point[] {
   const corner = vertexAt(points, at, within) ?? (points.length > 2 ? 1 : undefined)
   return corner === undefined ? [...points] : turnedCorner(points, corner)
+}
+
+// ── what drawing from one pin to another means ──
+// Kept here, out of the pointer code, because it is a rule about the file rather
+// than about the hand: the same pair means "undo the cut" or "this is new",
+// depending on what the RTL already says.
+
+export type LinkDecision =
+  | { kind: 'uncut'; net: string } // the RTL carries it and the reader had cut it
+  | { kind: 'link'; from: string; to: string } // the reader's own, the RTL has no net
+  | { kind: 'none'; why: string } // and why nothing happened
+
+export function linkDecision(graph: ComponentGraph, layout: Layout, a: string, b: string): LinkDecision {
+  if (a === b) return { kind: 'none', why: 'a pin cannot be linked to itself' }
+  const [fa, fb] = [facing(graph, a), facing(graph, b)]
+  if (fa === undefined || fb === undefined) return { kind: 'none', why: 'one of those pins is not in this file' }
+  if (fa === fb) {
+    const what = fa === 'source' ? 'drive' : 'read'
+    return { kind: 'none', why: `both of those pins ${what}; a link runs from one that drives to one that reads` }
+  }
+  const [from, to] = fa === 'source' ? [a, b] : [b, a]
+  const net = Object.entries(graph.signals).find(([, s]) => s.driver === from && s.sinks.includes(to))
+  if (net) {
+    return isCut(layout, net[0])
+      ? { kind: 'uncut', net: net[0] }
+      : { kind: 'none', why: `${net[0]} already carries ${from} to ${to}` }
+  }
+  if (linkedPair(layout, from, to)) return { kind: 'none', why: 'that link is already drawn' }
+  return { kind: 'link', from, to }
 }

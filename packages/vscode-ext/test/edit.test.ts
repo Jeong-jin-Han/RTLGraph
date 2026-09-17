@@ -1,9 +1,11 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import type { Layout } from '@rtlgraph/ir'
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
+import type { ComponentGraph, Layout } from '@rtlgraph/ir'
 import {
   belongsToThisFile, cleared, emptyLayout, isArranged, isCut, linkedPair, movedTo, resizedTo, shapedTo,
-  turnedAt, vertexAt, withCut, withLink, withoutCut, withoutLink,
+  linkDecision, turnedAt, vertexAt, withCut, withLink, withoutCut, withoutLink,
 } from '../src/webview/edit.ts'
 
 test('only what this file draws can be arranged here', () => {
@@ -93,4 +95,36 @@ test('a link the reader drew is kept apart from the nets of the RTL', () => {
   assert.equal(gone.links, undefined)
   assert.equal(gone.wires, undefined, 'its shape goes with it')
   assert.ok(isArranged(drawn) && !isArranged(gone))
+})
+
+// The file the screenshots came from: a register with its two sides, and an
+// output port under it.
+const inbuf = JSON.parse(
+  readFileSync(join(import.meta.dirname, '../../../demo/sys/sys/dev/inbuf/inbuf.rtlgraph-schematic.json'), 'utf8'),
+) as ComponentGraph
+
+test('drawing a pair the RTL carries brings a cut wire back', () => {
+  const cut = withCut(emptyLayout(), 'BUF_Q')
+  assert.deepEqual(linkDecision(inbuf, cut, 'BUF_FF:Q', '@DOUT'), { kind: 'uncut', net: 'BUF_Q' })
+  assert.deepEqual(linkDecision(inbuf, cut, '@DOUT', 'BUF_FF:Q'), { kind: 'uncut', net: 'BUF_Q' }, 'either way round')
+})
+
+test('and says what stopped it when it cannot', () => {
+  const nothing = emptyLayout()
+  // Two sinks: the clock input on the right, and an output port below.
+  const both = linkDecision(inbuf, nothing, 'BUF_FF:CLK', '@DOUT')
+  assert.equal(both.kind, 'none')
+  assert.match((both as { why: string }).why, /both of those pins read/)
+
+  const already = linkDecision(inbuf, nothing, 'BUF_FF:Q', '@DOUT')
+  assert.deepEqual(already, { kind: 'none', why: 'BUF_Q already carries BUF_FF:Q to @DOUT' })
+  assert.deepEqual(linkDecision(inbuf, nothing, '@DOUT', '@DOUT'), { kind: 'none', why: 'a pin cannot be linked to itself' })
+  assert.match((linkDecision(inbuf, nothing, 'BUF_FF:Q', 'nobody:D') as { why: string }).why, /not in this file/)
+})
+
+test('a pair the RTL has no net for becomes a link of the reader, once', () => {
+  const drawn = linkDecision(inbuf, emptyLayout(), '@EN', 'BUF_FF:D')
+  assert.deepEqual(drawn, { kind: 'link', from: '@EN', to: 'BUF_FF:D' })
+  const after = withLink(emptyLayout(), '@EN', 'BUF_FF:D')
+  assert.deepEqual(linkDecision(inbuf, after, '@EN', 'BUF_FF:D'), { kind: 'none', why: 'that link is already drawn' })
 })

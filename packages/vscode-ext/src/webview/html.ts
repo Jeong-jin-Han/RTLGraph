@@ -72,6 +72,8 @@ body.editing #stage g.wire { cursor: pointer; }
 /* Dragging a box or a wire must not sweep up the labels as if they were text. */
 #canvas { flex: 1; position: relative; overflow: hidden; background: #ffffff; cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; }
 #canvas.panning { cursor: grabbing; }
+/* What just happened, or what stopped it: one line, gone in a few seconds. */
+#notice { position: absolute; left: 10px; bottom: 10px; max-width: 70%; padding: 5px 10px; border: 1px solid #fcd34d; border-radius: 4px; background: #fffbeb; color: #92400e; pointer-events: none; }
 #stage { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
 #stage svg { display: block; }
 /* The overlay covers the whole drawing, so it must let every click through to
