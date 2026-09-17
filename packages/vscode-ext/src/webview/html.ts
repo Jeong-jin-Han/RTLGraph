@@ -86,7 +86,12 @@ body.editing #stage g.wire { cursor: pointer; }
    lands on another pin. */
 #stage .pin { fill: #ffffff; stroke: #94a3b8; stroke-width: 1; vector-effect: non-scaling-stroke; pointer-events: all; cursor: crosshair; }
 #stage .pin:hover { fill: #d97706; stroke: #b45309; }
+/* While a link is being drawn: what can take it, what cannot, and what it would
+   land on if the hand let go now. */
+#stage .pin.off { fill: #f1f5f9; stroke: #cbd5e1; opacity: 0.5; pointer-events: none; }
+#stage .pin.target { fill: #d97706; stroke: #b45309; stroke-width: 2; }
 #stage .drawing { fill: none; stroke: #d97706; stroke-width: 2; stroke-dasharray: 6 4; vector-effect: non-scaling-stroke; pointer-events: none; }
+#stage .drawing.landing { stroke-dasharray: none; }
 #stage g.wire.sketch { cursor: pointer; }
 #problems { max-height: 30%; overflow: auto; border-top: 1px solid #fcd34d; background: #fffbeb; padding: 4px 10px; font-family: ui-monospace, monospace; white-space: pre-wrap; }
 #problems summary { cursor: pointer; font-family: system-ui, sans-serif; font-weight: 600; }

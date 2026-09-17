@@ -1,5 +1,6 @@
 import {
-  candidatesFor, connectionGoals, FILTER_PRESETS, goalLink, graphFileKind, hierarchyEntries, loadHierarchy, parseEndpoint,
+  candidatesFor, canConnect, connectionGoals, facing, FILTER_PRESETS, goalLink, graphFileKind, hierarchyEntries,
+  loadHierarchy, parseEndpoint,
   validateFsmGraph,
   type Diagnostic, type FilterPreset, type FsmGraph, type Goal, type HierarchyEntry, type Layout, type ViewFilter,
 } from '@rtlgraph/ir'
@@ -58,8 +59,9 @@ let selectedTransition: number | undefined
 // anything the reader dragged outside it, so its origin can be negative.
 let view = { x: 0, y: 0, w: 0, h: 0 }
 let selectedBranch = 0 // which way through a net that reaches several sinks
-// Drawing a link: the pin it started from and where the hand is now.
-let drawing: { from: string; at: Point } | undefined
+// Drawing a link: the pin it started from, where the hand is now, and the pin it
+// would land on.
+let drawing: { from: string; at: Point; to?: string } | undefined
 
 const isUnfolded = (instance: string) => unfolded.includes(instance)
 // The graph as it is drawn: the file plus whatever the reader has arranged.
@@ -261,21 +263,28 @@ function drawHandles() {
       if (!belongsToThisFile(id)) continue
       const isPort = root?.graph.nodes[id]?.kind === 'port'
       for (const [pin, at] of Object.entries(box.pins)) {
+        const ref = isPort || pin === PORT_PIN ? id : `${id}:${pin}`
+        const state = drawing === undefined
+          ? ''
+          : drawing.to === ref ? ' target' : canLink(drawing.from, ref) || ref === drawing.from ? '' : ' off'
         const mark = document.createElementNS(ns, 'circle')
-        mark.setAttribute('class', 'pin')
+        mark.setAttribute('class', `pin${state}`)
         mark.setAttribute('cx', String(at.x))
         mark.setAttribute('cy', String(at.y))
-        mark.setAttribute('r', String(dot))
-        mark.dataset.ref = isPort || pin === PORT_PIN ? id : `${id}:${pin}`
+        mark.setAttribute('r', String(state === ' target' ? dot * 1.8 : dot))
+        mark.dataset.ref = ref
         svg.append(mark)
       }
     }
   }
   if (drawing) {
     const line = document.createElementNS(ns, 'polyline')
-    line.setAttribute('class', 'drawing')
+    // The band snaps to the pin it would land on, so the hand can let go early.
+    const landing = drawing.to !== undefined ? pinOf(drawing.to) : undefined
+    line.setAttribute('class', `drawing${landing ? ' landing' : ''}`)
     const from = pinOf(drawing.from)
-    if (from) line.setAttribute('points', `${from.x},${from.y} ${drawing.at.x},${drawing.at.y}`)
+    const to = landing ?? drawing.at
+    if (from) line.setAttribute('points', `${from.x},${from.y} ${to.x},${to.y}`)
     svg.append(line)
   }
   if (!points) {
@@ -642,24 +651,37 @@ const pinRefAt = (target: EventTarget | null) =>
   (target instanceof Element ? (target.closest('.pin') as SVGElement | null)?.dataset.ref : undefined) ?? undefined
 const pinRefUnder = (x: number, y: number) => pinRefAt(document.elementFromPoint(x, y))
 
-// Which way a pin faces, seen from inside this schematic: an input port of the
-// component drives what is drawn here, so it counts as a source.
-function pinDirection(ref: string): 'in' | 'out' | undefined {
-  const { node, port } = parseEndpoint(ref)
-  const n = root?.graph.nodes[node]
-  if (!n) return undefined
-  if (n.kind === 'port') return n.dir === 'in' ? 'out' : 'in'
-  return port === undefined ? undefined : (n.ports[port] as 'in' | 'out' | 'inout') === 'out' ? 'out' : 'in'
+// Only a pin facing the other way can take the link being drawn; everything else
+// is dimmed while the hand moves, which is the answer to "why does nothing
+// happen when I let go here".
+const canLink = (from: string, to: string): boolean => !!root && canConnect(root.graph, from, to)
+
+const refOf = (id: string, pin: string) =>
+  root?.graph.nodes[id]?.kind === 'port' || pin === PORT_PIN ? id : `${id}:${pin}`
+
+// Where the link would land: a pin under the hand, or — anywhere over a box —
+// that box's nearest pin that can take it. Aiming at a whole box is far easier
+// than aiming at a dot, and the dot it picks is shown while the hand moves.
+function targetUnder(from: string, clientX: number, clientY: number, at: Point): string | undefined {
+  const element = document.elementFromPoint(clientX, clientY)
+  const pin = pinRefAt(element)
+  if (pin !== undefined) return canLink(from, pin) ? pin : undefined
+  const id = nodeAt(element)
+  const box = id !== undefined && belongsToThisFile(id) ? layout?.nodes[id] : undefined
+  if (!box) return undefined
+  const options = Object.entries(box.pins)
+    .map(([pin, p]) => ({ ref: refOf(id!, pin), p }))
+    .filter(({ ref }) => canLink(from, ref))
+    .sort((u, v) => Math.hypot(u.p.x - at.x, u.p.y - at.y) - Math.hypot(v.p.x - at.x, v.p.y - at.y))
+  return options[0]?.ref
 }
 
 // Drawing a link between two pins. Redrawing a net that was cut is how a cut is
 // undone; anything else is the reader's own sketch, which the goals then ask the
 // RTL for.
 function linkPins(a: string, b: string) {
-  if (a === b || !root) return
-  const [da, db] = [pinDirection(a), pinDirection(b)]
-  if (da === undefined || db === undefined || da === db) return // two sources, or two sinks
-  const [from, to] = da === 'out' ? [a, b] : [b, a]
+  if (!root || !canLink(a, b)) return
+  const [from, to] = facing(root.graph, a) === 'source' ? [a, b] : [b, a]
   const net = Object.entries(root.graph.signals).find(([, s]) => s.driver === from && s.sinks.includes(to))
   if (net && isCut(arrangement, net[0])) arrangement = withoutCut(arrangement, net[0])
   else if (net) return // the RTL already carries it and it is already drawn
@@ -688,13 +710,14 @@ canvas.addEventListener('pointerdown', event => {
     canvas.setPointerCapture(event.pointerId)
     drawing = { from: startPin, at: pressedAt }
     const track = (e: PointerEvent) => {
-      drawing = { from: startPin, at: { x: (e.clientX - frame.left - v.x) / v.zoom + view.x, y: (e.clientY - frame.top - v.y) / v.zoom + view.y } }
+      const at = { x: (e.clientX - frame.left - v.x) / v.zoom + view.x, y: (e.clientY - frame.top - v.y) / v.zoom + view.y }
+      drawing = { from: startPin, at, to: targetUnder(startPin, e.clientX, e.clientY, at) }
       drawHandles()
     }
     const drop = (e: PointerEvent) => {
       canvas.removeEventListener('pointermove', track)
+      const landed = drawing?.to
       drawing = undefined
-      const landed = pinRefUnder(e.clientX, e.clientY)
       if (landed !== undefined) linkPins(startPin, landed)
       else drawHandles()
     }

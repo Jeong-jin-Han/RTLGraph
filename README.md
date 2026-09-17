@@ -25,8 +25,9 @@ RTL folder ──[AI agent + .agent/RTLGRAPH_SPEC.md]──→ *.rtlgraph.json +
 4. **Edit** arranges the picture by hand and writes it under `layout` in the file, nothing else:
    drag a box or a component frame to move it, a frame corner to resize it, a straight run of a wire
    sideways, right-click a wire to turn its corner the other way round, and Delete to cut a link.
-   Every pin carries a dot — drag from one to another to **draw** a link, which is also how a cut one
-   comes back. A link the RTL has no net for is drawn amber and dashed, and the panel on the right
+   Every pin carries a dot — drag from one onto another pin, or anywhere over the box you want, and
+   the link is drawn to the nearest pin that can take it; while you drag, only those pins stay lit.
+   Drawing is also how a cut link comes back. A link the RTL has no net for is drawn amber and dashed, and the panel on the right
    lists it (with everything else the sketch owes the code) the way a proof assistant lists its goals.
 5. Components: click a box or frame to select it, then **Fold** / **Unfold** asks whether to act on it
    only or on everything inside it too; with nothing selected (`Esc`) they act on the whole hierarchy.

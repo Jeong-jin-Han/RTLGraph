@@ -2,7 +2,9 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { candidatesFor, connectionGoals, goalLink, goalsAsDiagnostics, type ComponentGraph } from '../src/index.ts'
+import {
+  candidatesFor, canConnect, connectionGoals, facing, goalLink, goalsAsDiagnostics, type ComponentGraph,
+} from '../src/index.ts'
 
 const graph = JSON.parse(
   readFileSync(join(import.meta.dirname, '../../../demo/acc/acc/acc.rtlgraph-schematic.json'), 'utf8'),
@@ -88,4 +90,20 @@ test('a drawn link takes its endpoints out of the free list', () => {
   assert.ok(candidatesFor(open, goal).includes('CNT_FF:EN'))
   const drawn = [{ from: 'data_path.u_inc:y', to: 'CNT_FF:EN' }]
   assert.ok(!candidatesFor(open, goal, [], drawn).includes('CNT_FF:EN'), 'it is spoken for now')
+})
+
+test('a pin faces one way, and only the other way can take a link', () => {
+  // Seen from inside: an input port drives, an output port reads.
+  assert.equal(facing(graph, '@MODE'), 'source')
+  assert.equal(facing(graph, '@ACC'), 'sink')
+  assert.equal(facing(graph, 'CNT_FF:D'), 'sink')
+  assert.equal(facing(graph, 'CNT_FF:Q'), 'source')
+  assert.equal(facing(graph, 'CNT_FF:nope'), undefined)
+  assert.equal(facing(graph, 'nobody:D'), undefined)
+
+  assert.ok(canConnect(graph, 'CNT_FF:Q', 'ACC_FF:D'))
+  assert.ok(canConnect(graph, 'ACC_FF:D', 'CNT_FF:Q'), 'either way round; the driver is worked out')
+  // What the screenshot showed: a clock input and an output port are both sinks.
+  assert.ok(!canConnect(graph, 'CNT_FF:CLK', '@ACC'))
+  assert.ok(!canConnect(graph, 'CNT_FF:Q', 'CNT_FF:Q'))
 })

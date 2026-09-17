@@ -24,6 +24,25 @@ export const goalLink = (goal: Goal): string | undefined =>
 
 export type DrawnLink = { from: string; to: string }
 
+// Which way an endpoint faces, seen from inside this schematic. An input port of
+// the component drives what is drawn here, so it is a source; its output port
+// reads what is drawn here, so it is a sink.
+export function facing(graph: ComponentGraph, ref: string): 'source' | 'sink' | undefined {
+  const { node, port } = parseEndpoint(ref)
+  const n = graph.nodes[node]
+  if (!n) return undefined
+  if (n.kind === 'port') return n.dir === 'in' ? 'source' : 'sink'
+  if (port === null || !Object.hasOwn(n.ports, port)) return undefined
+  return n.ports[port] === 'out' ? 'source' : 'sink'
+}
+
+// A link runs from what drives to what reads: two sources, or two sinks, cannot
+// be joined however the picture is drawn.
+export const canConnect = (graph: ComponentGraph, from: string, to: string): boolean => {
+  const [a, b] = [facing(graph, from), facing(graph, to)]
+  return from !== to && a !== undefined && b !== undefined && a !== b
+}
+
 const endpointsOf = (graph: ComponentGraph, cut: ReadonlySet<string>, links: readonly DrawnLink[]) => {
   const driven = new Set<string>() // input endpoints a net reaches
   const drives = new Set<string>() // output endpoints a net leaves
@@ -128,17 +147,12 @@ export function candidatesFor(graph: ComponentGraph, goal: Goal, cut: readonly s
   const removed = new Set(cut)
   const { driven, drives } = endpointsOf(graph, removed, links)
   const wantDriver = goal.id.startsWith('in:') || goal.id.startsWith('port:')
+  const want = wantDriver ? 'source' : 'sink'
+  const taken = wantDriver ? drives : driven
   const out: string[] = []
   for (const [id, node] of Object.entries(graph.nodes)) {
-    if (node.kind === 'port') {
-      const isSource = node.dir === 'in' // seen from inside, an input port drives
-      if (wantDriver === isSource && !(wantDriver ? drives.has(id) : driven.has(id))) out.push(id)
-      continue
-    }
-    for (const [pin, dir] of Object.entries(node.ports)) {
-      const ref = `${id}:${pin}`
-      if (wantDriver ? dir === 'out' && !drives.has(ref) : dir === 'in' && !driven.has(ref)) out.push(ref)
-    }
+    const refs = node.kind === 'port' ? [id] : Object.keys(node.ports).map(pin => `${id}:${pin}`)
+    for (const ref of refs) if (facing(graph, ref) === want && !taken.has(ref)) out.push(ref)
   }
   return out.filter(ref => parseEndpoint(ref).node !== goal.node)
 }
