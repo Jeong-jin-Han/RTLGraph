@@ -1,6 +1,6 @@
 import * as vscode from 'vscode'
 import { randomBytes } from 'node:crypto'
-import { FILTER_PRESETS, graphFileKind, hierarchyEntries, loadHierarchy, originOf, specOf } from '@rtlgraph/ir'
+import { briefOf, FILTER_PRESETS, graphFileKind, hierarchyEntries, loadHierarchy, originOf, specOf } from '@rtlgraph/ir'
 import type { HostToWebview, RenderState, WebviewToHost } from './protocol.ts'
 import type { ExportSource } from './export.ts'
 import { collectHierarchyFiles } from './hierarchyFiles.ts'
@@ -18,7 +18,7 @@ interface Panel {
   source: () => ExportSource
   componentUri: (instance: string) => vscode.Uri | undefined
   sourceAt: (of: { node?: string; signal?: string }) => { uri: vscode.Uri; line: number } | undefined
-  specAt: (of: { node?: string; signal?: string }) => { uri: vscode.Uri; page?: number; quote: string } | undefined
+  specAt: (of: { node?: string; signal?: string }) => { uri: vscode.Uri; page?: number; quote?: string } | undefined
   rendered?: RenderState
 }
 
@@ -59,7 +59,7 @@ export class RtlGraphEditorProvider implements vscode.CustomTextEditorProvider {
     return RtlGraphEditorProvider.active?.sourceAt(of)
   }
 
-  static activeSpec(of: { node?: string; signal?: string }): { uri: vscode.Uri; page?: number; quote: string } | undefined {
+  static activeSpec(of: { node?: string; signal?: string }): { uri: vscode.Uri; page?: number; quote?: string } | undefined {
     return RtlGraphEditorProvider.active?.specAt(of)
   }
 
@@ -130,10 +130,14 @@ export class RtlGraphEditorProvider implements vscode.CustomTextEditorProvider {
         return at ? { uri: vscode.Uri.joinPath(document.uri, '..', at.path), line: at.line } : undefined
       },
 
+      // The sentence when the element quotes one, else just the document: a brief
+      // is worth opening from anything in a design that has one.
       specAt: of => {
         const { root } = loadHierarchy(rootName, path => (path === rootName ? document.getText() : files[path]))
         const at = specOf(root, of)
-        return at ? { uri: vscode.Uri.joinPath(document.uri, '..', at.path), page: at.page, quote: at.quote } : undefined
+        if (at) return { uri: vscode.Uri.joinPath(document.uri, '..', at.path), page: at.page, quote: at.quote }
+        const brief = briefOf(root, of)
+        return brief ? { uri: vscode.Uri.joinPath(document.uri, '..', brief) } : undefined
       },
     }
 
@@ -220,7 +224,11 @@ export class RtlGraphEditorProvider implements vscode.CustomTextEditorProvider {
             // The document opens beside the drawing like the code does; which page
             // it is on is said out loud, since a PDF viewer is not ours to drive.
             void openBeside(at.uri, document).then(
-              () => vscode.window.showInformationMessage(`RTLGraph: page ${at.page ?? '?'} — "${at.quote}"`),
+              () => vscode.window.showInformationMessage(
+                at.quote === undefined
+                  ? `RTLGraph: ${at.uri.path.split('/').pop()} — the brief this design was asked for`
+                  : `RTLGraph: page ${at.page ?? '?'} — "${at.quote}"`,
+              ),
               () => vscode.window.showWarningMessage(`RTLGraph: cannot open ${at.uri.path.split('/').pop()}.`),
             )
           }

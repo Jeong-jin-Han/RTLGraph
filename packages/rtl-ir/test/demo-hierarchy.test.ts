@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import {
-  checkSources, hierarchyEntries, loadHierarchy, originOf, specOf, validateComponentGraph, validateFsmGraph,
+  briefOf, checkSources, hierarchyEntries, loadHierarchy, originOf, specOf, validateComponentGraph, validateFsmGraph,
 } from '../src/index.ts'
 
 // Every demo project that has RTLGraph files: the root, and each component
@@ -180,6 +180,19 @@ test('a requirement resolves to the document, from whichever level cites it', ()
   assert.equal(specOf(pwm, { signal: 'RDY' })?.quote, 'RDY : Active-low when the PWM core is activated')
   assert.equal(specOf(pwm, { node: 'pwm/PERIOD_FF' }), undefined, 'a box that cites nothing has nothing to open')
   assert.equal(specOf(pwm, { node: 'nowhere' }), undefined)
+})
+
+test('the brief is reachable from anything in the design that was built from it', () => {
+  const pwm = loadHierarchy('pwm_top.rtlgraph.json', reader('pwm')).root!
+  // Only the root and pwm's own schematic name the document; a box three levels
+  // down is in the same design, so it opens the same brief.
+  assert.equal(briefOf(pwm, { node: 'pwm/PERIOD_FF' }), 'spec/pwm_brief.pdf')
+  assert.equal(briefOf(pwm, { node: 'pwm/u_pulse/u_cnt/CNT_FF' }), 'spec/pwm_brief.pdf')
+  assert.equal(briefOf(pwm, { signal: 'RDY' }), 'spec/pwm_brief.pdf')
+
+  // A design built from no document offers nothing rather than a broken link.
+  const acc = loadHierarchy('acc_top.rtlgraph.json', reader('acc')).root!
+  assert.equal(briefOf(acc, { node: 'acc' }), undefined)
 })
 
 test('every requirement a demo quotes is really in the document it names', () => {

@@ -150,6 +150,28 @@ function resolve(parts: readonly string[]): string {
   return path.join('/')
 }
 
+// The document the file this element belongs to was built from, whether or not
+// the element itself quotes a sentence of it. Right-clicking anything in a design
+// that has a brief should be able to open the brief.
+export function briefOf(root: HierarchyEntry | undefined, of: { node?: string; signal?: string }): string | undefined {
+  const id = of.node ?? of.signal
+  if (!root || id === undefined) return undefined
+  const entries = hierarchyEntries(root)
+  const parts = id.split('/')
+  parts.pop()
+  // Up to the nearest file that names one: a project is built from one brief,
+  // and only the file that first cited it has to say where it is.
+  for (let at = parts; ; at = at.slice(0, -1)) {
+    const entry = entries.find(e => e.instance === at.join('/'))
+    const file = entry?.graph.source.spec
+    if (entry && file !== undefined) {
+      const folder = entry.path.split('/').slice(0, -1)
+      return resolve([...folder, ...entry.graph.source.root.split('/'), ...file.split('/')])
+    }
+    if (at.length === 0) return undefined
+  }
+}
+
 // Where the code behind a drawn element is, as a path relative to the folder of
 // the root file. The id carries the instance path ("sys/u_dev/u_inbuf/BUF_FF"),
 // which says which schematic describes it; that schematic says where its sources

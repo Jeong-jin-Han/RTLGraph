@@ -350,8 +350,12 @@ export function activate(context: vscode.ExtensionContext): void {
         return undefined
       }
       await openBeside(at.uri, RtlGraphEditorProvider.activeDocument())
-      void vscode.window.showInformationMessage(`RTLGraph: page ${at.page ?? '?'} — "${at.quote}"`)
-      return `${at.uri.fsPath}#page=${at.page ?? ''}`
+      void vscode.window.showInformationMessage(
+        at.quote === undefined
+          ? `RTLGraph: ${at.uri.path.split('/').pop()} — the brief this design was asked for`
+          : `RTLGraph: page ${at.page ?? '?'} — "${at.quote}"`,
+      )
+      return at.page === undefined ? at.uri.fsPath : `${at.uri.fsPath}#page=${at.page}`
     }),
 
     vscode.commands.registerCommand('rtlgraph.fitView', () => RtlGraphEditorProvider.postToActive({ type: 'fitView' })),

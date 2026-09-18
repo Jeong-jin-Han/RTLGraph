@@ -210,6 +210,12 @@ export async function run(): Promise<void> {
   assert.notEqual(briefTab.group.viewColumn, vscode.window.tabGroups.activeTabGroup.viewColumn === 1 ? 0 : 1)
   log('Open Requirement opens the brief the design was asked for, beside the drawing')
 
+  // A box that quotes no sentence is still part of a design built from a brief,
+  // so it opens the document — just without a page to jump to.
+  const whole = await vscode.commands.executeCommand<string>('rtlgraph.openSpec', 'pwm/PERIOD_FF')
+  assert.equal(whole, join(demoDir, 'pwm/spec/pwm_brief.pdf'))
+  log('a box that quotes nothing opens the brief itself, with no page')
+
   // ── state machines: demo/pwm, three levels with a machine at two of them ──
   const demo = demoDir
   const pwmSchematic = vscode.Uri.file(join(demo, 'pwm/pwm/pwm.rtlgraph-schematic.json'))

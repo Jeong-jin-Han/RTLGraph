@@ -73,15 +73,26 @@ test('right-clicking a box opens the menu, and its items reach the host', async 
   assert.equal(ui.byId('menu')!.hidden, true, 'and the menu closes behind it')
 })
 
-test('a box with no requirement is not offered one', async () => {
+test('a box that quotes nothing is still offered the brief behind its design', async () => {
   const ui = await webview()
   rightClickOn(ui, { node: 'pwm/PERIOD_FF' })
   const labels = ui.byId('menu')!.children.map(child => child.textContent)
-  assert.deepEqual(labels, ['Open the code of PERIOD_FF'])
+  assert.deepEqual(labels, ['Open the code of PERIOD_FF', 'Open the brief (pwm_brief.pdf)'])
 
   ui.posted.length = 0
   ui.clickMenuItem('Open the code of PERIOD_FF')
   assert.deepEqual(ui.posted, [{ type: 'openSource', node: 'pwm/PERIOD_FF' }])
+})
+
+// The brief is named once, in the file that first cites it; a box three levels
+// down is in the same design and gets the same document.
+test('a box deep in the hierarchy finds the brief its parent named', async () => {
+  const ui = await webview()
+  rightClickOn(ui, { node: 'pwm/u_pulse/u_cnt/CNT_FF' })
+  assert.ok(ui.byId('menu')!.children.map(child => child.textContent).includes('Open the brief (pwm_brief.pdf)'))
+  ui.posted.length = 0
+  ui.clickMenuItem('Open the brief (pwm_brief.pdf)')
+  assert.deepEqual(ui.posted, [{ type: 'openSpec', node: 'pwm/u_pulse/u_cnt/CNT_FF' }])
 })
 
 test('right-clicking a net offers its line, and its requirement when it has one', async () => {

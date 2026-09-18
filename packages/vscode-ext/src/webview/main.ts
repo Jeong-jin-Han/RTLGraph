@@ -2,7 +2,8 @@ import {
   candidatesFor, canConnect, connectedEndpoints, connectionGoals, facing, FILTER_PRESETS, goalLink, graphFileKind,
   hierarchyEntries, loadHierarchy, parseEndpoint,
   validateFsmGraph,
-  type Diagnostic, type FilterPreset, type FsmGraph, type Goal, type HierarchyEntry, type Layout, type ViewFilter,
+  type ComponentGraph, type Diagnostic, type FilterPreset, type FsmGraph, type Goal, type HierarchyEntry,
+  type Layout, type ViewFilter,
 } from '@rtlgraph/ir'
 import { displayName, layoutHierarchy, linkEnds, linkKey, PORT_PIN, type NestedLayout } from '@rtlgraph/layout'
 import { buildFsmScene, buildHierarchyScene, fsmTable, sceneToSvg } from '@rtlgraph/render'
@@ -714,15 +715,53 @@ const pinRefUnder = (x: number, y: number) => pinRefAt(document.elementFromPoint
 // is what the reader sees on it.
 const shortName = (id: string) => displayName(id.split('/').pop() ?? id)
 
-// The requirement an element is there for, if the file names one. The menu only
-// offers what is there.
+// The file a drawn element came from, by its instance path.
+function fileOf(id: string): ComponentGraph | undefined {
+  if (!root) return undefined
+  const parts = id.split('/')
+  parts.pop()
+  return hierarchyEntries(root).find(e => e.instance === parts.join('/'))?.graph
+}
+
+// The files an element sits inside, innermost first: its own, then the ones that
+// contain it, up to the root.
+function filesAbove(id: string): ComponentGraph[] {
+  if (!root) return []
+  const entries = hierarchyEntries(root)
+  const parts = id.split('/')
+  parts.pop()
+  const above: ComponentGraph[] = []
+  for (let at = parts; ; at = at.slice(0, -1)) {
+    const entry = entries.find(e => e.instance === at.join('/'))
+    if (entry) above.push(entry.graph)
+    if (at.length === 0) return above
+  }
+}
+
+// The requirement an element is there for, if it quotes one.
 function specOf(node?: string, signal?: string): { quote: string } | undefined {
   const id = node ?? signal
   if (!root || id === undefined) return undefined
-  const parts = id.split('/')
-  const own = parts.pop()!
-  const entry = hierarchyEntries(root).find(e => e.instance === parts.join('/'))
-  return node !== undefined ? entry?.graph.nodes[own]?.spec : entry?.graph.signals[own]?.spec
+  const own = id.split('/').pop()!
+  const graph = fileOf(id)
+  return node !== undefined ? graph?.nodes[own]?.spec : graph?.signals[own]?.spec
+}
+
+// The document behind the element's file, quoted or not. Most boxes never cite a
+// sentence, and "no menu item at all" reads as the link being broken — so if the
+// design was built from a brief, every box in it can open the brief.
+function briefOf(id: string): string | undefined {
+  return filesAbove(id).find(graph => graph.source.spec !== undefined)?.source.spec?.split('/').pop()
+}
+
+// What the menu offers for a requirement: the sentence when there is one, else
+// the document it would be in.
+function specItem(carried: boolean, of: { node?: string; signal?: string }) {
+  const id = of.node ?? of.signal!
+  const label = specOf(of.node, of.signal) !== undefined
+    ? carried ? 'Open the requirement it carries' : 'Open the requirement it is here for'
+    : briefOf(id) !== undefined ? `Open the brief (${briefOf(id)})` : undefined
+  return label === undefined ? [] : [{ label, run: () => vscode.postMessage({ type: 'openSpec', ...of }) }]
 }
 
 // Only a pin facing the other way can take the link being drawn; everything else
@@ -928,7 +967,7 @@ canvas.addEventListener('contextmenu', event => {
     showMenu({ x: event.clientX - frame.left, y: event.clientY - frame.top }, [
       ...open,
       { label: `Open the code of ${shortName(id)}`, run: () => vscode.postMessage({ type: 'openSource', node: id }) },
-      ...(specOf(id) ? [{ label: 'Open the requirement it is here for', run: () => vscode.postMessage({ type: 'openSpec', node: id }) }] : []),
+      ...specItem(false, { node: id }),
     ])
     return
   }
@@ -936,7 +975,7 @@ canvas.addEventListener('contextmenu', event => {
     event.preventDefault()
     showMenu({ x: event.clientX - frame.left, y: event.clientY - frame.top }, [
       { label: `Open the code of ${shortName(onWire)}`, run: () => vscode.postMessage({ type: 'openSource', signal: onWire }) },
-      ...(specOf(undefined, onWire) ? [{ label: 'Open the requirement it carries', run: () => vscode.postMessage({ type: 'openSpec', signal: onWire }) }] : []),
+      ...specItem(true, { signal: onWire }),
     ])
     return
   }
