@@ -11,8 +11,8 @@ and simulates with `iverilog`, and every root validates with 0 errors.
 | `sys/` | root + 4 schematics | Written for RTLGraph: the deep case. Root → `sys` → `host`, `dev` → `inbuf`, three levels of component boxes, with a golden SVG of all of them open |
 | `pwm/` | root + 4 schematics + **3 FSM files** | The D02-2 PWM controller, written for RTLGraph: three levels of components (`pwm` → `pulse` → `cnt`, with `rdy` beside `pulse`) and a state machine at each of the top two levels plus the handshake. The case for `*.rtlgraph-fsm.json` |
 | `hw/` | root + 2 schematics, **all in one flat folder** | An assignment as handed out: `hw_top.v` and `counter.v` side by side, names fixed, an active-low asynchronous reset, logic in `assign` and `always` rather than instances. The case for the "follow the code" placement — no folder is created and every JSON sits beside the module it describes |
-| `stopwatch/` | **none, on purpose** | Typical non-conforming student code: flat folder, an FSM in `always` blocks, one positional connection, one counter module used twice, an active-low reset. The input for testing `.prompt/rtlgraph/*.md` |
-| `updown/` | root + 1 schematic | Written end to end by a fresh `claude -p` session from `.prompt/rtl/korean.md`, kept as produced: RTL, testbench, root and schematic |
+| `stopwatch/` | **none, on purpose** | Typical non-conforming student code: flat folder, an FSM in `always` blocks, one positional connection, one counter module used twice, an active-low reset. The input for testing `.prompt/assignment/*.md` in a fresh session — its structure is exactly the kind that must be left alone |
+| `updown/` | root + 1 schematic | Written end to end by a fresh `claude -p` session from `.prompt/rtl/korean.md`: RTL, testbench, root and schematic. Kept in step with the spec since (the form it was produced in is in git) |
 
 ## What each project checks
 
@@ -59,6 +59,14 @@ iverilog -g2005 -o /tmp/hw.vvp demo/hw/tb_hw.v demo/hw/hw_top.v demo/hw/counter.
 equivalence checks. It was produced with Vivado xsim; the testbench changes inputs
 at the same posedge it samples them, so other simulators order that race
 differently and the stimulus column shifts (the `ACC` column matches).
+
+## What the validator expects of all of them
+
+`node packages/vscode-ext/dist/agent/rtlgraph-validate.mjs demo/<project>/<top>.rtlgraph.json`
+reports **0 errors and 0 warnings** for every project here, and
+`packages/rtl-ir/test/demo-hierarchy.test.ts` keeps it that way. The counts of
+"diagnostics recorded in the files" are deliberate: they are what each project
+says about itself (an inferred node, a pin left open, a contract it does not follow).
 
 ## Not in git
 

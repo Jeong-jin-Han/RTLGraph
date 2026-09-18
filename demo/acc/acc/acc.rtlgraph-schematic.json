@@ -3,7 +3,7 @@
   "kind": "component",
   "title": "acc",
   "created": "2026-09-14T00:00:00.000Z",
-  "modified": "2026-09-14T00:00:00.000Z",
+  "modified": "2026-09-18T00:00:00.000Z",
   "source": {
     "root": ".",
     "lib": "../../base",
@@ -14,14 +14,14 @@
   },
   "signals": {
     "CLK": { "width": 1, "flow": "clock", "driver": "@CLK", "sinks": ["CNT_FF:CLK", "ACC_FF:CLK", "OUT_FF:CLK"], "hidden": true, "origin": { "file": "seq/acc_top.v", "line": 5 } },
-    "RST": { "width": 1, "flow": "reset", "driver": "@RST", "sinks": ["control_path:RST"], "origin": { "file": "seq/acc_top.v", "line": 6 } },
-    "SHOW": { "width": 1, "flow": "control", "driver": "@SHOW", "sinks": ["control_path:SHOW"], "origin": { "file": "seq/acc_top.v", "line": 9 } },
-    "MODE": { "width": 1, "flow": "control", "driver": "@MODE", "sinks": ["control_path:MODE"], "origin": { "file": "seq/acc_top.v", "line": 10 } },
+    "RST": { "width": 1, "flow": "reset", "driver": "@RST", "sinks": ["control_path:RST"], "meaning": "1=리셋(reset): 세 레지스터를 모두 0 으로", "origin": { "file": "seq/acc_top.v", "line": 6 } },
+    "SHOW": { "width": 1, "flow": "control", "driver": "@SHOW", "sinks": ["control_path:SHOW"], "meaning": "1=표시(show): 누산 결과를 출력 레지스터에 싣는다", "origin": { "file": "seq/acc_top.v", "line": 9 } },
+    "MODE": { "width": 1, "flow": "control", "driver": "@MODE", "sinks": ["control_path:MODE"], "meaning": "0=덧셈(ADD), 1=뺄셈(SUB)", "origin": { "file": "seq/acc_top.v", "line": 10 } },
 
-    "CNT_RST": { "width": 1, "flow": "control", "driver": "control_path:CNT_RST", "sinks": ["CNT_FF:RST"], "origin": { "file": "seq/acc_top.v", "line": 19 } },
-    "ACC_RST": { "width": 1, "flow": "control", "driver": "control_path:ACC_RST", "sinks": ["ACC_FF:RST"], "origin": { "file": "seq/acc_top.v", "line": 23 } },
-    "OUT_RST": { "width": 1, "flow": "control", "driver": "control_path:OUT_RST", "sinks": ["OUT_FF:RST"], "origin": { "file": "seq/acc_top.v", "line": 27 } },
-    "OUT_EN": { "width": 1, "flow": "control", "driver": "control_path:OUT_EN", "sinks": ["OUT_FF:EN"], "origin": { "file": "seq/acc_top.v", "line": 29 } },
+    "CNT_RST": { "width": 1, "flow": "control", "driver": "control_path:CNT_RST", "sinks": ["CNT_FF:RST"], "meaning": "1=계수기(counter)를 0 으로", "origin": { "file": "seq/acc_top.v", "line": 19 } },
+    "ACC_RST": { "width": 1, "flow": "control", "driver": "control_path:ACC_RST", "sinks": ["ACC_FF:RST"], "meaning": "1=누산기(accumulator)를 0 으로", "origin": { "file": "seq/acc_top.v", "line": 23 } },
+    "OUT_RST": { "width": 1, "flow": "control", "driver": "control_path:OUT_RST", "sinks": ["OUT_FF:RST"], "meaning": "1=출력 레지스터를 0 으로", "origin": { "file": "seq/acc_top.v", "line": 27 } },
+    "OUT_EN": { "width": 1, "flow": "control", "driver": "control_path:OUT_EN", "sinks": ["OUT_FF:EN"], "meaning": "1=이번 에지에 누산 결과를 출력 레지스터에 싣는다", "origin": { "file": "seq/acc_top.v", "line": 29 } },
     "ACC_SEL": { "width": 1, "flow": "control", "driver": "control_path:ACC_SEL", "sinks": ["data_path.u_mux:sel"], "meaning": "0=덧셈(ADD), 1=뺄셈(SUB)", "origin": { "file": "seq/acc_top.v", "line": 30 } },
 
     "CNT_Q": { "width": 6, "flow": "data", "driver": "CNT_FF:Q", "sinks": ["data_path.u_inc:a", "data_path.u_add:b", "data_path.u_sub:b"], "origin": { "file": "seq/acc_top.v", "line": 18 } },
@@ -43,20 +43,20 @@
       "kind": "reg", "flow": "data", "time": "seq", "module": "DFF", "params": { "BW": 5 },
       "ports": { "CLK": "in", "RST": "in", "EN": "in", "D": "in", "Q": "out" },
       "consts": { "EN": "1'b1" },
-      "rstKind": "sync", "rstPriority": "rst>en", "rstValue": "0",
+      "rstKind": "sync", "rstPriority": "rst>en", "rstValue": "0", "rstActive": "high", "enActive": "high",
       "origin": { "file": "seq/acc_top.v", "line": 54 }
     },
     "ACC_FF": {
       "kind": "reg", "flow": "data", "time": "seq", "module": "DFF", "params": { "BW": 5 },
       "ports": { "CLK": "in", "RST": "in", "EN": "in", "D": "in", "Q": "out" },
       "consts": { "EN": "1'b1" },
-      "rstKind": "sync", "rstPriority": "rst>en", "rstValue": "0",
+      "rstKind": "sync", "rstPriority": "rst>en", "rstValue": "0", "rstActive": "high", "enActive": "high",
       "origin": { "file": "seq/acc_top.v", "line": 62 }
     },
     "OUT_FF": {
       "kind": "reg", "flow": "data", "time": "seq", "module": "DFF", "params": { "BW": 5 },
       "ports": { "CLK": "in", "RST": "in", "EN": "in", "D": "in", "Q": "out" },
-      "rstKind": "sync", "rstPriority": "rst>en", "rstValue": "0",
+      "rstKind": "sync", "rstPriority": "rst>en", "rstValue": "0", "rstActive": "high", "enActive": "high",
       "origin": { "file": "seq/acc_top.v", "line": 70 }
     },
 

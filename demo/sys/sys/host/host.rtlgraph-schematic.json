@@ -3,7 +3,7 @@
   "kind": "component",
   "title": "host",
   "created": "2026-09-15T00:00:00.000Z",
-  "modified": "2026-09-15T00:00:00.000Z",
+  "modified": "2026-09-18T00:00:00.000Z",
   "source": {
     "root": ".",
     "lib": "../../../base",
@@ -14,8 +14,8 @@
   },
   "signals": {
     "CLK":     { "width": 1, "flow": "clock",   "driver": "@CLK",   "sinks": ["CNT_FF:CLK"], "hidden": true, "origin": { "file": "seq/host_top.v", "line": 7 } },
-    "RST":     { "width": 1, "flow": "reset",   "driver": "@RST",   "sinks": ["control_path:RST"],   "origin": { "file": "seq/host_top.v", "line": 8 } },
-    "START":   { "width": 1, "flow": "control", "driver": "@START", "sinks": ["control_path:START"], "origin": { "file": "seq/host_top.v", "line": 9 } },
+    "RST":     { "width": 1, "flow": "reset",   "driver": "@RST",   "sinks": ["control_path:RST"],   "meaning": "1=go back to the first sample", "origin": { "file": "seq/host_top.v", "line": 8 } },
+    "START":   { "width": 1, "flow": "control", "driver": "@START", "sinks": ["control_path:START"], "meaning": "1=send the next sample on this edge", "origin": { "file": "seq/host_top.v", "line": 9 } },
     "CNT_RST": { "width": 1, "flow": "control", "driver": "control_path:CNT_RST", "sinks": ["CNT_FF:RST"], "meaning": "1=clear the sample counter", "origin": { "file": "seq/host_top.v", "line": 16 } },
     "CNT_EN":  { "width": 1, "flow": "control", "driver": "control_path:CNT_EN",  "sinks": ["CNT_FF:EN"],  "meaning": "1=advance to the next sample", "origin": { "file": "seq/host_top.v", "line": 17 } },
     "VALID":   { "width": 1, "flow": "control", "driver": "control_path:VALID",   "sinks": ["@VALID"],     "meaning": "1=DATA holds a sample for the device", "origin": { "file": "seq/host_top.v", "line": 11 } },
@@ -52,7 +52,7 @@
     "CNT_FF": {
       "kind": "reg", "flow": "data", "time": "seq", "module": "DFF", "params": { "BW": 5 },
       "ports": { "CLK": "in", "RST": "in", "EN": "in", "D": "in", "Q": "out" },
-      "rstKind": "sync", "rstPriority": "rst>en", "rstValue": "0",
+      "rstKind": "sync", "rstPriority": "rst>en", "rstValue": "0", "rstActive": "high", "enActive": "high",
       "origin": { "file": "seq/host_top.v", "line": 35 }
     }
   }

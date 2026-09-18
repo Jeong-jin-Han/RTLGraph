@@ -3,7 +3,7 @@
   "kind": "component",
   "title": "pulse",
   "created": "2026-09-16T00:00:00.000Z",
-  "modified": "2026-09-16T00:00:00.000Z",
+  "modified": "2026-09-18T00:00:00.000Z",
   "source": {
     "root": ".",
     "lib": "../../../base",
@@ -14,7 +14,7 @@
   },
   "signals": {
     "CLK":       { "width": 1, "flow": "clock",   "driver": "@CLK",  "sinks": ["u_cnt:CLK", "PHASE_FF:CLK"], "hidden": true, "origin": { "file": "seq/pulse_top.v", "line": 10 } },
-    "RST":       { "width": 1, "flow": "reset",   "driver": "@RST",  "sinks": ["control_path:RST", "PHASE_FF:RST"], "origin": { "file": "seq/pulse_top.v", "line": 11 } },
+    "RST":       { "width": 1, "flow": "reset",   "driver": "@RST",  "sinks": ["control_path:RST", "PHASE_FF:RST"], "meaning": "1=hold the low half with the counter cleared", "origin": { "file": "seq/pulse_top.v", "line": 11 } },
     "RUN":       { "width": 1, "flow": "control", "driver": "@RUN",  "sinks": ["control_path:RUN"], "meaning": "1=the core wants a wave", "origin": { "file": "seq/pulse_top.v", "line": 12 } },
     "PERIOD":    { "width": 8, "flow": "data",    "driver": "@PERIOD", "sinks": ["data_path.u_off:a"], "origin": { "file": "seq/pulse_top.v", "line": 13 } },
     "DUTY":      { "width": 8, "flow": "data",    "driver": "@DUTY", "sinks": ["data_path.u_off:b", "data_path.u_high:a"], "origin": { "file": "seq/pulse_top.v", "line": 14 } },

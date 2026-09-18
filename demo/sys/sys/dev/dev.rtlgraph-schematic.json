@@ -3,7 +3,7 @@
   "kind": "component",
   "title": "dev",
   "created": "2026-09-15T00:00:00.000Z",
-  "modified": "2026-09-15T00:00:00.000Z",
+  "modified": "2026-09-18T00:00:00.000Z",
   "source": {
     "root": ".",
     "lib": "../../../base",
@@ -14,7 +14,7 @@
   },
   "signals": {
     "CLK":     { "width": 1, "flow": "clock",   "driver": "@CLK",   "sinks": ["u_inbuf:CLK", "SUM_FF:CLK"], "hidden": true, "origin": { "file": "seq/dev_top.v", "line": 8 } },
-    "RST":     { "width": 1, "flow": "reset",   "driver": "@RST",   "sinks": ["control_path:RST"],   "origin": { "file": "seq/dev_top.v", "line": 9 } },
+    "RST":     { "width": 1, "flow": "reset",   "driver": "@RST",   "sinks": ["control_path:RST"],   "meaning": "1=clear the input buffer and the running sum", "origin": { "file": "seq/dev_top.v", "line": 9 } },
     "VALID":   { "width": 1, "flow": "control", "driver": "@VALID", "sinks": ["control_path:VALID"], "meaning": "1=DATA holds a sample from the host", "origin": { "file": "seq/dev_top.v", "line": 10 } },
     "DATA":    { "width": 6, "flow": "data",    "driver": "@DATA",  "sinks": ["u_inbuf:DIN"], "origin": { "file": "seq/dev_top.v", "line": 11 } },
     "BUF_OUT": { "width": 6, "flow": "data",    "driver": "u_inbuf:DOUT", "sinks": ["data_path.u_add:b"], "origin": { "file": "seq/dev_top.v", "line": 15 } },
@@ -61,7 +61,7 @@
     "SUM_FF": {
       "kind": "reg", "flow": "data", "time": "seq", "module": "DFF", "params": { "BW": 5 },
       "ports": { "CLK": "in", "RST": "in", "EN": "in", "D": "in", "Q": "out" },
-      "rstKind": "sync", "rstPriority": "rst>en", "rstValue": "0",
+      "rstKind": "sync", "rstPriority": "rst>en", "rstValue": "0", "rstActive": "high", "enActive": "high",
       "origin": { "file": "seq/dev_top.v", "line": 51 }
     }
   }

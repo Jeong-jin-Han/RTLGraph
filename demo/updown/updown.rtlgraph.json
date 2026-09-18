@@ -3,7 +3,7 @@
   "kind": "system",
   "title": "updown",
   "created": "2026-09-14T13:40:00.000Z",
-  "modified": "2026-09-14T13:40:00.000Z",
+  "modified": "2026-09-18T00:00:00.000Z",
   "source": {
     "root": ".",
     "lib": "../base",
@@ -14,10 +14,10 @@
   },
   "signals": {
     "CLK":  { "width": 1, "flow": "clock",   "driver": "@CLK",       "sinks": ["updown:CLK"],  "hidden": true, "origin": { "file": "updown/seq/updown.v", "line": 9 } },
-    "RST":  { "width": 1, "flow": "reset",   "driver": "@RST",       "sinks": ["updown:RST"],  "origin": { "file": "updown/seq/updown.v", "line": 10 } },
-    "EN":   { "width": 1, "flow": "control", "driver": "@EN",        "sinks": ["updown:EN"],   "origin": { "file": "updown/seq/updown.v", "line": 11 } },
-    "UP":   { "width": 1, "flow": "control", "driver": "@UP",        "sinks": ["updown:UP"],   "origin": { "file": "updown/seq/updown.v", "line": 12 } },
-    "LOAD": { "width": 1, "flow": "control", "driver": "@LOAD",      "sinks": ["updown:LOAD"], "origin": { "file": "updown/seq/updown.v", "line": 13 } },
+    "RST":  { "width": 1, "flow": "reset",   "driver": "@RST",       "sinks": ["updown:RST"],  "meaning": "1=리셋(reset): 계수기를 0 으로, LOAD·EN 보다 우선", "origin": { "file": "updown/seq/updown.v", "line": 10 } },
+    "EN":   { "width": 1, "flow": "control", "driver": "@EN",        "sinks": ["updown:EN"],   "meaning": "1=이번 에지에 계수기를 갱신", "origin": { "file": "updown/seq/updown.v", "line": 11 } },
+    "UP":   { "width": 1, "flow": "control", "driver": "@UP",        "sinks": ["updown:UP"],   "meaning": "0=감소(down), 1=증가(up)", "origin": { "file": "updown/seq/updown.v", "line": 12 } },
+    "LOAD": { "width": 1, "flow": "control", "driver": "@LOAD",      "sinks": ["updown:LOAD"], "meaning": "1=적재(load): DIN 값을 계수기에 싣는다, EN 보다 우선", "origin": { "file": "updown/seq/updown.v", "line": 13 } },
     "DIN":  { "width": 6, "flow": "data",    "driver": "@DIN",       "sinks": ["updown:DIN"],  "origin": { "file": "updown/seq/updown.v", "line": 14 } },
     "CNT":  { "width": 6, "flow": "data",    "driver": "updown:CNT", "sinks": ["@CNT"],        "origin": { "file": "updown/seq/updown.v", "line": 15 } }
   },

@@ -3,7 +3,7 @@
   "kind": "system",
   "title": "sys_top",
   "created": "2026-09-15T00:00:00.000Z",
-  "modified": "2026-09-15T00:00:00.000Z",
+  "modified": "2026-09-18T00:00:00.000Z",
   "source": {
     "root": ".",
     "files": ["sys/seq/sys_top.v"],
@@ -12,8 +12,8 @@
   },
   "signals": {
     "CLK":   { "width": 1, "flow": "clock",   "driver": "@CLK",   "sinks": ["sys:CLK"],   "hidden": true, "origin": { "file": "sys/seq/sys_top.v", "line": 9 } },
-    "RST":   { "width": 1, "flow": "reset",   "driver": "@RST",   "sinks": ["sys:RST"],   "origin": { "file": "sys/seq/sys_top.v", "line": 10 } },
-    "START": { "width": 1, "flow": "control", "driver": "@START", "sinks": ["sys:START"], "origin": { "file": "sys/seq/sys_top.v", "line": 11 } },
+    "RST":   { "width": 1, "flow": "reset",   "driver": "@RST",   "sinks": ["sys:RST"],   "meaning": "1=clear the running sum and the input buffer", "origin": { "file": "sys/seq/sys_top.v", "line": 10 } },
+    "START": { "width": 1, "flow": "control", "driver": "@START", "sinks": ["sys:START"], "meaning": "1=the host may send its next sample", "origin": { "file": "sys/seq/sys_top.v", "line": 11 } },
     "SUM":   { "width": 6, "flow": "data",    "driver": "sys:SUM", "sinks": ["@SUM"],     "origin": { "file": "sys/seq/sys_top.v", "line": 12 } }
   },
   "nodes": {

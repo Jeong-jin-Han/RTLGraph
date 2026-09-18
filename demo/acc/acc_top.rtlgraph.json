@@ -3,7 +3,7 @@
   "kind": "system",
   "title": "acc_top",
   "created": "2026-09-14T00:00:00.000Z",
-  "modified": "2026-09-14T00:00:00.000Z",
+  "modified": "2026-09-18T00:00:00.000Z",
   "source": {
     "root": ".",
     "files": ["acc/seq/acc_top.v"],
@@ -12,9 +12,9 @@
   },
   "signals": {
     "CLK": { "width": 1, "flow": "clock", "driver": "@CLK", "sinks": ["acc:CLK"], "hidden": true, "origin": { "file": "acc/seq/acc_top.v", "line": 5 } },
-    "RST": { "width": 1, "flow": "reset", "driver": "@RST", "sinks": ["acc:RST"], "origin": { "file": "acc/seq/acc_top.v", "line": 6 } },
-    "SHOW": { "width": 1, "flow": "control", "driver": "@SHOW", "sinks": ["acc:SHOW"], "origin": { "file": "acc/seq/acc_top.v", "line": 9 } },
-    "MODE": { "width": 1, "flow": "control", "driver": "@MODE", "sinks": ["acc:MODE"], "origin": { "file": "acc/seq/acc_top.v", "line": 10 } },
+    "RST": { "width": 1, "flow": "reset", "driver": "@RST", "sinks": ["acc:RST"], "meaning": "1=리셋(reset): 세 레지스터를 모두 0 으로", "origin": { "file": "acc/seq/acc_top.v", "line": 6 } },
+    "SHOW": { "width": 1, "flow": "control", "driver": "@SHOW", "sinks": ["acc:SHOW"], "meaning": "1=표시(show): 누산 결과를 출력 레지스터에 싣는다", "origin": { "file": "acc/seq/acc_top.v", "line": 9 } },
+    "MODE": { "width": 1, "flow": "control", "driver": "@MODE", "sinks": ["acc:MODE"], "meaning": "0=덧셈(ADD), 1=뺄셈(SUB)", "origin": { "file": "acc/seq/acc_top.v", "line": 10 } },
     "ACC": { "width": 6, "flow": "data", "driver": "acc:ACC", "sinks": ["@ACC"], "origin": { "file": "acc/seq/acc_top.v", "line": 13 } }
   },
   "nodes": {

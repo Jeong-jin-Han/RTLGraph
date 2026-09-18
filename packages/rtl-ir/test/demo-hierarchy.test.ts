@@ -2,7 +2,9 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { checkSources, hierarchyEntries, loadHierarchy, originOf, validateFsmGraph } from '../src/index.ts'
+import {
+  checkSources, hierarchyEntries, loadHierarchy, originOf, validateComponentGraph, validateFsmGraph,
+} from '../src/index.ts'
 
 // Every demo project that has RTLGraph files: the root, and each component
 // schematic it reaches. demo/sys is the deep one (a component inside a component).
@@ -136,6 +138,18 @@ test('every drawn element says which line of the code it came from', () => {
         assert.ok(text !== undefined, `${project}: ${at.path} (${JSON.stringify(of)})`)
         assert.ok(at.line >= 1 && at.line <= text!.split('\n').length, `${project}: ${at.path}:${at.line}`)
       }
+    }
+  }
+})
+
+test('every demo passes the validator clean: no errors and no warnings', () => {
+  for (const [project, { root }] of Object.entries(PROJECTS)) {
+    const read = reader(project)
+    const loaded = loadHierarchy(root, read)
+    assert.deepEqual(loaded.diagnostics, [], project)
+    for (const entry of hierarchyEntries(loaded.root)) {
+      const found = validateComponentGraph(entry.graph).diagnostics
+      assert.deepEqual(found, [], `${project}/${entry.path}: ${found.map(d => `${d.code} ${d.signal ?? d.node ?? ''}`).join(', ')}`)
     }
   }
 })

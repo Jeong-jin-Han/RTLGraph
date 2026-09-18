@@ -3,7 +3,7 @@
   "kind": "component",
   "title": "inbuf",
   "created": "2026-09-15T00:00:00.000Z",
-  "modified": "2026-09-15T00:00:00.000Z",
+  "modified": "2026-09-18T00:00:00.000Z",
   "source": {
     "root": ".",
     "lib": "../../../../base",
@@ -28,7 +28,7 @@
     "BUF_FF": {
       "kind": "reg", "flow": "data", "time": "seq", "module": "DFF", "params": { "BW": 5 },
       "ports": { "CLK": "in", "RST": "in", "EN": "in", "D": "in", "Q": "out" },
-      "rstKind": "sync", "rstPriority": "rst>en", "rstValue": "0",
+      "rstKind": "sync", "rstPriority": "rst>en", "rstValue": "0", "rstActive": "high", "enActive": "high",
       "origin": { "file": "seq/inbuf_top.v", "line": 15 }
     }
   }

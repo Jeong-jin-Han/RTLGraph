@@ -537,11 +537,11 @@ is drawn as a generic box — that is normal, not an error.
 | node `kind` | `port` · `reg` · `op` · `mux` · `control` · `module` · `blackbox` · `component` |
 | logic node (not `port`/`component`) | required `flow` (`data`/`control`), `time` (`comb`/`seq`), `module`, `ports` (`{ pin: "in"/"out"/"inout" }`). Optional `params`, `consts`, `label`, `group`, `origin` |
 | `component` node | required `name` (identifier), `module`, `ref` (a `*.rtlgraph-schematic.json` path relative to this file), `ports` — exactly the ports of that schematic, same directions. Optional `params`, `consts`, `label`, `origin`. No `flow`/`time` |
-| `reg` extras | `rstKind` (`sync`/`async`), `rstPriority` (`rst>en`/`en>rst`), `rstValue`, `rstActive`/`enActive` (`high`/`low` — an active-low pin is drawn with a bubble), `fsm` (the `*.rtlgraph-fsm.json` this register's state is described in) |
+| `reg` extras | `rstKind` (`sync`/`async`), `rstPriority` (`rst>en`/`en>rst`), `rstValue`; `rstActive`/`enActive` (`high`/`low`, from the code: `if (!nRST)` is `"low"` — an active-low pin is drawn with a bubble); `fsm` (the `*.rtlgraph-fsm.json` this register's state is described in) |
 | `control` extras | `truthTable` { `inputs`, `outputs`, `rows`: [{ `in`, `out`, `note?` }], `default?`: { `out` }, `origin` } with values `"0"`/`"1"`/`"x"`; or `equations`: [{ `output`, `expr` }]. `note` is one short line saying what the row means ("reset: clear the counter"); keep a `default` row even when the listed cases already cover every input |
 | `blackbox` extras | `rdelay` |
 | port node | required `dir`, `flow` (`data`/`control`/`clock`/`reset`); no `time` |
-| signal | required `width`, `flow`, `driver`, `sinks`; optional `aliases`, `meaning`, `hidden`, `origin` |
+| signal | required `width`, `flow`, `driver`, `sinks`; optional `aliases`, `hidden`, `origin`. `meaning` is **required on every `control` and `reset` net** — what it does when it is asserted — and worth writing on a data net whose name does not say it |
 | `groups` | `{ "<id>": { "label": "...", "members": [nodeIds] } }` from `// @sch: group=` |
 | `layout`, `view` | **owned by the user and the extension — never write them**, keep them as they are |
 | `diagnostics` | `{ severity: error/warn/info, code, msg, file?, line?, node?, signal? }`. Leave the key out when there is nothing to report |
@@ -580,6 +580,7 @@ Never use line numbers or counters in ids — the user's layout is matched by id
 - [ ] Every net has exactly one `driver`; every input pin is a sink of one net or in `consts`
 - [ ] Widths match declarations (`BW+1` rule for primitives)
 - [ ] `flow`/`time` on every non-port node; clock nets `hidden`
+- [ ] Every control and reset net has a `meaning`; every register says `rstKind`, `rstValue`, and `rstActive`/`enActive` when a pin acts on a low
 - [ ] Every node and net has an exact `origin`; control nodes have `truthTable.origin`
 - [ ] Contract violations and inferred elements listed in `diagnostics`; `contractCheck` set
 - [ ] A component with a state machine has `<name>.rtlgraph-fsm.json`, and its state register carries `fsm` and `flow: "control"`

@@ -211,6 +211,12 @@ export function validateComponentGraph(input: unknown): ValidationResult {
       if (!isStrArr(s.aliases)) error('schema', 'aliases must be a string array', at)
       else for (const alias of s.aliases) claimName(alias, name)
     }
+    // What a control line means when it is 1 cannot be read off the picture, and
+    // it is what the control table and the ledger are made of.
+    const said = typeof s.meaning === 'string' && s.meaning.trim() !== ''
+    if ((s.flow === 'control' || s.flow === 'reset') && !said) {
+      warn('meaning-missing', 'a control or reset net must say what it means when it is asserted', at)
+    }
   }
 
   for (const [id, n] of Object.entries(nodes)) {

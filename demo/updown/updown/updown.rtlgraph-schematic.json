@@ -3,7 +3,7 @@
   "kind": "component",
   "title": "updown",
   "created": "2026-09-14T13:40:00.000Z",
-  "modified": "2026-09-14T13:40:00.000Z",
+  "modified": "2026-09-18T00:00:00.000Z",
   "source": {
     "root": ".",
     "lib": "../../base",
@@ -14,17 +14,17 @@
   },
   "signals": {
     "CLK":      { "width": 1, "flow": "clock",   "driver": "@CLK",  "sinks": ["CNT_FF:CLK"],   "hidden": true, "origin": { "file": "seq/updown.v", "line": 9 } },
-    "RST":      { "width": 1, "flow": "reset",   "driver": "@RST",  "sinks": ["control_path:RST"],  "origin": { "file": "seq/updown.v", "line": 10 } },
-    "EN":       { "width": 1, "flow": "control", "driver": "@EN",   "sinks": ["control_path:EN"],   "origin": { "file": "seq/updown.v", "line": 11 } },
-    "UP":       { "width": 1, "flow": "control", "driver": "@UP",   "sinks": ["control_path:UP"],   "origin": { "file": "seq/updown.v", "line": 12 } },
-    "LOAD":     { "width": 1, "flow": "control", "driver": "@LOAD", "sinks": ["control_path:LOAD"], "origin": { "file": "seq/updown.v", "line": 13 } },
+    "RST":      { "width": 1, "flow": "reset",   "driver": "@RST",  "sinks": ["control_path:RST"],  "meaning": "1=리셋(reset): 계수기를 0 으로, LOAD·EN 보다 우선", "origin": { "file": "seq/updown.v", "line": 10 } },
+    "EN":       { "width": 1, "flow": "control", "driver": "@EN",   "sinks": ["control_path:EN"],   "meaning": "1=이번 에지에 계수기를 갱신", "origin": { "file": "seq/updown.v", "line": 11 } },
+    "UP":       { "width": 1, "flow": "control", "driver": "@UP",   "sinks": ["control_path:UP"],   "meaning": "0=감소(down), 1=증가(up)", "origin": { "file": "seq/updown.v", "line": 12 } },
+    "LOAD":     { "width": 1, "flow": "control", "driver": "@LOAD", "sinks": ["control_path:LOAD"], "meaning": "1=적재(load): DIN 값을 계수기에 싣는다, EN 보다 우선", "origin": { "file": "seq/updown.v", "line": 13 } },
     "DIN":      { "width": 6, "flow": "data",    "driver": "@DIN",  "sinks": ["data_path.u_mux_load:d1"], "origin": { "file": "seq/updown.v", "line": 14 } },
     "CNT_D":    { "width": 6, "flow": "data",    "driver": "data_path.u_mux_load:y", "sinks": ["CNT_FF:D"], "origin": { "file": "seq/updown.v", "line": 19 } },
     "CNT_Q":    { "width": 6, "flow": "data",    "driver": "CNT_FF:Q", "sinks": ["data_path.u_inc:a", "data_path.u_dec:a", "@CNT"], "aliases": ["CNT"], "origin": { "file": "seq/updown.v", "line": 20 } },
-    "CNT_RST":  { "width": 1, "flow": "control", "driver": "control_path:CNT_RST",  "sinks": ["CNT_FF:RST"], "meaning": "1=clear counter to 0", "origin": { "file": "seq/updown.v", "line": 24 } },
-    "CNT_EN":   { "width": 1, "flow": "control", "driver": "control_path:CNT_EN",   "sinks": ["CNT_FF:EN"],  "meaning": "0=hold, 1=update counter", "origin": { "file": "seq/updown.v", "line": 26 } },
-    "LOAD_SEL": { "width": 1, "flow": "control", "driver": "control_path:LOAD_SEL", "sinks": ["data_path.u_mux_load:sel"], "meaning": "0=step (INC/SUB), 1=load DIN", "origin": { "file": "seq/updown.v", "line": 28 } },
-    "DIR_SEL":  { "width": 1, "flow": "control", "driver": "control_path:DIR_SEL",  "sinks": ["data_path.u_mux_dir:sel"],  "meaning": "0=decrement (SUB), 1=increment (INC)", "origin": { "file": "seq/updown.v", "line": 30 } },
+    "CNT_RST":  { "width": 1, "flow": "control", "driver": "control_path:CNT_RST",  "sinks": ["CNT_FF:RST"], "meaning": "1=계수기를 0 으로", "origin": { "file": "seq/updown.v", "line": 24 } },
+    "CNT_EN":   { "width": 1, "flow": "control", "driver": "control_path:CNT_EN",   "sinks": ["CNT_FF:EN"],  "meaning": "0=유지(hold), 1=계수기 갱신", "origin": { "file": "seq/updown.v", "line": 26 } },
+    "LOAD_SEL": { "width": 1, "flow": "control", "driver": "control_path:LOAD_SEL", "sinks": ["data_path.u_mux_load:sel"], "meaning": "0=계단 이동(INC/SUB), 1=DIN 적재", "origin": { "file": "seq/updown.v", "line": 28 } },
+    "DIR_SEL":  { "width": 1, "flow": "control", "driver": "control_path:DIR_SEL",  "sinks": ["data_path.u_mux_dir:sel"],  "meaning": "0=감소(SUB), 1=증가(INC)", "origin": { "file": "seq/updown.v", "line": 30 } },
     "data_path.INC_OUT":  { "width": 6, "flow": "data", "driver": "data_path.u_inc:y",     "sinks": ["data_path.u_mux_dir:d1"],  "origin": { "file": "comb/data_path/updown_dp.v", "line": 16 } },
     "data_path.DEC_OUT":  { "width": 6, "flow": "data", "driver": "data_path.u_dec:y",     "sinks": ["data_path.u_mux_dir:d0"],  "origin": { "file": "comb/data_path/updown_dp.v", "line": 17 } },
     "data_path.STEP_OUT": { "width": 6, "flow": "data", "driver": "data_path.u_mux_dir:y", "sinks": ["data_path.u_mux_load:d0"], "origin": { "file": "comb/data_path/updown_dp.v", "line": 18 } }
@@ -83,7 +83,7 @@
     "CNT_FF": {
       "kind": "reg", "flow": "data", "time": "seq", "module": "DFF", "params": { "BW": 5 },
       "ports": { "CLK": "in", "RST": "in", "EN": "in", "D": "in", "Q": "out" },
-      "rstKind": "sync", "rstPriority": "rst>en", "rstValue": "0",
+      "rstKind": "sync", "rstPriority": "rst>en", "rstValue": "0", "rstActive": "high", "enActive": "high",
       "origin": { "file": "seq/updown.v", "line": 54 }
     }
   },
