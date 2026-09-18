@@ -2,61 +2,258 @@
   <img src="packages/vscode-ext/resources/banner-hires.png" width="100%" alt="RTLGraph — Draw the RTL. Don't just read it." />
 </p>
 
-# RTLGraph
+<p align="center">
+  <img src="https://img.shields.io/badge/VS%20Code-Extension-007ACC?logo=visualstudiocode&logoColor=white&style=for-the-badge" alt="VS Code Extension" />
+  <img src="https://img.shields.io/badge/version-0.1.0-orange?style=for-the-badge" alt="Version 0.1.0" />
+  <img src="https://img.shields.io/badge/license-MIT-brightgreen?style=for-the-badge" alt="MIT License" />
+</p>
 
-A VS Code extension (in progress) that turns an **existing RTL project** into an
-editable, high-level schematic — the sibling of
-[NodeGraph](https://github.com/Jeong-jin-Han/NodeGraph), with Verilog instead of
-papers as input.
+---
+
+<p align="center"><b>Turn an existing RTL project into the schematic you would have drawn on a whiteboard.</b></p>
+
+Point an AI agent (Claude Code, Codex, Cursor) at a Verilog folder and it reads the code and writes
+the graph itself — one file per component, every box and every net carrying the line of code it came
+from. Prefer to draw it yourself? Write the JSON by hand and use the same canvas, no agent required.
+
+<p align="center"><b>Not a netlist viewer. The picture a person draws to explain the design — and every line of it traces back to the code, and to the brief the design was asked for.</b></p>
+
+---
+
+## A Quick Look
+
+<p align="center">
+  <img src="packages/vscode-ext/resources/screenshot-hierarchy.png" width="100%" alt="demo/pwm drawn three levels deep: the pwm frame holds pulse, which holds cnt, with rdy beside them" />
+</p>
+<p align="center"><b><code>demo/pwm</code>, three levels of components open at once — each frame is its own file, and every box opens the Verilog it came from</b></p>
+
+**Getting there takes four steps:**
+1. Build the extension and press **F5** (see [Installation](#installation) — it is not on the Marketplace yet)
+2. Right-click your RTL folder and run `RTLGraph: Copy Agent Spec to Workspace`
+3. Paste the generated `.prompt/rtlgraph/english.md` (or `korean.md`) into your agent, filling in the project path
+4. Open the finished `<top>.rtlgraph.json`
+
+---
+
+## Perfect for
+
+- **Explaining a design you did not write**, by reading its shape before its syntax
+- **Assignments handed out as a skeleton**, where the folder may not be touched and the brief is a PDF — the JSON sits beside the code and every box can open the sentence it exists for
+- **Figures for a report or slides**, since any view exports to SVG, PNG or PDF cropped to what is on screen
+- **The tables the design was built from**, since a schematic exports to XLSX: control signals, truth tables, state transitions
+- **Checking an agent's reading of your RTL**, because every claim carries a `file:line` and the validator says when it does not match
+
+---
+
+## Motivation
+
+Vivado will draw an elaborated schematic, and it is unreadable: every net, every hierarchy level, laid
+out by a tool that has no idea which parts matter. The picture a person draws on a whiteboard is a
+different object — a dozen boxes, the data path across, the control path underneath, the state machine
+in a corner — and there is no tool that keeps *that* picture beside the code.
+
+So the drawing is kept as **data**: a small JSON per component, which an agent writes by reading the
+RTL. That makes the picture reviewable (it is a diff), regenerable (re-run the agent after a
+refactor), and checkable — `origin` on every box and net names the file and line it came from, and the
+validator reads the Verilog back to confirm the line really says that. An agent that invents a
+connection is caught by the same pass that would catch a typo.
+
+The hand still matters, so everything you arrange — moving a box, resizing a frame, bending a wire,
+cutting a link, drawing one the code does not have yet — is written under `layout` and nowhere else.
+Re-extraction never overwrites it. A link you draw that the RTL has no net for is drawn amber and
+listed as an open goal, the way a proof assistant lists what is left to prove: the sketch says what the
+code should do, and the panel keeps asking until it does.
+
+And an assignment arrives as a PDF. A box can quote the sentence of the brief it exists for; opening it
+shows the document *inside the editor* with that sentence highlighted, so "does the circuit do what was
+asked" is one click rather than a memory test.
+
+---
+
+## Screenshots
+
+<p align="center">
+  <img src="packages/vscode-ext/resources/screenshot-fsm.png" width="100%" alt="The pwm state machine as a diagram: IDLE, LOAD and RUN with what each transition means in words" />
+</p>
+<p align="center"><b>A <code>*.rtlgraph-fsm.json</code> opens as a state diagram — every transition says <i>when</i> it is taken, in words, with the code's own condition kept beside it</b></p>
+
+<p align="center">
+  <img src="packages/vscode-ext/resources/screenshot-datapath.png" width="100%" alt="demo/acc under the Datapath preset: registers and arithmetic only, the control path filtered out" />
+</p>
+<p align="center"><b>The same kind of file under the <b>Datapath</b> preset — the filter is two levels deep, so the control path can be taken out of the picture entirely</b></p>
+
+---
+
+## Features
+
+| | |
+|---|---|
+| **Component hierarchy** | One root plus a schematic per component, each beside the code it describes; fold a frame to a box, or open three levels at once |
+| **Two-level filter** | **Comb** opens Data / Control, **Seq** opens Registers / FSM — the way a top module is drawn on a slide — plus presets (Datapath, Control path, Registers only…) |
+| **Code jump** | Right-click any box or net to open the exact `file:line` it came from, in the editor group to the right of the drawing |
+| **Requirement jump** | Right-click to open the brief the design was asked for, rendered in the editor with the quoted sentence highlighted — found by the sentence, never by stored coordinates |
+| **Hand editing that survives** | Move boxes and frames, resize, bend wires, cut a link, draw one the code lacks; all of it lives under `layout` and re-extraction leaves it alone |
+| **Open goals** | A link the RTL has no net for is drawn dashed and listed conclusion-first ("Drive CNT_FF:D — nothing does yet"), so the sketch can run ahead of the code |
+| **State machines** | `*.rtlgraph-fsm.json` draws Moore or Mealy as a diagram with the transition table beside it |
+| **Export** | SVG / PNG / PDF of exactly what is on screen, and XLSX of the tables behind it — all written without a dependency |
+| **Validator** | Schema, widths, ports, unreachable nets, missing `meaning`, and every `origin` checked against the Verilog itself |
+| **Agent-friendly** | `.agent/RTLGRAPH_SPEC.md` plus five ready-to-paste prompts, one per kind of job |
+
+---
+
+## Agent / AI Editing
+
+> **Before pointing an agent at a project, run `RTLGraph: Copy Agent Spec to Workspace` once** —
+> right-click the folder in the Explorer (or run it from the Command Palette). It writes, into that
+> folder and nowhere else:
+>
+> ```
+> .agent/RTLGRAPH_SPEC.md        how to turn RTL into *.rtlgraph.json (and how to write RTL)
+> .agent/ENVIRONMENT.md          which simulators and tools this machine has
+> .agent/rtlgraph-validate.mjs   the validator the agent runs on what it wrote
+> .prompt/rtlgraph/{korean,english}.md     existing RTL → RTLGraph
+> .prompt/assignment/{korean,english}.md   the same, for a skeleton that may not be touched
+> .prompt/rtl/{korean,english}.md          spec → RTL in the three-layer layout, then RTLGraph
+> .prompt/refactor/{korean,english}.md     existing RTL → restructured RTL, then RTLGraph
+> .prompt/spec/{korean,english}.md         an idea → SPEC.md
+> ```
+>
+> **Which prompt.** `rtlgraph` and `assignment` both leave the code exactly as it is; they differ in
+> where the JSON goes. `rtlgraph` builds the contract layout (a folder per component) — use it on your
+> own projects. `assignment` creates no folder: each JSON sits beside the module it describes
+> (`demo/hw`), or set `RTLGRAPH_FOLDER` in the prompt and they all go in one folder of their own
+> (`demo/lab`, code left in `src/`). `refactor` is the only one that restructures code, and it is a
+> separate task on purpose. `RTLGraph: Copy Prompt Path` puts the path of whichever branch you want on
+> the clipboard.
+
+Key rules the spec holds the agent to:
+
+- Every node and net carries `origin` (`file`, 1-based `line`) — **the validator reads the line back**, so a guess is caught
+- `meaning` is **required on every control and reset net**: what happens when it is asserted cannot be read off the picture, and the control table and the workbook are built from it
+- A state machine is a file of its own, and every state says what the design is *doing* there, every transition *when* it is taken — in words, with the code's condition kept beside it
+- Where a brief exists, `source.spec` names the document and an element quotes the sentence **verbatim**; a requirement the design does not implement is a diagnostic, not a quote
+- `layout` is the reader's, never the agent's: rewriting the graph leaves the arrangement alone
+
+### Example prompt
+
+After running `RTLGraph: Copy Agent Spec to Workspace` on your project folder, paste this in — the same
+text is written out as `.prompt/rtlgraph/english.md`, so you can hand the agent that path instead.
 
 ```
-RTL folder ──[AI agent + .agent/RTLGRAPH_SPEC.md]──→ *.rtlgraph.json + *.rtlgraph-schematic.json ──[extension]──→ schematic
+PROJECT_FOLDER = <ABSOLUTE PATH TO THE RTL PROJECT>
+
+PROJECT_FOLDER/.agent/RTLGRAPH_SPEC.md and PROJECT_FOLDER/.agent/ENVIRONMENT.md
+are already prepared for you — read both in full.
+
+Read the RTL without changing it, then write the root <top>.rtlgraph.json and
+one *.rtlgraph-schematic.json per component, following the spec exactly.
+Every node and net must carry the file and line it came from.
+
+Run PROJECT_FOLDER/.agent/rtlgraph-validate.mjs on the result and fix what it
+reports, until it is clean. Tell me when done.
 ```
 
-## Try it
+### An assignment with a PDF brief
 
-1. Build once:
-   ```bash
-   npm install
-   npm run check        # typecheck + tests; also builds the extension bundles
-   ```
-2. Open this repository in VS Code and press **F5** (**Run RTLGraph**). An *Extension Development
-   Host* window opens on `demo/`.
-3. In that window open `acc/acc_top.rtlgraph.json`: the root appears with its one main component
-   `acc` unfolded as a frame around its schematic. The filter is two buttons deep — **Comb** switches
-   the combinational half on and opens **Data / Control**, **Seq** switches the registers on and opens
-   **Registers / FSM** — or pick a preset. Drag to pan, scroll to zoom.
-4. **Edit** arranges the picture by hand and writes it under `layout` in the file, nothing else:
-   drag a box or a component frame to move it, a frame corner to resize it, a straight run of a wire
-   sideways, right-click a wire to turn its corner the other way round, and Delete to cut a link.
-   Every pin carries a dot — drag from one onto another pin, or anywhere over the box you want, and
-   the link is drawn to the nearest pin that can take it; while you drag, only those pins stay lit.
-   Drawing is also how a cut link comes back. A link the RTL has no net for is drawn amber and dashed, and the panel on the right
-   lists it (with everything else the sketch owes the code) the way a proof assistant lists its goals.
-5. Components: click a box or frame to select it, then **Fold** / **Unfold** asks whether to act on it
-   only or on everything inside it too; with nothing selected (`Esc`) they act on the whole hierarchy.
-   Double-click a box to toggle just that one. **Right-click any box** to ask where to go: into a
-   component's own schematic, or straight to the line of Verilog it came from (a net's right-click
-   menu opens its line too), or — where the file says which sentence of the brief a box exists for —
-   **the requirement itself**: `demo/pwm` cites `spec/pwm_brief.pdf`, and the workbook export lists
-   every requirement beside what carries it. Code opens *beside* the drawing — a group is made to its right the
-   first time and reused after that, so the schematic stays on the left while you read, and the
-   drawing refits itself whenever the room it has changes — a tab opening beside it, or closing again.
-6. `Ctrl+Shift+P` → type `RTLGraph`:
+Assignments are what the `assignment` prompt exists for: the skeleton's folders and names may not be
+touched, so nothing is moved and each JSON is written beside the module it describes. Give the agent
+the handout as well and it fills in `source.spec` plus a `spec: { quote, page }` on the elements the
+document actually talks about. Right-clicking one of those opens the PDF beside the drawing with that
+sentence highlighted; any other box in the same design offers the brief itself. `demo/hw` is the worked
+example, handout included.
 
-   | Command | What it does |
-   |---|---|
-   | `RTLGraph: Copy Agent Spec to Workspace` | Writes the agent files into a folder (also on folder right-click in the Explorer) |
-   | `RTLGraph: Copy Prompt Path` | Pick a branch of work; its `.prompt/…md` path goes to the clipboard, ready to paste into an agent |
-   | `RTLGraph: Export Schematic (SVG / PNG / PDF)` | Exports the current view (also the **Export…** toolbar button) |
-   | `RTLGraph: Fold Components` / `Unfold Components` | The selected component (only it, or with everything inside), else all |
-   | `RTLGraph: Open Component Schematic` | Opens the selected component's own schematic file |
-   | `RTLGraph: Open the Code of the Selected Box` | Jumps to the `origin` line the box came from, in the editor group right of the schematic |
-   | `RTLGraph: Open the Requirement of the Selected Box` | Opens the document the design was asked for, and says the page and the sentence |
-   | `RTLGraph: Set View Preset` | All · Datapath · Control path · Combinational only · Registers only · State registers only |
-   | `RTLGraph: Fit View` | Fit the schematic to the window |
+---
 
-### Export
+## Mouse & Keyboard
+
+### Canvas
+
+| | |
+|---|---|
+| Drag | Pan |
+| Scroll | Zoom |
+| Click | Select a box, a frame or a wire |
+| Double-click a component | Fold or unfold just that one |
+| Right-click a box or net | Where to go: the schematic inside it, its code, its requirement |
+| `Esc` | Deselect |
+
+### Edit mode
+
+| | |
+|---|---|
+| Drag a box or frame | Move it |
+| Drag a frame's corner | Resize it |
+| Drag a straight run of a wire | Shift that run sideways |
+| Drag from a pin | Draw a link — drop it on a pin, or anywhere over the target box and it snaps to the nearest pin that can take it; while you drag, only the pins that can take it stay lit |
+| Right-click a wire | Turn its corner the other way round |
+| `Delete` | Cut the selected link (drawing it again puts it back) |
+
+Everything here is written under `layout` in the file, and nothing else is.
+
+---
+
+## Installation
+
+RTLGraph is not on the Marketplace yet. To run it from source:
+
+```bash
+git clone https://github.com/Jeong-jin-Han/RTLGraph
+cd RTLGraph
+npm install
+npm run check      # typecheck + tests; also builds the extension bundles
+```
+
+Open the repository in VS Code and press **F5** (**Run RTLGraph**). An *Extension Development Host*
+opens on `demo/`; try `acc/acc_top.rtlgraph.json` or `pwm/pwm_top.rtlgraph.json`.
+
+Node ≥ 22.18 is required — the packages are TypeScript sources, run directly.
+
+---
+
+## Files
+
+One root per project and one schematic per component, each next to the code it describes:
+
+```
+<project>/
+├── <top>.rtlgraph.json                       root: the top's ports and component boxes, no logic
+└── <main>/                                   the main component — a folder even when it is the only one
+    ├── comb/  seq/  tb/
+    ├── <main>.rtlgraph-schematic.json        its schematic; a component inside it is a box that refers to…
+    ├── <main>.rtlgraph-fsm.json              …and, if it runs a machine, the machine
+    └── <child>/<child>.rtlgraph-schematic.json   …its own schematic, and so on
+```
+
+The **FSM** and **Schematic** buttons walk between a component and its machine. Fold state is
+remembered per file by VS Code, never written into the JSON.
+
+The shape of a schematic file:
+
+```jsonc
+{
+  "version": "0.1.0", "kind": "component", "title": "cnt",
+  "source": { "root": ".", "spec": "../spec/brief.pdf", "files": ["seq/cnt_top.v"], "top": "cnt_top" },
+  "signals": {
+    "CNT_EN": { "width": 1, "flow": "control", "driver": "control_path:CNT_EN", "sinks": ["CNT_FF:EN"],
+                "meaning": "1=the counter register takes a new value",
+                "origin": { "file": "seq/cnt_top.v", "line": 19 } }
+  },
+  "nodes": {
+    "CNT_FF": { "kind": "reg", "flow": "data", "time": "seq", "module": "DFF",
+                "ports": { "CLK": "in", "RST": "in", "EN": "in", "D": "in", "Q": "out" },
+                "spec": { "quote": "Count up while EN is high.", "page": 1 },
+                "origin": { "file": "seq/cnt_top.v", "line": 22 } }
+  },
+  "layout": { "nodes": { "CNT_FF": { "x": 240, "y": 120 } } }   // the reader's, never rewritten
+}
+```
+
+See `.agent/RTLGRAPH_SPEC.md` (or `packages/vscode-ext/assets/agent/RTLGRAPH_SPEC.md`) for the whole
+schema, and `docs/DECISIONS.md` for why each part is the way it is.
+
+---
+
+## Export
 
 **Export…** writes what is on screen — the current filter and fold state, cropped to what is visible —
 next to the graph file:
@@ -69,123 +266,105 @@ acc/.out-acc_top/acc_top.datapath.pdf   vector; papers, reports
 acc/.out-acc_top/acc_top.control.xlsx   the tables behind it; Excel, LibreOffice
 ```
 
-**XLSX** is the drawing read back as the tables it was made from — including, where a brief is
-cited, one tab of requirements against what carries each — the way D02 builds a machine in a
-spreadsheet before any Verilog. A schematic or a root gives one tab of control signals per level
-(what drives each, what reads it, what it means) and one tab per control block's truth table; a
-`*.rtlgraph-fsm.json` gives the machine, its states and every transition. Written without a
-dependency, like the PDF.
+**XLSX** is the drawing read back as the tables it was made from — one tab of control signals per level
+(what drives each, what reads it, what it means), one tab per truth table, and, where a brief is cited,
+one tab of requirements against what carries each. A `*.rtlgraph-fsm.json` gives the machine, its
+states and every transition.
 
-A figure holds the schematic and nothing else: the fold markers stay in the editor, and a root that
-only wraps one main component is left out — the export draws that component, laid out as in its
-frame, without the frame or the doubled port pills.
+A figure holds the schematic and nothing else: fold markers stay in the editor, and a root that only
+wraps one main component is left out. The file name carries the view (`all`, `datapath`, `controlpath`,
+`comb`, `registers`, `fsm`, or the groups spelled out). The folder is the `rtlgraph.export.folder`
+setting, default `.out-${name}` — hidden, like NodeGraph's `.<name>-imgs`.
 
-The file name carries the view (`all`, `datapath`, `controlpath`, `comb`, `registers`, `fsm`, or the
-groups spelled out, e.g. `comb-control.seq-off`).
-The folder is the `rtlgraph.export.folder` setting, default `.out-${name}` — hidden, like NodeGraph's
-`.<name>-imgs`; set it to `out-${name}` for a visible folder. PDF text uses the built-in Helvetica font, so non-Latin labels
-(e.g. Hangul) show as `?` there — you are warned, and SVG/PNG show them correctly.
+PDF text uses the built-in Helvetica font, so non-Latin labels (e.g. Hangul) come out as `?` there —
+you are warned, and SVG/PNG show them correctly.
 
-Without VS Code: `node packages/rtl-render/src/cli.ts <graph> datapath --unfold --format pdf -o out.pdf`
-(add `--keep-root` to draw the wrapper root as the editor does).
+Without VS Code:
 
-### Files
-
-One root per project and one schematic per component, each next to the code it describes:
-
-```
-<project>/
-├── <top>.rtlgraph.json                       root: the top's ports and component boxes, no logic
-└── <main>/                                   the main component — a folder even when it is the only one
-    ├── comb/  seq/  tb/
-    ├── <main>.rtlgraph-schematic.json        its schematic; a component inside it is a box that refers to…
-    └── <child>/<child>.rtlgraph-schematic.json   …its own schematic, and so on
+```bash
+node packages/rtl-render/src/cli.ts <graph> datapath --unfold --format pdf -o out.pdf
+node packages/vscode-ext/dist/agent/rtlgraph-validate.mjs <graph>
 ```
 
-A component with a state machine also gets `<name>.rtlgraph-fsm.json` beside its schematic: it opens
-as a state diagram with the meaning of each state and the transition table next to it, and the **FSM**
-and **Schematic** buttons walk between the two. `demo/pwm` is the worked example — three levels of
-components and three machines.
+---
 
-Every file opens in the editor. The fold state is remembered per file by VS Code, never written to
-the JSON.
+## Commands
 
-### Your own RTL
+`Ctrl+Shift+P` → type `RTLGraph`:
 
-1. In the Extension Development Host, **File → Open Folder…** your RTL project.
-2. Right-click the project folder → **RTLGraph: Copy Agent Spec to Workspace** (or run it from
-   `Ctrl+Shift+P`). It writes:
-   ```
-   .agent/RTLGRAPH_SPEC.md          how to turn RTL into *.rtlgraph.json (and how to write RTL)
-   .agent/ENVIRONMENT.md            which simulators / tools this machine has
-   .agent/rtlgraph-validate.mjs     validator the agent runs on what it wrote
-   .prompt/rtlgraph/korean.md       existing RTL → RTLGraph   (english.md too)
-   .prompt/assignment/korean.md     the same, for a skeleton that may not be touched at all
-   .prompt/rtl/korean.md            spec → RTL in the three-layer layout, then RTLGraph (english.md too)
-   .prompt/refactor/korean.md       existing RTL → restructured RTL, then RTLGraph
-   .prompt/spec/korean.md           an idea → SPEC.md
-   ```
+| Command | What it does |
+|---|---|
+| `RTLGraph: Copy Agent Spec to Workspace` | Writes the agent files into a folder (also on folder right-click in the Explorer) |
+| `RTLGraph: Copy Prompt Path` | Pick a branch of work; its `.prompt/…md` path goes to the clipboard |
+| `RTLGraph: Export Schematic (SVG / PNG / PDF)` | Exports the current view (also the **Export…** toolbar button) |
+| `RTLGraph: Fold Components` / `Unfold Components` | The selected component (only it, or with everything inside), else all |
+| `RTLGraph: Open Component Schematic` | Opens the selected component's own schematic file |
+| `RTLGraph: Open the Code of the Selected Box` | Jumps to the `origin` line, in the editor group right of the schematic |
+| `RTLGraph: Open the Requirement of the Selected Box` | Opens the brief in the reader, with the quoted sentence highlighted |
+| `RTLGraph: Open State Machine` / `Open the Component Schematic` | Walks between a component and its machine |
+| `RTLGraph: Open Root File` | Back out to the root of the hierarchy |
+| `RTLGraph: Set View Preset` | All · Datapath · Control path · Combinational only · Registers only · State registers only |
+| `RTLGraph: Fit View` | Fit the schematic to the window |
 
-   **Which one.** `rtlgraph` and `assignment` both draw code you keep as it is; they differ in where
-   the files go. `rtlgraph` builds the contract layout (a folder per component) — use it on your own
-   projects. `assignment` touches nothing: by default each JSON goes beside the module it describes
-   (`demo/hw`), or set `RTLGRAPH_FOLDER` in the prompt and they are all kept in one folder of their
-   own (`demo/lab`, where the code stays in `src/`). `refactor` is the one that restructures the
-   code, and it is a separate task on purpose. `RTLGraph: Copy Prompt Path` hands you the path of
-   whichever branch you want.
-3. Open `.prompt/rtlgraph/korean.md`, fill in the project path, and paste it into your agent (Claude
-   Code, Codex, Cursor…). The agent reads the code without changing it, writes the root and one
-   schematic per component, and validates them.
-4. Open the root. It redraws by itself whenever the agent rewrites any of the files.
+---
 
-Code does not have to follow the three-layer contract: `assign` and `always` logic is inferred into
-the same symbols, and every inference or contract violation is listed under the schematic.
-
-## Layout
+## Repository layout
 
 | Path | What |
 |---|---|
 | `packages/rtl-ir` | IR types, validator, source cross-check, layout merge, view filter — no VS Code, no dependencies |
 | `packages/rtl-registry` | Symbols for the `base/` primitives, width and port checks |
 | `packages/rtl-layout` | Row-based placement and orthogonal wire routing |
-| `packages/rtl-render` | IR → SVG, shared by the editor and HTML export |
+| `packages/rtl-render` | IR → SVG and PDF, shared by the editor and the CLI |
 | `packages/rtl-sheet` | IR → XLSX: control signals, truth tables, a machine's transitions |
-| `packages/vscode-ext` | The extension: custom editor, commands, agent spec and prompts (`assets/`) |
-| `demo/acc` | D01-2 accumulator: root, main component `acc/` with its schematic, golden SVGs |
+| `packages/rtl-pdf` | Finding a quoted sentence on a page of a PDF, and the boxes to paint over it |
+| `packages/vscode-ext` | The extension: custom editor, requirement reader, commands, agent spec and prompts |
+| `demo/acc` | D01-2 accumulator: root, main component `acc/`, golden SVGs |
 | `demo/base` | Shared primitives (`DFF INC ADD SUB MUX2 CMP_EQ`) |
-| `demo/pwm` | D02-2 PWM controller: three levels of components and three state machines |
-| `demo/hw` | An assignment skeleton: one flat folder, RTLGraph files beside the code |
+| `demo/pwm` | D02-2 PWM controller: three levels, three state machines, a one-page brief |
+| `demo/hw` | An assignment skeleton: one flat folder, JSON beside the code, handout included |
 | `demo/lab` | The same idea, files kept together: code in `src/`, every JSON in `rtlgraph/` |
-| `packages/rtl-sheet` (tests) | The workbook: control signals, truth tables, machines, requirements |
-| `docs/DECISIONS.md` | Schema, layout, filter, editor and agent decisions |
+| `docs/DECISIONS.md` | Schema, layout, filter, editor and agent decisions, with the reason for each |
+| `tools/logo.py` | Makes the icon and banner from the drawn logo (run by hand; the PNGs are committed) |
 
 Only `packages/vscode-ext` imports `vscode`.
 
-## Develop
+---
 
-Node ≥ 22.18 runs the TypeScript sources and tests directly.
+## Develop
 
 ```bash
 npm run check    # tsc typecheck + node --test
-npm run golden   # regenerate the golden SVGs under demo/acc after an intended visual change
+npm run golden   # regenerate the golden SVGs after an intended visual change
 
 # end-to-end in a real VS Code with a throwaway profile, off screen
 VSCODE_EXECUTABLE=/usr/share/code/code xvfb-run -a npm run e2e
-
-# render or validate any graph without VS Code
-node packages/rtl-render/src/cli.ts demo/acc/acc_top.rtlgraph.json datapath --unfold > datapath.svg
-node packages/vscode-ext/dist/agent/rtlgraph-validate.mjs demo/acc/acc_top.rtlgraph.json
 ```
 
-## Status
+Every demo also simulates, and every demo project validates with no errors and no warnings — both are
+checked by the test suite.
 
-| Milestone | Scope | State |
-|---|---|---|
-| M0 | `rtl-ir` + hand-written golden IR + registry | done |
-| M1 | `rtl-layout` + `rtl-render` (IR → SVG, no VS Code) | done — `datapath` preset matches slide p.31 |
-| M2 | Custom editor + the two-level filter | done — verified in a real VS Code |
-| M5 | Agent spec, validator, prompts (existing RTL → RTLGraph first) | done — pulled ahead of M3/M4 |
-| M6.5 | Component hierarchy: root + schematic files, frames, fold / unfold | done — pulled ahead |
-| — | FSM files (`*.rtlgraph-fsm.json`): diagram + table, Moore / Mealy | done — `demo/pwm` |
-| — | Code jump (node or net → `file:line`) | done — right-click a box |
-| M3 | Manual placement + `layout` merge on re-extraction | planned |
+---
+
+## Tech Stack
+
+- **TypeScript, run directly** by Node ≥ 22.18's type stripping — no build step for the packages, `node --test` for the tests
+- **esbuild** for the two webview bundles and the extension-host bundle
+- **No runtime dependencies.** The SVG, PDF and XLSX writers are all ours — a PDF is a Scene of text and lines, an XLSX is a stored zip of XML parts
+- **pdf.js** (build time only, bundled) for the requirement reader; the sentence itself is located by our own matcher in `packages/rtl-pdf`
+- **Verified against real tools**: iverilog simulates every demo, LibreOffice and `pdftotext` read the exports back, and the end-to-end suite drives a real VS Code
+
+---
+
+## Privacy
+
+Everything runs locally. The extension makes no network requests: it reads the JSON, the Verilog beside
+it, and the documents you point it at. What an AI agent does with your code is between you and that
+agent — RTLGraph only reads the files it wrote.
+
+---
+
+## License
+
+MIT — the sibling of [NodeGraph](https://github.com/Jeong-jin-Han/NodeGraph), with Verilog instead of
+papers as input.

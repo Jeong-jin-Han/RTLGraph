@@ -27,6 +27,31 @@
   ],
   "main": "./dist/extension.cjs",
   "contributes": {
+    "languages": [
+      {
+        "id": "rtlgraph",
+        "aliases": [
+          "RTLGraph"
+        ],
+        "filenamePatterns": [
+          "*.rtlgraph.json",
+          "*.rtlgraph-schematic.json",
+          "*.rtlgraph-fsm.json"
+        ],
+        "icon": {
+          "light": "resources/icon.png",
+          "dark": "resources/icon.png"
+        },
+        "configuration": "resources/language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "rtlgraph",
+        "scopeName": "source.json.rtlgraph",
+        "path": "resources/rtlgraph.tmLanguage.json"
+      }
+    ],
     "customEditors": [
       {
         "viewType": "rtlgraph.editor",

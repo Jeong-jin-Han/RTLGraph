@@ -1,0 +1,6 @@
+{
+  "$comment": "RTLGraph files are JSON. The only reason they have a language of their own is the file icon, so the grammar is JSON's, unchanged.",
+  "scopeName": "source.json.rtlgraph",
+  "name": "RTLGraph",
+  "patterns": [{ "include": "source.json" }]
+}
