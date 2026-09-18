@@ -272,6 +272,24 @@ exactly the ports (and directions) of the schematic it points at (`hierarchy-por
 again, until it reports `0 errors`. `undriven` warnings that reflect real unconnected pins in the code stay,
 with a matching diagnostic in the file.
 
+### Step 8b — What the validator will tell you
+The codes you are most likely to see, and what each means:
+
+| Code | What it is saying |
+|---|---|
+| `schema`, `node-id`, `endpoint` | the shape of the file is wrong — a missing field, an id that is not a `@port`/`node:pin` |
+| `undriven`, `multi-driven` | a net with no driver, or a pin driven twice |
+| `meaning-missing` | a `control` or `reset` net does not say what it means when asserted |
+| `origin-mismatch` | the line named does not mention that element (a name you invented may name anything it is wired to) |
+| `registry-*`, `width` | a primitive's ports or widths do not match `base/` |
+| `hierarchy-missing`, `hierarchy-ports` | a `ref` that resolves nowhere, or a box whose ports differ from its schematic |
+| `fsm-missing`, `fsm-state`, `fsm-when`, `fsm-style`… | the machine file is missing, or its states and transitions do not hold together |
+| `spec-quote`, `spec-file` | a `spec` with nothing quoted, or naming no document |
+| `system-logic`, `system-empty` | logic in the root, or a root with no component |
+
+Fix every error. A warning is either a real finding about the code — leave it, with a
+matching `diagnostics` entry — or a mistake in what you wrote.
+
 ### Step 9 — Re-extraction
 For every file that already exists: keep its `layout`, `view` and `created` untouched, regenerate
 everything else, and update `modified`. Because node ids are names from the code, the user's
