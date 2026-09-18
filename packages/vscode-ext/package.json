@@ -80,6 +80,10 @@
         "title": "RTLGraph: Copy Prompt Path"
       },
       {
+        "command": "rtlgraph.markFiles",
+        "title": "RTLGraph: Mark RTLGraph Files in the Explorer"
+      },
+      {
         "command": "rtlgraph.export",
         "title": "RTLGraph: Export Schematic (SVG / PNG / PDF)"
       },

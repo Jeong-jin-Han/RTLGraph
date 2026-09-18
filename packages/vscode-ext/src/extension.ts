@@ -7,6 +7,7 @@ import { exportSchematic } from './export.ts'
 import { EXPORT_FORMATS, viewName, type ExportFormat } from './exportFiles.ts'
 import { collectHierarchyFiles } from './hierarchyFiles.ts'
 import { openBeside, openCodeBeside } from './openCode.ts'
+import { MATERIAL_ICON, withRtlgraphFiles } from './explorerIcons.ts'
 import { openRequirement } from './specView.ts'
 import { fsmFileName, graphFileKind, graphName, hierarchyEntries, loadHierarchy, schematicFileName } from '@rtlgraph/ir'
 import type { FoldAction, FoldScope } from './protocol.ts'
@@ -299,6 +300,31 @@ export function activate(context: vscode.ExtensionContext): void {
     // to read, not opened here.
     // Optional argument { kind?, folder? }: the branch to take without asking, and
     // where to look when the prompts are not in an open folder.
+    // The Explorer's icon belongs to the reader's icon theme; this offers to tell
+    // the common one about RTLGraph's files. See explorerIcons.ts.
+    vscode.commands.registerCommand('rtlgraph.markFiles', async () => {
+      const theme = vscode.workspace.getConfiguration('workbench').get<string>('iconTheme')
+      if (theme !== 'material-icon-theme') {
+        void vscode.window.showInformationMessage(
+          `RTLGraph: the Explorer's icons come from your file icon theme (${theme ?? 'none'}), and RTLGraph's own mark is already on its tabs. ` +
+          'This command can only teach Material Icon Theme about *.rtlgraph.json.')
+        return undefined
+      }
+      const settings = vscode.workspace.getConfiguration('material-icon-theme')
+      const wanted = withRtlgraphFiles(settings.get<Record<string, string>>('files.associations'))
+      if (!wanted) {
+        void vscode.window.showInformationMessage('RTLGraph: Material Icon Theme already marks RTLGraph files.')
+        return undefined
+      }
+      const yes = 'Add it'
+      const answer = await vscode.window.showInformationMessage(
+        `RTLGraph: mark *.rtlgraph.json in the Explorer with Material's "${MATERIAL_ICON}" icon? This changes your settings.`,
+        yes, 'Cancel')
+      if (answer !== yes) return undefined
+      await settings.update('files.associations', wanted, vscode.ConfigurationTarget.Global)
+      return wanted
+    }),
+
     vscode.commands.registerCommand('rtlgraph.copyPromptPath', async (args?: unknown) => {
       const given = (typeof args === 'object' && args !== null ? args : { kind: args }) as { kind?: unknown; folder?: unknown }
       const kind = typeof given.kind === 'string' ? given.kind : undefined
