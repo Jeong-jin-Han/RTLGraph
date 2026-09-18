@@ -4,3 +4,7 @@ dist/
 *.vsix
 .vscode-test/
 .out-*/
+
+# A real handed-out assignment, kept out of the repository: the handout is
+# course material. It sits in demo/ so it can be opened like any other demo.
+demo/uart-p01/

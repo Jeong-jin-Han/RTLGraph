@@ -27,7 +27,13 @@ const pages = async (path: string) => {
   return out
 }
 
-// Every { quote, page } in the demos, with the document it belongs to.
+// The demos the repository ships. A real handed-out assignment can be dropped
+// into demo/ as well (it is git-ignored, since the handout is course material),
+// and it is deliberately not part of this suite: what it quotes is checked by
+// hand when it is put there, not on every run of the tests.
+const SHIPPED = ['acc', 'base', 'hw', 'lab', 'pwm', 'stopwatch', 'sys', 'updown']
+
+// Every { quote, page } in those demos, with the document it belongs to.
 function quoted(): { where: string; file: string; quote: string; page?: number }[] {
   const found: { where: string; file: string; quote: string; page?: number }[] = []
   const walk = (dir: string) => {
@@ -47,7 +53,7 @@ function quoted(): { where: string; file: string; quote: string; page?: number }
       }
     }
   }
-  walk(DEMO)
+  for (const project of SHIPPED) walk(join(DEMO, project))
   return found
 }
 

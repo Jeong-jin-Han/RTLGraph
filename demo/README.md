@@ -105,3 +105,17 @@ says about itself (an inferred node, a pin left open, a contract it does not fol
 `.out-*` folders are exports written by the extension (the `rtlgraph.export.folder`
 setting) and are ignored. Delete them freely; they are regenerated on the next
 export, and an old one can show a drawing several changes out of date.
+
+## A real assignment, kept out of the repository
+
+Course material cannot be committed, so a handed-out assignment is dropped in as
+`demo/uart-p01/` (the handout PDF, the skeleton as unzipped, and the RTLGraph
+files written for it) and that path is git-ignored. It is the only way to check
+the parts that no written-for-the-repo demo can exercise: an eleven-page
+PowerPoint handout, a skeleton whose folders may not be touched, and quotes that
+the deck spells its own way — `serial_in` in bold mid-sentence, an arrow drawn
+between two logic levels, a name set in the equation editor's italics.
+
+The last run of it: the validator clean (0 errors), and right-clicking three
+boxes opened the handout at pages 2, 3 and 7 with the quoted sentence
+highlighted; a box that quotes nothing opened the handout itself.
