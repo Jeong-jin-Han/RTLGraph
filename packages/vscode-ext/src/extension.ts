@@ -6,7 +6,7 @@ import { copyAgentSpec } from './agent/copyAgentSpec.ts'
 import { exportSchematic } from './export.ts'
 import { EXPORT_FORMATS, viewName, type ExportFormat } from './exportFiles.ts'
 import { collectHierarchyFiles } from './hierarchyFiles.ts'
-import { openCodeBeside } from './openCode.ts'
+import { openBeside, openCodeBeside } from './openCode.ts'
 import { fsmFileName, graphFileKind, graphName, hierarchyEntries, loadHierarchy, schematicFileName } from '@rtlgraph/ir'
 import type { FoldAction, FoldScope } from './protocol.ts'
 
@@ -334,6 +334,24 @@ export function activate(context: vscode.ExtensionContext): void {
       }
       await openCodeBeside(at.uri, at.line, RtlGraphEditorProvider.activeDocument())
       return `${at.uri.fsPath}:${at.line}`
+    }),
+
+    // The document the design was asked for, at the requirement this box is here
+    // for. Optional argument: the node id; without it, the selected box.
+    vscode.commands.registerCommand('rtlgraph.openSpec', async (id?: unknown) => {
+      const target = typeof id === 'string' ? id : RtlGraphEditorProvider.activeRenderState()?.selected
+      if (target === undefined) {
+        void vscode.window.showWarningMessage('RTLGraph: select a box first.')
+        return undefined
+      }
+      const at = RtlGraphEditorProvider.activeSpec({ node: target })
+      if (!at) {
+        void vscode.window.showWarningMessage(`RTLGraph: ${target} names no requirement.`)
+        return undefined
+      }
+      await openBeside(at.uri, RtlGraphEditorProvider.activeDocument())
+      void vscode.window.showInformationMessage(`RTLGraph: page ${at.page ?? '?'} — "${at.quote}"`)
+      return `${at.uri.fsPath}#page=${at.page ?? ''}`
     }),
 
     vscode.commands.registerCommand('rtlgraph.fitView', () => RtlGraphEditorProvider.postToActive({ type: 'fitView' })),

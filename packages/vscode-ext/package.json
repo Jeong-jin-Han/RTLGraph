@@ -82,6 +82,10 @@
         "title": "RTLGraph: Open the Code of the Selected Box"
       },
       {
+        "command": "rtlgraph.openSpec",
+        "title": "RTLGraph: Open the Requirement of the Selected Box"
+      },
+      {
         "command": "rtlgraph.fitView",
         "title": "RTLGraph: Fit View"
       },

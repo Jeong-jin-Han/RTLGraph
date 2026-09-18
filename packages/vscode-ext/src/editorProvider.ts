@@ -59,6 +59,10 @@ export class RtlGraphEditorProvider implements vscode.CustomTextEditorProvider {
     return RtlGraphEditorProvider.active?.sourceAt(of)
   }
 
+  static activeSpec(of: { node?: string; signal?: string }): { uri: vscode.Uri; page?: number; quote: string } | undefined {
+    return RtlGraphEditorProvider.active?.specAt(of)
+  }
+
   static activeDocument(): vscode.TextDocument | undefined {
     return RtlGraphEditorProvider.active?.document
   }

@@ -25,6 +25,9 @@ on its own, and every root validates with 0 errors and 0 warnings.
 - **`sys`** — three levels in `packages/rtl-layout/test/hierarchy.test.ts` and
   `packages/rtl-render/test/render.test.ts` (`sys_top.svg`), plus the nested
   fold/unfold steps of the end-to-end test.
+- **`pwm`'s brief** — `packages/rtl-ir/test/demo-hierarchy.test.ts` resolves each
+  `spec` to the file it names and checks the sentence is in it; the end-to-end test
+  opens it beside the drawing with `RTLGraph: Open the Requirement…`.
 - **`pwm`** — also a render golden (`pwm_top.svg`): frames three deep, a state
   register in two of them, and operations the registry has no symbol for, which
   is the drawing most likely to shift under a layout change. It is what the
@@ -32,9 +35,6 @@ on its own, and every root validates with 0 errors and 0 warnings.
 - **`pwm`** — the state machines: `packages/rtl-ir/test/demo-hierarchy.test.ts`
   validates all three, and `packages/rtl-layout/test/fsm.test.ts` checks each
   diagram fits its page with no label over a state box.
-- **`pwm`'s brief** — `packages/rtl-ir/test/demo-hierarchy.test.ts` checks that every
-  sentence a demo quotes is really in the document it names, so a `spec` link cannot
-  rot into a paraphrase.
 - **`lab`** — the folder-of-its-own placement, and the code jump across it:
   `originOf` has to climb out of `rtlgraph/` to reach `../src/shift_reg.v`.
 - **`hw`** — the flat placement: `packages/rtl-ir/test/demo-hierarchy.test.ts`

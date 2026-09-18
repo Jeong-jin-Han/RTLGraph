@@ -48,6 +48,7 @@ RTL folder ──[AI agent + .agent/RTLGRAPH_SPEC.md]──→ *.rtlgraph.json +
    | `RTLGraph: Fold Components` / `Unfold Components` | The selected component (only it, or with everything inside), else all |
    | `RTLGraph: Open Component Schematic` | Opens the selected component's own schematic file |
    | `RTLGraph: Open the Code of the Selected Box` | Jumps to the `origin` line the box came from, in the editor group right of the schematic |
+   | `RTLGraph: Open the Requirement of the Selected Box` | Opens the document the design was asked for, and says the page and the sentence |
    | `RTLGraph: Set View Preset` | All · Datapath · Control path · Combinational only · Registers only · State registers only |
    | `RTLGraph: Fit View` | Fit the schematic to the window |
 

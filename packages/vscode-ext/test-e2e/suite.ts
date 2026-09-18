@@ -195,8 +195,23 @@ export async function run(): Promise<void> {
   assert.equal(deepCode, `${join(dirname(dirname(graphFile)), 'lab/src/shift_reg.v')}:11`)
   log('Open Code climbs out of rtlgraph/ to ../src for a box two levels down')
 
+  // ── the requirement a box is there for ──
+  const demoDir = dirname(dirname(graphFile))
+  const pwmRoot = vscode.Uri.file(join(demoDir, 'pwm/pwm_top.rtlgraph.json'))
+  await vscode.commands.executeCommand('vscode.open', pwmRoot)
+  await until('the pwm root drawn', renderState)
+  const groupsBefore = vscode.window.tabGroups.all.length
+  const brief = await vscode.commands.executeCommand<string>('rtlgraph.openSpec', 'pwm')
+  assert.equal(brief, `${join(demoDir, 'pwm/spec/pwm_brief.pdf')}#page=1`)
+  const briefTab = await until('the brief to open', () =>
+    vscode.window.tabGroups.all.flatMap(group => group.tabs.map(tab => ({ group, tab })))
+      .find(({ tab }) => tab.label.endsWith('pwm_brief.pdf')))
+  assert.ok(vscode.window.tabGroups.all.length >= groupsBefore, 'it opened beside, not over the drawing')
+  assert.notEqual(briefTab.group.viewColumn, vscode.window.tabGroups.activeTabGroup.viewColumn === 1 ? 0 : 1)
+  log('Open Requirement opens the brief the design was asked for, beside the drawing')
+
   // ── state machines: demo/pwm, three levels with a machine at two of them ──
-  const demo = dirname(dirname(graphFile))
+  const demo = demoDir
   const pwmSchematic = vscode.Uri.file(join(demo, 'pwm/pwm/pwm.rtlgraph-schematic.json'))
   await vscode.commands.executeCommand('vscode.open', pwmSchematic)
   await until('the pwm schematic', renderState)

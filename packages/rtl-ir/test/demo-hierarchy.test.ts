@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import {
-  checkSources, hierarchyEntries, loadHierarchy, originOf, validateComponentGraph, validateFsmGraph,
+  checkSources, hierarchyEntries, loadHierarchy, originOf, specOf, validateComponentGraph, validateFsmGraph,
 } from '../src/index.ts'
 
 // Every demo project that has RTLGraph files: the root, and each component
@@ -166,6 +166,20 @@ test('every demo passes the validator clean: no errors and no warnings', () => {
       assert.deepEqual(found, [], `${project}/${entry.path}: ${found.map(d => `${d.code} ${d.signal ?? d.node ?? ''}`).join(', ')}`)
     }
   }
+})
+
+test('a requirement resolves to the document, from whichever level cites it', () => {
+  const pwm = loadHierarchy('pwm_top.rtlgraph.json', reader('pwm')).root!
+  // The root sits beside spec/, the schematic one folder in — both land on the file.
+  assert.deepEqual(specOf(pwm, { node: 'pwm' }), {
+    path: 'spec/pwm_brief.pdf',
+    page: 1,
+    quote: 'Generate a square wave with a configurable duty cycle.',
+  })
+  assert.deepEqual(specOf(pwm, { node: 'pwm/u_pulse' })?.path, 'spec/pwm_brief.pdf')
+  assert.equal(specOf(pwm, { signal: 'RDY' })?.quote, 'RDY : Active-low when the PWM core is activated')
+  assert.equal(specOf(pwm, { node: 'pwm/PERIOD_FF' }), undefined, 'a box that cites nothing has nothing to open')
+  assert.equal(specOf(pwm, { node: 'nowhere' }), undefined)
 })
 
 test('every requirement a demo quotes is really in the document it names', () => {
