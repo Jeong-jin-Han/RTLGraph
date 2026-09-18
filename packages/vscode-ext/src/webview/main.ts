@@ -710,6 +710,21 @@ const pinRefAt = (target: EventTarget | null) =>
   (target instanceof Element ? (target.closest('.pin') as SVGElement | null)?.dataset.ref : undefined) ?? undefined
 const pinRefUnder = (x: number, y: number) => pinRefAt(document.elementFromPoint(x, y))
 
+// What to call a box in a menu: the instance path says where it is, but the name
+// is what the reader sees on it.
+const shortName = (id: string) => displayName(id.split('/').pop() ?? id)
+
+// The requirement an element is there for, if the file names one. The menu only
+// offers what is there.
+function specOf(node?: string, signal?: string): { quote: string } | undefined {
+  const id = node ?? signal
+  if (!root || id === undefined) return undefined
+  const parts = id.split('/')
+  const own = parts.pop()!
+  const entry = hierarchyEntries(root).find(e => e.instance === parts.join('/'))
+  return node !== undefined ? entry?.graph.nodes[own]?.spec : entry?.graph.signals[own]?.spec
+}
+
 // Only a pin facing the other way can take the link being drawn; everything else
 // is dimmed while the hand moves, which is the answer to "why does nothing
 // happen when I let go here".
@@ -906,13 +921,13 @@ canvas.addEventListener('contextmenu', event => {
     event.preventDefault()
     const instance = componentAt(event.target)
     const open = instance !== undefined ? [{
-      label: `Open the schematic of ${displayName(instance)}`,
+      label: `Open the schematic of ${shortName(instance)}`,
       run: () => vscode.postMessage({ type: 'command', command: 'rtlgraph.openComponent' }),
     }] : []
     if (instance !== undefined) select(instance)
     showMenu({ x: event.clientX - frame.left, y: event.clientY - frame.top }, [
       ...open,
-      { label: `Open the code of ${displayName(id)}`, run: () => vscode.postMessage({ type: 'openSource', node: id }) },
+      { label: `Open the code of ${shortName(id)}`, run: () => vscode.postMessage({ type: 'openSource', node: id }) },
       ...(specOf(id) ? [{ label: 'Open the requirement it is here for', run: () => vscode.postMessage({ type: 'openSpec', node: id }) }] : []),
     ])
     return
@@ -920,7 +935,7 @@ canvas.addEventListener('contextmenu', event => {
   if (onWire !== undefined && !editing) {
     event.preventDefault()
     showMenu({ x: event.clientX - frame.left, y: event.clientY - frame.top }, [
-      { label: `Open the code of ${displayName(onWire)}`, run: () => vscode.postMessage({ type: 'openSource', signal: onWire }) },
+      { label: `Open the code of ${shortName(onWire)}`, run: () => vscode.postMessage({ type: 'openSource', signal: onWire }) },
       ...(specOf(undefined, onWire) ? [{ label: 'Open the requirement it carries', run: () => vscode.postMessage({ type: 'openSpec', signal: onWire }) }] : []),
     ])
     return

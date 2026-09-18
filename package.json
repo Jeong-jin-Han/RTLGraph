@@ -6,11 +6,11 @@
     "packages/*"
   ],
   "scripts": {
-    "test": "npm run build -w rtlgraph --silent && node --test \"packages/*/test/*.test.ts\"",
+    "test": "tsc -p packages/vscode-ext --noEmit && npm run build -w rtlgraph --silent && node --test \"packages/*/test/*.test.ts\"",
     "typecheck": "tsc -p tsconfig.json && tsc -p packages/vscode-ext",
     "check": "npm run typecheck && npm test",
     "e2e": "npm run e2e -w rtlgraph",
-    "golden":"UPDATE_GOLDEN=1 node --test packages/rtl-render/test/render.test.ts"
+    "golden": "UPDATE_GOLDEN=1 node --test packages/rtl-render/test/render.test.ts"
   },
   "devDependencies": {
     "@types/node": "^22.20.2",
