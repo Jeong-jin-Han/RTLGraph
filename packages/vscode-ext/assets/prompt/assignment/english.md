@@ -1,5 +1,6 @@
 PROJECT_ROOT_ABSOLUTE_PATH = <PROJECT_ROOT_ABSOLUTE_PATH>
 PROJECT_FOLDER = PROJECT_ROOT_ABSOLUTE_PATH
+RTLGRAPH_FOLDER = <leave empty to put each file beside its code, or name one folder to keep them all in, e.g. rtlgraph>
 
 This is an assignment: the skeleton was handed out and must stay exactly as it
 is. Do not modify, move, rename or reformat any .v/.sv file, do not change a
@@ -10,7 +11,10 @@ PROJECT_FOLDER/.agent/RTLGRAPH_SPEC.md and PROJECT_FOLDER/.agent/ENVIRONMENT.md
 are already prepared for you — read both in full. Follow "Workflow A — RTL →
 RTLGraph", and in Step 2 use the "Follow the code" placement: a component's
 schematic goes in the same folder as the module it describes, source.root is
-usually ".", and the root records a layout-follows-code diagnostic.
+usually ".", and the root records a layout-follows-code diagnostic. If
+RTLGRAPH_FOLDER names a folder, create that one folder and keep every RTLGraph
+file in it instead, with source.root climbing back out to the code ("..",
+"../src") — still without touching the code itself.
 
 First, briefly explain the top module, which modules become component boxes, and
 where the code departs from contracts C1–C7 — as a reading of the assignment,

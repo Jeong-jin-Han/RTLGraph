@@ -83,16 +83,17 @@ cannot be recovered with confidence, record a diagnostic instead of guessing.
     instantiates it (in file order) — and every box's `ref` points at it.
   - **Where the files go** — two ways, and the user's prompt says which:
 
-    | | **Follow the code** (default when the code is not yours to restructure: a handed-out skeleton, an assignment, someone else's repository) | **Build the contract layout** (default when the code already follows the contract, or you wrote it in Workflow B/C) |
-    |---|---|---|
-    | Folders | none are created; the tree stays exactly as it is | `PROJECT_FOLDER/<main>/`, `<main>/<child>/` are created to hold the schematics |
-    | A component's schematic | beside the file its component top is in (`counter.v` → `counter.rtlgraph-schematic.json` in the same folder) | in that component's own folder |
-    | `source.root` | usually `"."`: the code is right there | the path back to where the sources are |
-    | `ref` | the path from the parent's file to the child's, which in a flat project is just the file name | `child/child.rtlgraph-schematic.json` |
+    | | **Follow the code** (a handed-out skeleton, an assignment, someone else's repository) | **One folder of your own** (the same, when the user asks for the files kept together) | **Build the contract layout** (the code already follows the contract, or you wrote it in Workflow B/C) |
+    |---|---|---|---|
+    | Folders | none are created; the tree stays exactly as it is | one is created, `<RTLGRAPH_FOLDER>` (say `rtlgraph/`), and nothing else | `PROJECT_FOLDER/<main>/`, `<main>/<child>/` hold the schematics |
+    | The root file | in `PROJECT_FOLDER`, beside the top's code | in that folder | in `PROJECT_FOLDER` |
+    | A component's schematic | beside the file its component top is in (`counter.v` → `counter.rtlgraph-schematic.json`) | in that folder too, all of them together | in that component's own folder |
+    | `source.root` | usually `"."`: the code is right there | the way back out to the code (`".."`, `"../src"`) | the path back to where the sources are |
+    | `ref` | the path from the parent's file to the child's, which in a flat project is just the file name | just the file name: they are siblings | `child/child.rtlgraph-schematic.json` |
 
-    Either way: **never move, rename or copy code**, and never change a name the code uses. When you
-    follow the code, say so in the root's `diagnostics` (`layout-follows-code`) so the next reader
-    knows the placement was deliberate.
+    In all three: **never move, rename or copy code**, and never change a name the code uses. In the
+    first two, say so in the root's `diagnostics` (`layout-follows-code`) so the next reader knows the
+    placement was deliberate.
   - **`source.root`** is the path from the schematic's folder to the folder its `source.files` are
     relative to: `"."` when the code sits in that folder, `".."` for `PROJECT_FOLDER/<main>/` over a
     flat project, `"../.."` one level deeper.

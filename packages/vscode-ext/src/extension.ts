@@ -22,6 +22,38 @@ async function resolveTargetFolder(clicked: unknown): Promise<vscode.Uri | undef
 const FOLD_SCOPES: readonly FoldScope[] = ['all', 'node', 'descendants']
 const ROOT_SEARCH_DEPTH = 8
 
+// Every prompt the workspace has, as "<branch>/<language>" with what it is for.
+const PROMPT_ABOUT: Record<string, string> = {
+  spec: 'an idea → SPEC.md',
+  rtl: 'a spec → new RTL in the three-layer layout',
+  refactor: 'existing RTL → restructured RTL',
+  rtlgraph: 'existing RTL → RTLGraph, your own project',
+  assignment: 'existing RTL → RTLGraph, code that may not be touched',
+}
+
+async function promptsIn(folder: vscode.Uri): Promise<{ label: string; description: string; uri: vscode.Uri }[]> {
+  const root = vscode.Uri.joinPath(folder, '.prompt')
+  let kinds: [string, vscode.FileType][] = []
+  try {
+    kinds = await vscode.workspace.fs.readDirectory(root)
+  } catch {
+    return []
+  }
+  const out: { label: string; description: string; uri: vscode.Uri }[] = []
+  for (const [kind, type] of kinds) {
+    if (type !== vscode.FileType.Directory) continue
+    for (const [file, kindOfFile] of await vscode.workspace.fs.readDirectory(vscode.Uri.joinPath(root, kind))) {
+      if (kindOfFile !== vscode.FileType.File || !file.endsWith('.md')) continue
+      out.push({
+        label: `${kind}/${file.replace(/\.md$/, '')}`,
+        description: PROMPT_ABOUT[kind] ?? '',
+        uri: vscode.Uri.joinPath(root, kind, file),
+      })
+    }
+  }
+  return out.sort((a, b) => a.label.localeCompare(b.label))
+}
+
 const exists = async (uri: vscode.Uri) => {
   try {
     await vscode.workspace.fs.stat(uri)
@@ -258,6 +290,32 @@ export function activate(context: vscode.ExtensionContext): void {
       }
       await vscode.commands.executeCommand('vscode.open', uri)
       return uri.fsPath
+    }),
+
+    // The prompts, by the branch of work they are for. The path lands on the
+    // clipboard because that is how they are used: pasted into an agent as a file
+    // to read, not opened here.
+    // Optional argument { kind?, folder? }: the branch to take without asking, and
+    // where to look when the prompts are not in an open folder.
+    vscode.commands.registerCommand('rtlgraph.copyPromptPath', async (args?: unknown) => {
+      const given = (typeof args === 'object' && args !== null ? args : { kind: args }) as { kind?: unknown; folder?: unknown }
+      const kind = typeof given.kind === 'string' ? given.kind : undefined
+      const where = given.folder instanceof vscode.Uri
+        ? [given.folder]
+        : typeof given.folder === 'string'
+          ? [vscode.Uri.file(given.folder)]
+          : (vscode.workspace.workspaceFolders ?? []).map(f => f.uri)
+      const found = (await Promise.all(where.map(promptsIn))).flat()
+      if (found.length === 0) {
+        void vscode.window.showWarningMessage('RTLGraph: no .prompt folder here yet — run "Copy Agent Spec to Workspace" first.')
+        return undefined
+      }
+      const wanted = kind !== undefined ? found.find(p => p.label.startsWith(`${kind}/`)) : undefined
+      const picked = wanted ?? (await vscode.window.showQuickPick(found, { placeHolder: 'Which prompt? The path goes to the clipboard' }))
+      if (!picked) return undefined
+      await vscode.env.clipboard.writeText(picked.uri.fsPath)
+      void vscode.window.showInformationMessage(`RTLGraph: copied ${picked.label} — paste the path into your agent.`)
+      return picked.uri.fsPath
     }),
 
     // The code behind what is drawn. Optional argument: the node id (the webview's

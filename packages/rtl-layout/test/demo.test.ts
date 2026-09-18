@@ -23,11 +23,14 @@ const FILES = [
   'pwm/pwm/rdy/rdy.rtlgraph-schematic.json',
   'hw/hw.rtlgraph-schematic.json',
   'hw/counter.rtlgraph-schematic.json',
+  'lab/rtlgraph/lab.rtlgraph-schematic.json',
+  'lab/rtlgraph/shift_reg.rtlgraph-schematic.json',
   'acc/acc_top.rtlgraph.json',
   'sys/sys_top.rtlgraph.json',
   'updown/updown.rtlgraph.json',
   'pwm/pwm_top.rtlgraph.json',
   'hw/hw_top.rtlgraph.json',
+  'lab/rtlgraph/lab_top.rtlgraph.json',
 ]
 
 for (const file of FILES) {

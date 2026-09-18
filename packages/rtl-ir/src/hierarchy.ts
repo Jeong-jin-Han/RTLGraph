@@ -137,11 +137,12 @@ export function originOf(
   const origin = of.node !== undefined ? entry.graph.nodes[own]?.origin : entry.graph.signals[own]?.origin
   if (!origin) return undefined
   const folder = entry.path.split('/').slice(0, -1)
-  const parts2 = [...folder, ...entry.graph.source.root.split('/'), ...origin.file.split('/')]
   const path: string[] = []
-  for (const part of parts2) {
+  for (const part of [...folder, ...entry.graph.source.root.split('/'), ...origin.file.split('/')]) {
     if (part === '' || part === '.') continue
-    if (part === '..') path.pop()
+    // A ".." with nothing to climb stays: the sources may sit beside the folder
+    // the RTLGraph files were put in, not under it.
+    if (part === '..' && path.length > 0 && path[path.length - 1] !== '..') path.pop()
     else path.push(part)
   }
   return { path: path.join('/'), line: origin.line }

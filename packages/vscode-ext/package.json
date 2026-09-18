@@ -46,6 +46,10 @@
         "title": "RTLGraph: Copy Agent Spec to Workspace"
       },
       {
+        "command": "rtlgraph.copyPromptPath",
+        "title": "RTLGraph: Copy Prompt Path"
+      },
+      {
         "command": "rtlgraph.export",
         "title": "RTLGraph: Export Schematic (SVG / PNG / PDF)"
       },

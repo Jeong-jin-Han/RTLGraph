@@ -18,6 +18,16 @@ const reader = (project: string) => (path: string) => {
 }
 
 const PROJECTS: Record<string, { root: string; entries: [string, string, string][] }> = {
+  // The third placement: the code is untouched in src/ and every RTLGraph file is
+  // kept together in rtlgraph/, so source.root climbs out of that folder.
+  'lab/rtlgraph': {
+    root: 'lab_top.rtlgraph.json',
+    entries: [
+      ['', 'lab_top.rtlgraph.json', 'system'],
+      ['lab', 'lab.rtlgraph-schematic.json', 'component'],
+      ['lab/u_shift', 'shift_reg.rtlgraph-schematic.json', 'component'],
+    ],
+  },
   acc: {
     root: 'acc_top.rtlgraph.json',
     entries: [
@@ -119,6 +129,10 @@ test('every drawn element says which line of the code it came from', () => {
   assert.deepEqual(originOf(root, { node: 'sys/u_dev/u_inbuf/BUF_FF' }), { path: 'sys/dev/inbuf/seq/inbuf_top.v', line: 15 })
   assert.deepEqual(originOf(root, { signal: 'sys/u_dev/BUF_EN' }), { path: 'sys/dev/seq/dev_top.v', line: 17 })
   assert.deepEqual(originOf(root, { node: 'sys' }), { path: 'sys/seq/sys_top.v', line: 8 }, 'the box in the root')
+
+  // Files kept in a folder of their own: the path climbs out of it to the code.
+  const lab = loadHierarchy('lab_top.rtlgraph.json', reader('lab/rtlgraph')).root!
+  assert.deepEqual(originOf(lab, { node: 'lab/u_shift/q_reg' }), { path: '../src/shift_reg.v', line: 11 })
   assert.equal(originOf(root, { node: 'sys/u_dev/nobody' }), undefined)
   assert.equal(originOf(root, { node: 'nowhere/u_x' }), undefined)
 

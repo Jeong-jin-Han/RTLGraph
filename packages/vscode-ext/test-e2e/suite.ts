@@ -47,6 +47,13 @@ export async function run(): Promise<void> {
   const assignment = readFileSync(join(folder, '.prompt/assignment/korean.md'), 'utf8')
   assert.match(assignment, /Follow the code/)
 
+  // The prompts are picked by branch and the path goes to the clipboard, which is
+  // how they are used: pasted into an agent.
+  const copied = await vscode.commands.executeCommand<string>('rtlgraph.copyPromptPath', { kind: 'assignment', folder })
+  assert.equal(copied, join(folder, '.prompt/assignment/english.md'))
+  assert.equal(await vscode.env.clipboard.readText(), copied)
+  log('Copy Prompt Path puts .prompt/assignment/english.md on the clipboard')
+
   const validate = spawnSync('node', [join(folder, '.agent/rtlgraph-validate.mjs'), graphFile], { encoding: 'utf8' })
   assert.equal(validate.status, 0, validate.stdout + validate.stderr)
   log('the copied validator runs on its own: ' + validate.stdout.trim().split('\n').pop()!.trim())

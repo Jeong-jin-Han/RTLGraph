@@ -1,0 +1,39 @@
+{
+  "version": "0.1.0",
+  "kind": "component",
+  "title": "shift_reg",
+  "created": "2026-09-18T00:00:00.000Z",
+  "modified": "2026-09-18T00:00:00.000Z",
+  "source": { "root": "../src", "files": ["shift_reg.v"], "top": "shift_reg", "contractCheck": "fail" },
+  "signals": {
+    "clk":  { "width": 1, "flow": "clock",   "driver": "@clk", "sinks": ["q_reg:CLK"], "hidden": true, "origin": { "file": "shift_reg.v", "line": 4 } },
+    "rst":  { "width": 1, "flow": "reset",   "driver": "@rst", "sinks": ["q_reg:RST"], "meaning": "1=clear the register on the next edge", "origin": { "file": "shift_reg.v", "line": 5 } },
+    "en":   { "width": 1, "flow": "control", "driver": "@en",  "sinks": ["q_reg:EN"], "meaning": "1=take the shifted value on this edge", "origin": { "file": "shift_reg.v", "line": 6 } },
+    "din":  { "width": 1, "flow": "data",    "driver": "@din", "sinks": ["op_q_D:b"], "meaning": "the bit arriving this cycle", "origin": { "file": "shift_reg.v", "line": 7 } },
+    "q_D":  { "width": 8, "flow": "data",    "driver": "op_q_D:y", "sinks": ["q_reg:D"], "meaning": "the seven bits kept, with the new one at the bottom", "origin": { "file": "shift_reg.v", "line": 13 } },
+    "q":    { "width": 8, "flow": "data",    "driver": "q_reg:Q", "sinks": ["op_q_D:a", "@q"], "origin": { "file": "shift_reg.v", "line": 8 } }
+  },
+  "nodes": {
+    "@clk": { "kind": "port", "dir": "in",  "flow": "clock",   "origin": { "file": "shift_reg.v", "line": 4 } },
+    "@rst": { "kind": "port", "dir": "in",  "flow": "reset",   "origin": { "file": "shift_reg.v", "line": 5 } },
+    "@en":  { "kind": "port", "dir": "in",  "flow": "control", "origin": { "file": "shift_reg.v", "line": 6 } },
+    "@din": { "kind": "port", "dir": "in",  "flow": "data",    "origin": { "file": "shift_reg.v", "line": 7 } },
+    "@q":   { "kind": "port", "dir": "out", "flow": "data",    "origin": { "file": "shift_reg.v", "line": 8 } },
+    "op_q_D": {
+      "kind": "module", "flow": "data", "time": "comb", "module": "CONCAT",
+      "label": "{q[6:0], din}",
+      "ports": { "a": "in", "b": "in", "y": "out" },
+      "origin": { "file": "shift_reg.v", "line": 13 }
+    },
+    "q_reg": {
+      "kind": "reg", "flow": "data", "time": "seq", "module": "DFF", "params": { "BW": 7 },
+      "label": "q",
+      "ports": { "CLK": "in", "RST": "in", "EN": "in", "D": "in", "Q": "out" },
+      "rstKind": "sync", "rstPriority": "rst>en", "rstValue": "0", "rstActive": "high", "enActive": "high",
+      "origin": { "file": "shift_reg.v", "line": 11 }
+    }
+  },
+  "diagnostics": [
+    { "severity": "info", "code": "inferred", "msg": "the always block is drawn as a register fed by the concatenation {q[6:0], din}, which has no symbol in the registry", "file": "shift_reg.v", "line": 11, "node": "q_reg" }
+  ]
+}

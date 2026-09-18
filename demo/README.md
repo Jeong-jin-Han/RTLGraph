@@ -1,6 +1,6 @@
 # demo
 
-Six projects. Four are golden cases the tests check on every run; two are
+Seven projects. Five are golden cases the tests check on every run; two are
 inputs for trying the agent prompts in a fresh session. Everything here compiles
 and simulates with `iverilog`, and every root validates with 0 errors.
 
@@ -11,6 +11,7 @@ and simulates with `iverilog`, and every root validates with 0 errors.
 | `sys/` | root + 4 schematics | Written for RTLGraph: the deep case. Root → `sys` → `host`, `dev` → `inbuf`, three levels of component boxes, with a golden SVG of all of them open |
 | `pwm/` | root + 4 schematics + **3 FSM files** | The D02-2 PWM controller, written for RTLGraph: three levels of components (`pwm` → `pulse` → `cnt`, with `rdy` beside `pulse`) and a state machine at each of the top two levels plus the handshake. The case for `*.rtlgraph-fsm.json` |
 | `hw/` | root + 2 schematics, **all in one flat folder** | An assignment as handed out: `hw_top.v` and `counter.v` side by side, names fixed, an active-low asynchronous reset, logic in `assign` and `always` rather than instances. The case for the "follow the code" placement — no folder is created and every JSON sits beside the module it describes |
+| `lab/` | root + 2 schematics, **all in `rtlgraph/`** | The other way to draw code you must not touch: `src/` is left exactly as handed out and every RTLGraph file is kept together in one folder of its own, with `source.root` climbing back out (`../src`). Also the case for logic with no symbol — a concatenation and a reduction `^` |
 | `stopwatch/` | **none, on purpose** | Typical non-conforming student code: flat folder, an FSM in `always` blocks, one positional connection, one counter module used twice, an active-low reset. The input for testing `.prompt/assignment/*.md` in a fresh session — its structure is exactly the kind that must be left alone |
 | `updown/` | root + 1 schematic | Written end to end by a fresh `claude -p` session from `.prompt/rtl/korean.md`: RTL, testbench, root and schematic. Kept in step with the spec since (the form it was produced in is in git) |
 
@@ -26,6 +27,8 @@ and simulates with `iverilog`, and every root validates with 0 errors.
 - **`pwm`** — the state machines: `packages/rtl-ir/test/demo-hierarchy.test.ts`
   validates all three, and `packages/rtl-layout/test/fsm.test.ts` checks each
   diagram fits its page with no label over a state box.
+- **`lab`** — the folder-of-its-own placement, and the code jump across it:
+  `originOf` has to climb out of `rtlgraph/` to reach `../src/shift_reg.v`.
 - **`hw`** — the flat placement: `packages/rtl-ir/test/demo-hierarchy.test.ts`
   walks it, and its inferred names (`op_Q_D__t1`, `Q_reg`) are what the origin
   check has to follow back to the names the code uses.
@@ -49,10 +52,12 @@ iverilog -g2005 -o /tmp/pwm.vvp demo/pwm/pwm/tb/TB_pwm.v \
 13, pauses and clears. `updown` is self-checking: `PASS: 229 cycles, 0 mismatches`.
 `pwm` is self-checking too: at PERIOD=8 / DUTY=3 it reports
 `PASS: 12 high of 32 cycles, 0 mismatches`, and `hw` reports
-`PASS: reached the limit 4 times, 0 mismatches`:
+`PASS: reached the limit 4 times, 0 mismatches`. `lab` reports
+`PASS: shifted in a5, match=1 parity=0, 0 mismatches`:
 
 ```bash
 iverilog -g2005 -o /tmp/hw.vvp demo/hw/tb_hw.v demo/hw/hw_top.v demo/hw/counter.v && vvp -n /tmp/hw.vvp
+iverilog -g2005 -o /tmp/lab.vvp demo/lab/tb/tb_lab.v demo/lab/src/*.v && vvp -n /tmp/lab.vvp
 ```
 
 `acc/acc/tb/baseline.txt` is the 282-line dump of `TB_GOLDEN.v` kept for refactor

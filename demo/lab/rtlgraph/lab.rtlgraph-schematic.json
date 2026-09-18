@@ -1,0 +1,47 @@
+{
+  "version": "0.1.0",
+  "kind": "component",
+  "title": "lab",
+  "created": "2026-09-18T00:00:00.000Z",
+  "modified": "2026-09-18T00:00:00.000Z",
+  "source": { "root": "../src", "files": ["lab_top.v"], "top": "lab_top", "contractCheck": "fail" },
+  "signals": {
+    "clk":    { "width": 1, "flow": "clock",   "driver": "@clk", "sinks": ["u_shift:clk"], "hidden": true, "origin": { "file": "lab_top.v", "line": 4 } },
+    "rst":    { "width": 1, "flow": "reset",   "driver": "@rst", "sinks": ["u_shift:rst"], "meaning": "1=clear the shift register on the next edge", "origin": { "file": "lab_top.v", "line": 5 } },
+    "en":     { "width": 1, "flow": "control", "driver": "@en",  "sinks": ["u_shift:en"], "meaning": "1=shift one bit in on this edge", "origin": { "file": "lab_top.v", "line": 6 } },
+    "din":    { "width": 1, "flow": "data",    "driver": "@din", "sinks": ["u_shift:din"], "meaning": "the bit arriving this cycle", "origin": { "file": "lab_top.v", "line": 7 } },
+    "q":      { "width": 8, "flow": "data",    "driver": "u_shift:q", "sinks": ["op_parity:a", "op_match:a", "@data"], "aliases": ["data"], "meaning": "the last eight bits that came in", "origin": { "file": "lab_top.v", "line": 13 } },
+    "parity": { "width": 1, "flow": "data",    "driver": "op_parity:y", "sinks": ["@parity"], "meaning": "1=an odd number of ones is in the register", "origin": { "file": "lab_top.v", "line": 24 } },
+    "match":  { "width": 1, "flow": "control", "driver": "op_match:y", "sinks": ["@match"], "meaning": "1=the last eight bits are the pattern A5", "origin": { "file": "lab_top.v", "line": 25 } }
+  },
+  "nodes": {
+    "@clk":    { "kind": "port", "dir": "in",  "flow": "clock",   "origin": { "file": "lab_top.v", "line": 4 } },
+    "@rst":    { "kind": "port", "dir": "in",  "flow": "reset",   "origin": { "file": "lab_top.v", "line": 5 } },
+    "@en":     { "kind": "port", "dir": "in",  "flow": "control", "origin": { "file": "lab_top.v", "line": 6 } },
+    "@din":    { "kind": "port", "dir": "in",  "flow": "data",    "origin": { "file": "lab_top.v", "line": 7 } },
+    "@data":   { "kind": "port", "dir": "out", "flow": "data",    "origin": { "file": "lab_top.v", "line": 8 } },
+    "@parity": { "kind": "port", "dir": "out", "flow": "data",    "origin": { "file": "lab_top.v", "line": 9 } },
+    "@match":  { "kind": "port", "dir": "out", "flow": "control", "origin": { "file": "lab_top.v", "line": 10 } },
+    "u_shift": {
+      "kind": "component", "name": "shift_reg", "module": "shift_reg",
+      "ref": "shift_reg.rtlgraph-schematic.json",
+      "ports": { "clk": "in", "rst": "in", "en": "in", "din": "in", "q": "out" },
+      "origin": { "file": "lab_top.v", "line": 15 }
+    },
+    "op_parity": {
+      "kind": "op", "flow": "data", "time": "comb", "module": "XOR_REDUCE",
+      "label": "^",
+      "ports": { "a": "in", "y": "out" },
+      "origin": { "file": "lab_top.v", "line": 24 }
+    },
+    "op_match": {
+      "kind": "op", "flow": "data", "time": "comb", "module": "CMP_EQ", "params": { "BW": 7 },
+      "ports": { "a": "in", "b": "in", "y": "out" },
+      "consts": { "b": "8'hA5" },
+      "origin": { "file": "lab_top.v", "line": 25 }
+    }
+  },
+  "diagnostics": [
+    { "severity": "info", "code": "no-symbol", "msg": "the reduction ^q has no symbol in the registry; it is drawn as a box labelled ^", "file": "lab_top.v", "line": 24, "node": "op_parity" }
+  ]
+}

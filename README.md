@@ -39,6 +39,7 @@ RTL folder ──[AI agent + .agent/RTLGRAPH_SPEC.md]──→ *.rtlgraph.json +
    | Command | What it does |
    |---|---|
    | `RTLGraph: Copy Agent Spec to Workspace` | Writes the agent files into a folder (also on folder right-click in the Explorer) |
+   | `RTLGraph: Copy Prompt Path` | Pick a branch of work; its `.prompt/…md` path goes to the clipboard, ready to paste into an agent |
    | `RTLGraph: Export Schematic (SVG / PNG / PDF)` | Exports the current view (also the **Export…** toolbar button) |
    | `RTLGraph: Fold Components` / `Unfold Components` | The selected component (only it, or with everything inside), else all |
    | `RTLGraph: Open Component Schematic` | Opens the selected component's own schematic file |
@@ -117,9 +118,11 @@ the JSON.
 
    **Which one.** `rtlgraph` and `assignment` both draw code you keep as it is; they differ in where
    the files go. `rtlgraph` builds the contract layout (a folder per component) — use it on your own
-   projects. `assignment` creates no folder at all and puts each JSON beside the module it describes,
-   so a handed-out skeleton keeps the shape it was handed out in; `demo/hw` is what that looks like.
-   `refactor` is the one that restructures the code, and it is a separate task on purpose.
+   projects. `assignment` touches nothing: by default each JSON goes beside the module it describes
+   (`demo/hw`), or set `RTLGRAPH_FOLDER` in the prompt and they are all kept in one folder of their
+   own (`demo/lab`, where the code stays in `src/`). `refactor` is the one that restructures the
+   code, and it is a separate task on purpose. `RTLGraph: Copy Prompt Path` hands you the path of
+   whichever branch you want.
 3. Open `.prompt/rtlgraph/korean.md`, fill in the project path, and paste it into your agent (Claude
    Code, Codex, Cursor…). The agent reads the code without changing it, writes the root and one
    schematic per component, and validates them.
@@ -142,6 +145,7 @@ the same symbols, and every inference or contract violation is listed under the 
 | `demo/base` | Shared primitives (`DFF INC ADD SUB MUX2 CMP_EQ`) |
 | `demo/pwm` | D02-2 PWM controller: three levels of components and three state machines |
 | `demo/hw` | An assignment skeleton: one flat folder, RTLGraph files beside the code |
+| `demo/lab` | The same idea, files kept together: code in `src/`, every JSON in `rtlgraph/` |
 | `docs/DECISIONS.md` | Schema, layout, filter, editor and agent decisions |
 
 Only `packages/vscode-ext` imports `vscode`.
