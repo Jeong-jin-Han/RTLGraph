@@ -101,5 +101,29 @@ export function controlSheets(graph: ComponentGraph, title = graph.title): Sheet
       ...control.map(([name, s]) => [name, s.width, s.flow, s.driver, s.sinks.join(', '), s.meaning ?? '']),
     ],
   }
-  return [ledger, ...sheets]
+  return [ledger, ...sheets, ...requirementSheet(graph, title)]
+}
+
+// What the design was asked for, and where each ask ended up. An assignment is
+// marked against its brief, so the sheet is the brief read back off the drawing:
+// one row per requirement the files cite, saying which box or net carries it.
+function requirementSheet(graph: ComponentGraph, title: string): Sheet[] {
+  const cited = [
+    ...Object.entries(graph.nodes).map(([id, node]) => ({ what: id, kind: 'box', spec: node.spec })),
+    ...Object.entries(graph.signals).map(([name, signal]) => ({ what: name, kind: 'net', spec: signal.spec })),
+  ].filter(row => row.spec !== undefined)
+  if (cited.length === 0) return []
+  return [{
+    name: `${title} requirements`,
+    rows: [
+      ['Document', 'Page', 'The requirement', 'Carried by', ''],
+      ...cited.map(row => [
+        row.spec!.file ?? graph.source.spec ?? '',
+        row.spec!.page ?? '',
+        row.spec!.quote,
+        row.what,
+        row.kind,
+      ]),
+    ],
+  }]
 }

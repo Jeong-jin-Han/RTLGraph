@@ -131,3 +131,18 @@ test('the bundled validator follows a root into its component schematics', () =>
   writeFileSync(join(dir, 'acc_top.rtlgraph.json'), JSON.stringify(rootGraph))
   assert.match(run(join(dir, 'acc_top.rtlgraph.json')).stdout, /error hierarchy-ports \(node acc\)/)
 })
+
+test('the spec documents every field the IR has grown', () => {
+  // The agent writes these files from this document alone: a field it does not
+  // mention is a field no agent will ever produce.
+  const types = readFileSync(join(ROOT, '../rtl-ir/src/types.ts'), 'utf8')
+  const fields = ['fsm', 'rstActive', 'enActive', 'spec', 'links']
+  for (const field of fields) {
+    assert.ok(types.includes(`${field}?:`) || types.includes(`${field}:`), `the IR still has ${field}`)
+  }
+  for (const field of ['fsm', 'rstActive', 'enActive', 'spec']) {
+    assert.ok(spec.includes(field), `RTLGRAPH_SPEC.md says nothing about ${field}`)
+  }
+  // layout.links is the reader's, not the agent's: the spec says to leave layout alone.
+  assert.match(spec, /`layout`, `view` \| \*\*owned by the user and the extension/)
+})

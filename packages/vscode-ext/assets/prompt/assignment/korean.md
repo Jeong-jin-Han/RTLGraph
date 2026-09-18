@@ -1,5 +1,6 @@
 PROJECT_ROOT_ABSOLUTE_PATH = <PROJECT_ROOT_ABSOLUTE_PATH>
 PROJECT_FOLDER = PROJECT_ROOT_ABSOLUTE_PATH
+SPEC_DOCUMENT = <비워 두거나, 이 설계가 요구된 문서 경로 예: spec/pwm_brief.pdf>
 RTLGRAPH_FOLDER = <비워 두면 각 파일을 코드 옆에, 폴더 이름을 적으면 그 폴더 하나에 모아서 예: rtlgraph>
 
 이건 과제야. 스켈레톤 코드는 받은 그대로 유지해야 해. .v/.sv 파일은 수정·이동·이름
@@ -17,7 +18,9 @@ RTLGRAPH_FOLDER 에 폴더 이름이 적혀 있으면 그 폴더 하나만 만�
 간단히 설명해줘 — 고칠 대상이 아니라 과제를 읽은 결과로. 그 다음 파일을 만들어줘:
 PROJECT_FOLDER 에 <top>.rtlgraph.json, 컴포넌트마다 그 코드 옆에
 <이름>.rtlgraph-schematic.json. 상태 기계(FSM)를 가진 컴포넌트면 같은 폴더에
-<이름>.rtlgraph-fsm.json 까지 쓰고 상태 레지스터에 fsm 을 표시해줘.
+<이름>.rtlgraph-fsm.json 까지 쓰고 상태 레지스터에 fsm 을 표시해줘. SPEC_DOCUMENT 가
+주어졌으면(과제는 보통 명세 PDF 가 있지) Step 7c 를 따라 source.spec 을 적고, 각 요소가
+어떤 문장 때문에 있는지 그 문장 그대로와 쪽 번호를 spec 에 남겨줘.
 
 meaning, label, note, 진단 메시지는 한국어로 쓰되, 신호·모듈·인스턴스·핀 이름은 코드
 그대로 쓰고, 기술 용어는 처음 등장할 때 영어를 괄호로 병기해(예: "계수기(counter)").

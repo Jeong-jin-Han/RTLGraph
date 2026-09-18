@@ -247,6 +247,21 @@ only holds data.
      the code writes it (`SET & ~STOP`). A state that stays put for a cycle is a transition to itself.
 3. Cover every state: one transition per `casex` row, so the diagram and the code say the same thing.
 
+### Step 7c — The brief (`spec`)
+When the user gives a document the design was asked for — an assignment PDF, a
+requirements page — record where each piece comes from:
+
+1. `source.spec`: the document, relative to `source.root` (`"spec/pwm_brief.pdf"`).
+2. On the elements the document actually talks about, `spec: { quote, page }`:
+   - `quote` is the sentence **verbatim**, copied from the document, not paraphrased —
+     it is what finds the line again.
+   - `page` is where it is (1-based).
+   - Put it where the reader would look for it: an interface line on the **net**
+     (`"RDY : Active-low when the PWM core is activated"`), a behaviour on the **box**
+     that implements it.
+3. Quote what is there. A requirement the design does not implement is not a `spec`
+   entry; it is a `diagnostic`, so the gap is visible.
+
 ### Step 8 — Validate
 ```bash
 node .agent/rtlgraph-validate.mjs <top>.rtlgraph.json
@@ -534,7 +549,8 @@ is drawn as a generic box — that is normal, not an error.
 |---|---|
 | top level | required: `version` (`"0.1.0"`), `kind` (`"system"` for the root, `"component"` for a schematic), `title`, `created`, `modified`, `source`, `signals`, `nodes`. Optional: `groups`, `layout`, `view`, `diagnostics` |
 | root | only `port` and `component` nodes (a logic node there is the error `system-logic`) |
-| `source` | required `root`, `files`, `top`; optional `lib`, `libFiles`, `contractCheck`. `root` is where `files` are rooted, relative to this JSON file; `lib` is where `libFiles` are rooted, relative to `root` |
+| `source` | required `root`, `files`, `top`; optional `lib`, `libFiles`, `contractCheck`, `spec`. `root` is where `files` are rooted, relative to this JSON file; `lib` is where `libFiles` are rooted, relative to `root`; `spec` is the document the design was asked for (a PDF), relative to `root` |
+| `spec` (on a node or a net) | `{ quote, page?, file? }` — the sentence of the brief this element exists for, **verbatim**, the page it is on, and the document when it is not `source.spec`. Only where the brief really says something about that element; never invented |
 | node `kind` | `port` · `reg` · `op` · `mux` · `control` · `module` · `blackbox` · `component` |
 | logic node (not `port`/`component`) | required `flow` (`data`/`control`), `time` (`comb`/`seq`), `module`, `ports` (`{ pin: "in"/"out"/"inout" }`). Optional `params`, `consts`, `label`, `group`, `origin` |
 | `component` node | required `name` (identifier), `module`, `ref` (a `*.rtlgraph-schematic.json` path relative to this file), `ports` — exactly the ports of that schematic, same directions. Optional `params`, `consts`, `label`, `origin`. No `flow`/`time` |
@@ -542,7 +558,7 @@ is drawn as a generic box — that is normal, not an error.
 | `control` extras | `truthTable` { `inputs`, `outputs`, `rows`: [{ `in`, `out`, `note?` }], `default?`: { `out` }, `origin` } with values `"0"`/`"1"`/`"x"`; or `equations`: [{ `output`, `expr` }]. `note` is one short line saying what the row means ("reset: clear the counter"); keep a `default` row even when the listed cases already cover every input |
 | `blackbox` extras | `rdelay` |
 | port node | required `dir`, `flow` (`data`/`control`/`clock`/`reset`); no `time` |
-| signal | required `width`, `flow`, `driver`, `sinks`; optional `aliases`, `hidden`, `origin`. `meaning` is **required on every `control` and `reset` net** — what it does when it is asserted — and worth writing on a data net whose name does not say it |
+| signal | required `width`, `flow`, `driver`, `sinks`; optional `aliases`, `hidden`, `origin`, `spec`. `meaning` is **required on every `control` and `reset` net** — what it does when it is asserted — and worth writing on a data net whose name does not say it |
 | `groups` | `{ "<id>": { "label": "...", "members": [nodeIds] } }` from `// @sch: group=` |
 | `layout`, `view` | **owned by the user and the extension — never write them**, keep them as they are |
 | `diagnostics` | `{ severity: error/warn/info, code, msg, file?, line?, node?, signal? }`. Leave the key out when there is nothing to report |
@@ -581,6 +597,7 @@ Never use line numbers or counters in ids — the user's layout is matched by id
 - [ ] Every net has exactly one `driver`; every input pin is a sink of one net or in `consts`
 - [ ] Widths match declarations (`BW+1` rule for primitives)
 - [ ] `flow`/`time` on every non-port node; clock nets `hidden`
+- [ ] Where a brief was given: `source.spec` set, and every element it asks for carries the sentence verbatim in `spec`
 - [ ] Every control and reset net has a `meaning`; every register says `rstKind`, `rstValue`, and `rstActive`/`enActive` when a pin acts on a low
 - [ ] Every node and net has an exact `origin`; control nodes have `truthTable.origin`
 - [ ] Contract violations and inferred elements listed in `diagnostics`; `contractCheck` set

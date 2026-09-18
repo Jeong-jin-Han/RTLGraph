@@ -19,6 +19,13 @@ function groupOf(document: vscode.TextDocument | undefined): number | undefined 
   return (holding ?? vscode.window.tabGroups.activeTabGroup).viewColumn
 }
 
+// Anything that is not a text file — a PDF opens in whatever viewer claims it.
+export async function openBeside(uri: vscode.Uri, schematic: vscode.TextDocument | undefined): Promise<void> {
+  const columns = vscode.window.tabGroups.all.map(group => group.viewColumn)
+  const column = columnRightOf(columns, groupOf(schematic))
+  await vscode.commands.executeCommand('vscode.open', uri, { viewColumn: column ?? vscode.ViewColumn.Beside, preview: false })
+}
+
 export async function openCodeBeside(
   uri: vscode.Uri,
   line: number,

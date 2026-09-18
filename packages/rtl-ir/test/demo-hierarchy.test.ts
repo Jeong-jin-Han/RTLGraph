@@ -167,3 +167,34 @@ test('every demo passes the validator clean: no errors and no warnings', () => {
     }
   }
 })
+
+test('every requirement a demo quotes is really in the document it names', () => {
+  // The link is only worth having if the sentence is there: the quote is checked
+  // against the document itself. (demo/pwm's brief is uncompressed, so the text
+  // is in the bytes — no PDF library to read it back.)
+  let checked = 0
+  for (const [project, { root }] of Object.entries(PROJECTS)) {
+    const read = reader(project)
+    for (const entry of hierarchyEntries(loadHierarchy(root, read).root)) {
+      const dir = entry.path.split('/').slice(0, -1).join('/')
+      const base = [dir, entry.graph.source.root].filter(p => p && p !== '.').join('/')
+      const refs = [
+        ...Object.entries(entry.graph.nodes).map(([id, n]) => [id, n.spec] as const),
+        ...Object.entries(entry.graph.signals).map(([name, s]) => [name, s.spec] as const),
+      ].filter((pair): pair is [string, NonNullable<(typeof pair)[1]>] => pair[1] !== undefined)
+
+      for (const [what, spec] of refs) {
+        const file = spec.file ?? entry.graph.source.spec
+        assert.ok(file, `${project}: ${what} names no document`)
+        const path = [base, file].filter(Boolean).join('/').replace(/[^/]+\/\.\.\//g, '')
+        const document = read(path)
+        assert.ok(document !== undefined, `${project}: ${path} (quoted by ${what}) is not there`)
+        // A PDF escapes its brackets; the sentence is the same sentence.
+        const text = document!.replace(/\\([()\\])/g, '$1')
+        assert.ok(text.includes(spec.quote), `${project}: ${path} does not say "${spec.quote}"`)
+        checked++
+      }
+    }
+  }
+  assert.ok(checked >= 6, `only ${checked} requirements are linked`)
+})

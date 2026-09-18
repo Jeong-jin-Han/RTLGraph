@@ -67,6 +67,25 @@ export function validateComponentGraph(input: unknown): ValidationResult {
     warn('system-empty', 'the root file has no components')
   }
 
+  // A link to the document the design is built from: the sentence has to be
+  // there (that is the whole point of the link) and a document has to be named,
+  // here or once for the file in source.spec.
+  const specFile = isObj(g.source) && typeof g.source.spec === 'string' ? g.source.spec : undefined
+  const checkSpec = (spec: unknown, at: Partial<Diagnostic>) => {
+    if (spec === undefined) return
+    if (!isObj(spec)) return error('schema', 'spec must be an object', at)
+    if (typeof spec.quote !== 'string' || spec.quote.trim() === '') {
+      error('spec-quote', 'spec must quote the sentence it refers to', at)
+    }
+    if (spec.file !== undefined && typeof spec.file !== 'string') error('schema', 'spec.file must be a string', at)
+    if (spec.file === undefined && specFile === undefined) {
+      error('spec-file', 'spec names no document and source.spec is not set', at)
+    }
+    if (spec.page !== undefined && (!Number.isInteger(spec.page) || (spec.page as number) < 1)) {
+      error('schema', 'spec.page must be a page number from 1', at)
+    }
+  }
+
   // ── nodes ──
   for (const [id, n] of Object.entries(nodes)) {
     const at = { node: id }
@@ -74,6 +93,7 @@ export function validateComponentGraph(input: unknown): ValidationResult {
       error('schema', 'node must be an object', at)
       continue
     }
+    checkSpec(n.spec, at)
     if (n.kind === 'port') {
       if (!isPortNodeId(id)) error('node-id', 'port node id must be "@<port name>"', at)
       if (!inSet(DIRS, n.dir)) error('schema', 'port node dir must be in|out|inout', at)
@@ -211,6 +231,7 @@ export function validateComponentGraph(input: unknown): ValidationResult {
       if (!isStrArr(s.aliases)) error('schema', 'aliases must be a string array', at)
       else for (const alias of s.aliases) claimName(alias, name)
     }
+    checkSpec(s.spec, at)
     // What a control line means when it is 1 cannot be read off the picture, and
     // it is what the control table and the ledger are made of.
     const said = typeof s.meaning === 'string' && s.meaning.trim() !== ''

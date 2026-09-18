@@ -33,7 +33,9 @@ RTL folder ──[AI agent + .agent/RTLGRAPH_SPEC.md]──→ *.rtlgraph.json +
    only or on everything inside it too; with nothing selected (`Esc`) they act on the whole hierarchy.
    Double-click a box to toggle just that one. **Right-click any box** to ask where to go: into a
    component's own schematic, or straight to the line of Verilog it came from (a net's right-click
-   menu opens its line too). Code opens *beside* the drawing — a group is made to its right the
+   menu opens its line too), or — where the file says which sentence of the brief a box exists for —
+   **the requirement itself**: `demo/pwm` cites `spec/pwm_brief.pdf`, and the workbook export lists
+   every requirement beside what carries it. Code opens *beside* the drawing — a group is made to its right the
    first time and reused after that, so the schematic stays on the left while you read, and the
    drawing refits itself whenever the room it has changes — a tab opening beside it, or closing again.
 6. `Ctrl+Shift+P` → type `RTLGraph`:
@@ -62,7 +64,8 @@ acc/.out-acc_top/acc_top.datapath.pdf   vector; papers, reports
 acc/.out-acc_top/acc_top.control.xlsx   the tables behind it; Excel, LibreOffice
 ```
 
-**XLSX** is the drawing read back as the tables it was made from — the way D02 builds a machine in a
+**XLSX** is the drawing read back as the tables it was made from — including, where a brief is
+cited, one tab of requirements against what carries each — the way D02 builds a machine in a
 spreadsheet before any Verilog. A schematic or a root gives one tab of control signals per level
 (what drives each, what reads it, what it means) and one tab per control block's truth table; a
 `*.rtlgraph-fsm.json` gives the machine, its states and every transition. Written without a
@@ -148,6 +151,7 @@ the same symbols, and every inference or contract violation is listed under the 
 | `demo/pwm` | D02-2 PWM controller: three levels of components and three state machines |
 | `demo/hw` | An assignment skeleton: one flat folder, RTLGraph files beside the code |
 | `demo/lab` | The same idea, files kept together: code in `src/`, every JSON in `rtlgraph/` |
+| `packages/rtl-sheet` (tests) | The workbook: control signals, truth tables, machines, requirements |
 | `docs/DECISIONS.md` | Schema, layout, filter, editor and agent decisions |
 
 Only `packages/vscode-ext` imports `vscode`.

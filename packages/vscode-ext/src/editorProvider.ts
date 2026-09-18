@@ -1,13 +1,13 @@
 import * as vscode from 'vscode'
 import { randomBytes } from 'node:crypto'
-import { FILTER_PRESETS, graphFileKind, hierarchyEntries, loadHierarchy, originOf } from '@rtlgraph/ir'
+import { FILTER_PRESETS, graphFileKind, hierarchyEntries, loadHierarchy, originOf, specOf } from '@rtlgraph/ir'
 import type { HostToWebview, RenderState, WebviewToHost } from './protocol.ts'
 import type { ExportSource } from './export.ts'
 import { collectHierarchyFiles } from './hierarchyFiles.ts'
 import { setLayoutEdit } from './jsonEdit.ts'
 import { normalizeFilter } from './webview/state.ts'
 import { webviewHtml } from './webview/html.ts'
-import { openCodeBeside } from './openCode.ts'
+import { openBeside, openCodeBeside } from './openCode.ts'
 
 const RASTER_TIMEOUT_MS = 20_000
 const RELOAD_DELAY_MS = 100
@@ -18,6 +18,7 @@ interface Panel {
   source: () => ExportSource
   componentUri: (instance: string) => vscode.Uri | undefined
   sourceAt: (of: { node?: string; signal?: string }) => { uri: vscode.Uri; line: number } | undefined
+  specAt: (of: { node?: string; signal?: string }) => { uri: vscode.Uri; page?: number; quote: string } | undefined
   rendered?: RenderState
 }
 
@@ -124,6 +125,12 @@ export class RtlGraphEditorProvider implements vscode.CustomTextEditorProvider {
         const at = originOf(root, of)
         return at ? { uri: vscode.Uri.joinPath(document.uri, '..', at.path), line: at.line } : undefined
       },
+
+      specAt: of => {
+        const { root } = loadHierarchy(rootName, path => (path === rootName ? document.getText() : files[path]))
+        const at = specOf(root, of)
+        return at ? { uri: vscode.Uri.joinPath(document.uri, '..', at.path), page: at.page, quote: at.quote } : undefined
+      },
     }
 
     const dist = vscode.Uri.joinPath(this.context.extensionUri, 'dist')
@@ -201,6 +208,17 @@ export class RtlGraphEditorProvider implements vscode.CustomTextEditorProvider {
           else {
             void openCodeBeside(at.uri, at.line, document)
               .then(undefined, () => vscode.window.showWarningMessage(`RTLGraph: cannot open ${at.uri.path.split('/').pop()}.`))
+          }
+        } else if (message.type === 'openSpec') {
+          const at = panel.specAt(message)
+          if (!at) void vscode.window.showWarningMessage(`RTLGraph: ${message.node ?? message.signal} names no requirement.`)
+          else {
+            // The document opens beside the drawing like the code does; which page
+            // it is on is said out loud, since a PDF viewer is not ours to drive.
+            void openBeside(at.uri, document).then(
+              () => vscode.window.showInformationMessage(`RTLGraph: page ${at.page ?? '?'} — "${at.quote}"`),
+              () => vscode.window.showWarningMessage(`RTLGraph: cannot open ${at.uri.path.split('/').pop()}.`),
+            )
           }
         } else if (message.type === 'command') {
           RtlGraphEditorProvider.active = panel

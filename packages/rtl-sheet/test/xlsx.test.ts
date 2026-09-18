@@ -88,3 +88,14 @@ test('a schematic comes out as its control signals and its truth table', () => {
   assert.deepEqual(table.rows[3].slice(0, 3), ['1', 'x', 'x'])
   assert.ok(table.rows.some(row => row[0] === 'else'), 'the default row is in it')
 })
+
+test('what the design was asked for comes out beside what carries it', () => {
+  const root = read('pwm/pwm_top.rtlgraph.json') as ComponentGraph
+  const sheets = controlSheets(root, 'pwm_top')
+  const requirements = sheets.find(sheet => sheet.name.endsWith('requirements'))!
+  assert.deepEqual(requirements.rows[0], ['Document', 'Page', 'The requirement', 'Carried by', ''])
+  const rdy = requirements.rows.find(row => row[3] === 'RDY')!
+  assert.deepEqual(rdy, ['spec/pwm_brief.pdf', 1, 'RDY : Active-low when the PWM core is activated', 'RDY', 'net'])
+  // A design that cites nothing gets no tab at all.
+  assert.ok(!controlSheets(acc).some(sheet => sheet.name.endsWith('requirements')))
+})

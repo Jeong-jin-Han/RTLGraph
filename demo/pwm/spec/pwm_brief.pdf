@@ -1,0 +1,211 @@
+%PDF-1.4
+%‚„œ”
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 4 0 R /F2 5 0 R >> >> /Contents 6 0 R >>
+endobj
+4 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>
+endobj
+5 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>
+endobj
+6 0 obj
+<< /Length 1906 >>
+stream
+1 1 1 rg
+0 0 595 842 re
+f
+q
+0.07 0.09 0.15 rg
+BT
+/F2 20 Tf
+60 772 Td
+(D02-2: PWM controller) Tj
+ET
+Q
+q
+0.07 0.09 0.15 rg
+BT
+/F2 13 Tf
+60 732 Td
+(Pulse Width Modulation) Tj
+ET
+Q
+q
+0.07 0.09 0.15 rg
+BT
+/F1 11 Tf
+60 710 Td
+(Generate a square wave with a configurable duty cycle.) Tj
+ET
+Q
+q
+0.07 0.09 0.15 rg
+BT
+/F1 11 Tf
+60 692 Td
+(The average DC voltage drives an electric motor.) Tj
+ET
+Q
+q
+0.07 0.09 0.15 rg
+BT
+/F2 13 Tf
+60 652 Td
+(Interface signals) Tj
+ET
+Q
+q
+0.07 0.09 0.15 rg
+BT
+/F1 11 Tf
+60 630 Td
+(CLK : Core clock) Tj
+ET
+Q
+q
+0.07 0.09 0.15 rg
+BT
+/F1 11 Tf
+60 612 Td
+(RST : Active-high reset) Tj
+ET
+Q
+q
+0.07 0.09 0.15 rg
+BT
+/F1 11 Tf
+60 594 Td
+(PERIOD : Number of pulse period) Tj
+ET
+Q
+q
+0.07 0.09 0.15 rg
+BT
+/F1 11 Tf
+60 576 Td
+(DUTY : Number of ON cycles) Tj
+ET
+Q
+q
+0.07 0.09 0.15 rg
+BT
+/F1 11 Tf
+60 558 Td
+(SET : Set DUTY and PERIOD, enable PWM) Tj
+ET
+Q
+q
+0.07 0.09 0.15 rg
+BT
+/F1 11 Tf
+60 540 Td
+(STOP : Stop the PWM output) Tj
+ET
+Q
+q
+0.07 0.09 0.15 rg
+BT
+/F1 11 Tf
+60 522 Td
+(PWM : Generated PWM pulse) Tj
+ET
+Q
+q
+0.07 0.09 0.15 rg
+BT
+/F1 11 Tf
+60 504 Td
+(RDY : Active-low when the PWM core is activated) Tj
+ET
+Q
+q
+0.07 0.09 0.15 rg
+BT
+/F2 13 Tf
+60 464 Td
+(Detailed operations) Tj
+ET
+Q
+q
+0.07 0.09 0.15 rg
+BT
+/F1 11 Tf
+60 442 Td
+(Reset the core \(RDY becomes HIGH\).) Tj
+ET
+Q
+q
+0.07 0.09 0.15 rg
+BT
+/F1 11 Tf
+60 424 Td
+(Set PERIOD and DUTY.) Tj
+ET
+Q
+q
+0.07 0.09 0.15 rg
+BT
+/F1 11 Tf
+60 406 Td
+(Assert 1-cycle SET \(active-high\) to enable the PWM core.) Tj
+ET
+Q
+q
+0.07 0.09 0.15 rg
+BT
+/F1 11 Tf
+60 388 Td
+(Assert 1-cycle STOP \(active-high\) to stop the PWM core.) Tj
+ET
+Q
+q
+0.07 0.09 0.15 rg
+BT
+/F1 11 Tf
+60 356 Td
+(A state machine keeps the core in IDLE until it is set up,) Tj
+ET
+Q
+q
+0.07 0.09 0.15 rg
+BT
+/F1 11 Tf
+60 338 Td
+(loads the settings for one cycle, and runs until it is stopped.) Tj
+ET
+Q
+q
+0.42 0.45 0.5 rg
+BT
+/F1 9 Tf
+60 50 Td
+(page 1 of 1 - the brief demo/pwm is built from) Tj
+ET
+Q
+endstream
+endobj
+7 0 obj
+<< /Producer (RTLGraph) >>
+endobj
+xref
+0 8
+0000000000 65535 f 
+0000000015 00000 n 
+0000000064 00000 n 
+0000000121 00000 n 
+0000000257 00000 n 
+0000000354 00000 n 
+0000000456 00000 n 
+0000002414 00000 n 
+trailer
+<< /Size 8 /Root 1 0 R /Info 7 0 R >>
+startxref
+2456
+%%EOF

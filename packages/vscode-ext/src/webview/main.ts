@@ -913,6 +913,7 @@ canvas.addEventListener('contextmenu', event => {
     showMenu({ x: event.clientX - frame.left, y: event.clientY - frame.top }, [
       ...open,
       { label: `Open the code of ${displayName(id)}`, run: () => vscode.postMessage({ type: 'openSource', node: id }) },
+      ...(specOf(id) ? [{ label: 'Open the requirement it is here for', run: () => vscode.postMessage({ type: 'openSpec', node: id }) }] : []),
     ])
     return
   }
@@ -920,6 +921,7 @@ canvas.addEventListener('contextmenu', event => {
     event.preventDefault()
     showMenu({ x: event.clientX - frame.left, y: event.clientY - frame.top }, [
       { label: `Open the code of ${displayName(onWire)}`, run: () => vscode.postMessage({ type: 'openSource', signal: onWire }) },
+      ...(specOf(undefined, onWire) ? [{ label: 'Open the requirement it carries', run: () => vscode.postMessage({ type: 'openSpec', signal: onWire }) }] : []),
     ])
     return
   }

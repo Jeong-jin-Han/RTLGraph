@@ -37,6 +37,7 @@ export interface Diagnostic {
 
 export interface SourceInfo {
   root: string // project root, relative to the JSON file
+  spec?: string // the document the design is built from (a PDF), relative to root
   lib?: string // shared primitive library, relative to root
   files: string[]
   libFiles?: string[]
@@ -53,13 +54,25 @@ export interface Signal {
   aliases?: string[] // other names of the same net, e.g. from `assign OUT_D = ACC_D`
   meaning?: string // per-value meaning from `// @sch: meaning=...`
   hidden?: boolean
+  spec?: SpecRef // the requirement this net carries
   origin?: Origin
+}
+
+// Where a requirement this element exists for is written down. An assignment
+// arrives as a PDF, and the line between "the brief says this" and "the circuit
+// does this" is the thing a reader is checking, so it is part of the file:
+// the sentence verbatim, and the page it is on.
+export interface SpecRef {
+  quote: string // the sentence as the document writes it
+  page?: number // 1-based, a hint for finding it again
+  file?: string // relative to source.root; source.spec by default
 }
 
 interface NodeCommon {
   label?: string
   component?: string // absent: the component this file describes
   group?: string
+  spec?: SpecRef // the requirement this box is here for
   origin?: Origin // the instance statement
 }
 

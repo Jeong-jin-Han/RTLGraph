@@ -9,7 +9,7 @@ and simulates with `iverilog`, and every root validates with 0 errors.
 | `base/` | — | The six shared primitives (`DFF INC ADD SUB MUX2 CMP_EQ`) from EE578 `practice/base/`. Every other project instantiates them |
 | `acc/` | root + 1 schematic | EE578 `practice/week 2/D01-2/`: the accumulator of slide p.31. The hand-written golden — its `origin` lines are checked against the `.v` files, and its SVGs are the render goldens |
 | `sys/` | root + 4 schematics | Written for RTLGraph: the deep case. Root → `sys` → `host`, `dev` → `inbuf`, three levels of component boxes, with a golden SVG of all of them open |
-| `pwm/` | root + 4 schematics + **3 FSM files** | The D02-2 PWM controller, written for RTLGraph: three levels of components (`pwm` → `pulse` → `cnt`, with `rdy` beside `pulse`) and a state machine at each of the top two levels plus the handshake. The case for `*.rtlgraph-fsm.json` |
+| `pwm/` | root + 4 schematics + **3 FSM files** + **a brief** | The D02-2 PWM controller, written for RTLGraph: three levels of components (`pwm` → `pulse` → `cnt`, with `rdy` beside `pulse`) and a state machine at each of the top two levels plus the handshake. The case for `*.rtlgraph-fsm.json`, and for `spec`: `spec/pwm_brief.pdf` is the one-page brief the design was asked for, written by RTLGraph's own PDF writer (`node demo/pwm/spec/brief.mjs`), and four elements quote the sentence they are there for |
 | `hw/` | root + 2 schematics, **all in one flat folder** | An assignment as handed out: `hw_top.v` and `counter.v` side by side, names fixed, an active-low asynchronous reset, logic in `assign` and `always` rather than instances. The case for the "follow the code" placement — no folder is created and every JSON sits beside the module it describes |
 | `lab/` | root + 2 schematics, **all in `rtlgraph/`** | The other way to draw code you must not touch: `src/` is left exactly as handed out and every RTLGraph file is kept together in one folder of its own, with `source.root` climbing back out (`../src`). Also the case for logic with no symbol — a concatenation and a reduction `^` |
 | `stopwatch/` | **none, on purpose** | Typical non-conforming student code: flat folder, an FSM in `always` blocks, one positional connection, one counter module used twice, an active-low reset. The input for testing `.prompt/assignment/*.md` in a fresh session — its structure is exactly the kind that must be left alone |
@@ -27,6 +27,9 @@ and simulates with `iverilog`, and every root validates with 0 errors.
 - **`pwm`** — the state machines: `packages/rtl-ir/test/demo-hierarchy.test.ts`
   validates all three, and `packages/rtl-layout/test/fsm.test.ts` checks each
   diagram fits its page with no label over a state box.
+- **`pwm`'s brief** — `packages/rtl-ir/test/demo-hierarchy.test.ts` checks that every
+  sentence a demo quotes is really in the document it names, so a `spec` link cannot
+  rot into a paraphrase.
 - **`lab`** — the folder-of-its-own placement, and the code jump across it:
   `originOf` has to climb out of `rtlgraph/` to reach `../src/shift_reg.v`.
 - **`hw`** — the flat placement: `packages/rtl-ir/test/demo-hierarchy.test.ts`

@@ -6,6 +6,7 @@
   "modified": "2026-09-18T00:00:00.000Z",
   "source": {
     "root": ".",
+    "spec": "../spec/pwm_brief.pdf",
     "lib": "../../base",
     "files": ["seq/pwm_top.v", "comb/control_path/pwm_fsm.v"],
     "libFiles": ["DFF.v"],
@@ -41,6 +42,7 @@
     "control_path": {
       "kind": "control", "flow": "control", "time": "comb", "module": "pwm_fsm",
       "label": "FSM code",
+      "spec": { "quote": "A state machine keeps the core in IDLE until it is set up,", "page": 1 },
       "ports": { "RST": "in", "SET": "in", "STOP": "in", "STATE": "in", "STATE_D": "out", "LOAD_EN": "out", "RUN_EN": "out", "STOPPED": "out" },
       "truthTable": {
         "inputs": ["RST", "SET", "STOP", "STATE"],
@@ -60,6 +62,7 @@
     },
     "u_pulse": {
       "kind": "component", "name": "pulse", "module": "pulse_top",
+      "spec": { "quote": "Generate a square wave with a configurable duty cycle.", "page": 1 },
       "ref": "pulse/pulse.rtlgraph-schematic.json",
       "ports": { "CLK": "in", "RST": "in", "RUN": "in", "PERIOD": "in", "DUTY": "in", "PWM": "out" },
       "origin": { "file": "seq/pwm_top.v", "line": 41 }

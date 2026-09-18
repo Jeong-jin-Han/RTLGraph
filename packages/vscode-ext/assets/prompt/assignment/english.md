@@ -1,5 +1,6 @@
 PROJECT_ROOT_ABSOLUTE_PATH = <PROJECT_ROOT_ABSOLUTE_PATH>
 PROJECT_FOLDER = PROJECT_ROOT_ABSOLUTE_PATH
+SPEC_DOCUMENT = <leave empty, or the path of the brief this design was asked for, e.g. spec/pwm_brief.pdf>
 RTLGRAPH_FOLDER = <leave empty to put each file beside its code, or name one folder to keep them all in, e.g. rtlgraph>
 
 This is an assignment: the skeleton was handed out and must stay exactly as it
@@ -21,7 +22,9 @@ where the code departs from contracts C1–C7 — as a reading of the assignment
 not as something to fix. Then write the files: <top>.rtlgraph.json in
 PROJECT_FOLDER and one <name>.rtlgraph-schematic.json per component, beside its
 code. Where a component holds a state machine, write its <name>.rtlgraph-fsm.json
-in the same folder and mark the state register with fsm.
+in the same folder and mark the state register with fsm. If SPEC_DOCUMENT is
+given — an assignment usually comes with one — follow Step 7c: set source.spec and
+quote the sentence each element is there for, verbatim and with its page.
 
 Write meaning, label, note and diagnostic messages in English. Keep net, module,
 instance and pin names exactly as they appear in the code.

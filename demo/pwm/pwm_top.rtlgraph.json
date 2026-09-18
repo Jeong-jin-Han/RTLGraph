@@ -6,6 +6,7 @@
   "modified": "2026-09-18T00:00:00.000Z",
   "source": {
     "root": ".",
+    "spec": "spec/pwm_brief.pdf",
     "files": ["pwm/seq/pwm_top.v"],
     "top": "pwm_top",
     "contractCheck": "pass"
@@ -15,10 +16,10 @@
     "RST":    { "width": 1, "flow": "reset",   "driver": "@RST",    "sinks": ["pwm:RST"],    "meaning": "1=stop the wave and forget PERIOD and DUTY", "origin": { "file": "pwm/seq/pwm_top.v", "line": 10 } },
     "PERIOD": { "width": 8, "flow": "data",    "driver": "@PERIOD", "sinks": ["pwm:PERIOD"], "meaning": "the number of cycles in one pulse period", "origin": { "file": "pwm/seq/pwm_top.v", "line": 11 } },
     "DUTY":   { "width": 8, "flow": "data",    "driver": "@DUTY",   "sinks": ["pwm:DUTY"],   "meaning": "the number of ON cycles of a period", "origin": { "file": "pwm/seq/pwm_top.v", "line": 12 } },
-    "SET":    { "width": 1, "flow": "control", "driver": "@SET",    "sinks": ["pwm:SET"],    "meaning": "1 cycle: take PERIOD and DUTY and start the wave", "origin": { "file": "pwm/seq/pwm_top.v", "line": 13 } },
-    "STOP":   { "width": 1, "flow": "control", "driver": "@STOP",   "sinks": ["pwm:STOP"],   "meaning": "1 cycle: stop the wave", "origin": { "file": "pwm/seq/pwm_top.v", "line": 14 } },
+    "SET":    { "width": 1, "flow": "control", "driver": "@SET",    "sinks": ["pwm:SET"],    "meaning": "1 cycle: take PERIOD and DUTY and start the wave", "spec": { "quote": "Assert 1-cycle SET (active-high) to enable the PWM core.", "page": 1 }, "origin": { "file": "pwm/seq/pwm_top.v", "line": 13 } },
+    "STOP":   { "width": 1, "flow": "control", "driver": "@STOP",   "sinks": ["pwm:STOP"],   "meaning": "1 cycle: stop the wave", "spec": { "quote": "Assert 1-cycle STOP (active-high) to stop the PWM core.", "page": 1 }, "origin": { "file": "pwm/seq/pwm_top.v", "line": 14 } },
     "PWM":    { "width": 1, "flow": "data",    "driver": "pwm:PWM", "sinks": ["@PWM"],       "meaning": "the generated pulse", "origin": { "file": "pwm/seq/pwm_top.v", "line": 15 } },
-    "RDY":    { "width": 1, "flow": "control", "driver": "pwm:RDY", "sinks": ["@RDY"],       "meaning": "active-low: 0 while the core is activated", "origin": { "file": "pwm/seq/pwm_top.v", "line": 16 } }
+    "RDY":    { "width": 1, "flow": "control", "driver": "pwm:RDY", "sinks": ["@RDY"],       "meaning": "active-low: 0 while the core is activated", "spec": { "quote": "RDY : Active-low when the PWM core is activated", "page": 1 }, "origin": { "file": "pwm/seq/pwm_top.v", "line": 16 } }
   },
   "nodes": {
     "@CLK":    { "kind": "port", "dir": "in",  "flow": "clock",   "origin": { "file": "pwm/seq/pwm_top.v", "line": 9 } },
@@ -31,6 +32,7 @@
     "@RDY":    { "kind": "port", "dir": "out", "flow": "control", "origin": { "file": "pwm/seq/pwm_top.v", "line": 16 } },
     "pwm": {
       "kind": "component", "name": "pwm", "module": "pwm_top",
+      "spec": { "quote": "Generate a square wave with a configurable duty cycle.", "page": 1 },
       "ref": "pwm/pwm.rtlgraph-schematic.json",
       "ports": { "CLK": "in", "RST": "in", "PERIOD": "in", "DUTY": "in", "SET": "in", "STOP": "in", "PWM": "out", "RDY": "out" },
       "origin": { "file": "pwm/seq/pwm_top.v", "line": 8 }

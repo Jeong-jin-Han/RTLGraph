@@ -120,6 +120,36 @@ export function hierarchyEntries(root: HierarchyEntry | undefined): HierarchyEnt
   return [root, ...Object.values(root.children).flatMap(hierarchyEntries)]
 }
 
+// The requirement a drawn element is there for: the sentence, the page, and the
+// document — as a path relative to the folder of the root file, the same way an
+// origin is resolved.
+export function specOf(
+  root: HierarchyEntry | undefined,
+  of: { node?: string; signal?: string },
+): { path: string; page?: number; quote: string } | undefined {
+  const id = of.node ?? of.signal
+  if (!root || id === undefined) return undefined
+  const parts = id.split('/')
+  const own = parts.pop()!
+  const entry = hierarchyEntries(root).find(e => e.instance === parts.join('/'))
+  const spec = of.node !== undefined ? entry?.graph.nodes[own]?.spec : entry?.graph.signals[own]?.spec
+  const file = spec?.file ?? entry?.graph.source.spec
+  if (!entry || !spec || file === undefined) return undefined
+  const folder = entry.path.split('/').slice(0, -1)
+  return { path: resolve([...folder, ...entry.graph.source.root.split('/'), ...file.split('/')]), page: spec.page, quote: spec.quote }
+}
+
+// Joins the pieces of a path and takes out the "." and ".." it can.
+function resolve(parts: readonly string[]): string {
+  const path: string[] = []
+  for (const part of parts) {
+    if (part === '' || part === '.') continue
+    if (part === '..' && path.length > 0 && path[path.length - 1] !== '..') path.pop()
+    else path.push(part)
+  }
+  return path.join('/')
+}
+
 // Where the code behind a drawn element is, as a path relative to the folder of
 // the root file. The id carries the instance path ("sys/u_dev/u_inbuf/BUF_FF"),
 // which says which schematic describes it; that schematic says where its sources
@@ -137,13 +167,7 @@ export function originOf(
   const origin = of.node !== undefined ? entry.graph.nodes[own]?.origin : entry.graph.signals[own]?.origin
   if (!origin) return undefined
   const folder = entry.path.split('/').slice(0, -1)
-  const path: string[] = []
-  for (const part of [...folder, ...entry.graph.source.root.split('/'), ...origin.file.split('/')]) {
-    if (part === '' || part === '.') continue
-    // A ".." with nothing to climb stays: the sources may sit beside the folder
-    // the RTLGraph files were put in, not under it.
-    if (part === '..' && path.length > 0 && path[path.length - 1] !== '..') path.pop()
-    else path.push(part)
-  }
-  return { path: path.join('/'), line: origin.line }
+  // A ".." with nothing to climb stays: the sources may sit beside the folder the
+  // RTLGraph files were put in, not under it.
+  return { path: resolve([...folder, ...entry.graph.source.root.split('/'), ...origin.file.split('/')]), line: origin.line }
 }
