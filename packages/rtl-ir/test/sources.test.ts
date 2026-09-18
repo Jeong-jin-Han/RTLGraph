@@ -49,3 +49,41 @@ test('a name must match as a whole identifier', () => {
   g.signals.ACC_Q.origin = { file: 'seq/acc_top.v', line: 21 } // "wire [5:0] ACC_D;"
   assert.deepEqual(checkSources(g, read).map(d => d.signal).sort(), ['ACC_Q', 'CNT_D'])
 })
+
+test('a name the extractor had to invent may sit on a line that names what it is wired to', () => {
+  // Non-conforming code: a comparison used twice and an enable condition, neither
+  // of which the RTL ever names.
+  const code = [
+    'module d (input clk, input rst_n, input clr, input inc, output reg [3:0] q);',
+    '    always @(posedge clk or negedge rst_n) begin',
+    "        if (!rst_n)   q <= 4'd0;",
+    "        else if (clr) q <= 4'd0;",
+    "        else if (inc) q <= (q == 4'd9) ? 4'd0 : q + 4'd1;",
+    '    end',
+    'endmodule',
+  ].join('\n')
+  const graph = {
+    version: '0.1.0', kind: 'component', title: 'd', created: '', modified: '',
+    source: { root: '.', files: ['d.v'], top: 'd' },
+    signals: {
+      q: { width: 4, flow: 'data', driver: 'q_reg:Q', sinks: ['op_q9:a'], origin: { file: 'd.v', line: 1 } },
+      // invented: the code never writes "q9" or "q_EN"
+      q9: { width: 1, flow: 'control', driver: 'op_q9:y', sinks: ['q_reg:EN'], meaning: '1=at nine', origin: { file: 'd.v', line: 5 } },
+    },
+    nodes: {
+      op_q9: { kind: 'op', flow: 'control', time: 'comb', module: 'CMP_EQ', ports: { a: 'in', b: 'in', y: 'out' }, consts: { b: "4'd9" }, origin: { file: 'd.v', line: 5 } },
+      q_reg: { kind: 'reg', flow: 'data', time: 'seq', module: 'DFF', ports: { CLK: 'in', EN: 'in', D: 'in', Q: 'out' }, origin: { file: 'd.v', line: 2 } },
+    },
+  } as unknown as ComponentGraph
+
+  const found = checkSources(graph, path => (path === 'd.v' ? code : undefined))
+  assert.deepEqual(found, [], 'line 5 names q, which op_q9 reads; line 2 is the always block')
+
+  // The relaxation is not a free pass: the line still has to name something the
+  // element is wired to, and "endmodule" names nothing.
+  const moved = structuredClone(graph)
+  moved.nodes.op_q9.origin = { file: 'd.v', line: 7 }
+  const strict = checkSources(moved, path => (path === 'd.v' ? code : undefined))
+  assert.deepEqual(strict.map(d => d.code), ['origin-mismatch'])
+  assert.equal(strict[0].node, 'op_q9')
+})

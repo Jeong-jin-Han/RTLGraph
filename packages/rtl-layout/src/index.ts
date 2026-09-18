@@ -312,13 +312,17 @@ export function layoutComponent(graph: ComponentGraph, options: LayoutOptions = 
 
   // ── rows ──
   const isComb = (n: RtlNode) => n.kind !== 'port' && n.kind !== 'control' && n.kind !== 'component' && n.time === 'comb'
+  // A component is a stage of the design like a block of logic is: one that feeds
+  // another belongs a row above it. Without this every component landed in the
+  // register row, and a design made of components came out as one long strip.
+  const staged = (n: RtlNode) => isComb(n) || n.kind === 'component'
   const level = new Map<string, number>()
   const visiting = new Set<string>()
   const levelOf = (id: string): number => {
     const known = level.get(id)
     if (known !== undefined) return known
     const n = nodes[id]
-    if (n.kind === 'port' || !isComb(n)) return 0
+    if (n.kind === 'port' || !staged(n)) return 0
     if (visiting.has(id)) return 1 // combinational loop (contract C1 violation): keep going
     visiting.add(id)
     let lv = 1
@@ -326,19 +330,19 @@ export function layoutComponent(graph: ComponentGraph, options: LayoutOptions = 
       const net = netAt.get(`${id}:${pin}`)
       if (net === undefined || signals[net].driver === `${id}:${pin}`) continue
       const d = nodes[nodeOf(signals[net].driver)]
-      if (d.kind !== 'port' && isComb(d)) lv = Math.max(lv, levelOf(nodeOf(signals[net].driver)) + 1)
+      if (d.kind !== 'port' && staged(d)) lv = Math.max(lv, levelOf(nodeOf(signals[net].driver)) + 1)
     }
     visiting.delete(id)
     level.set(id, lv)
     return lv
   }
-  const depth = Math.max(0, ...ids.filter(id => isComb(nodes[id])).map(levelOf))
+  const depth = Math.max(0, ...ids.filter(id => staged(nodes[id])).map(levelOf))
 
   const row = new Map<string, number>()
   for (const id of ids) {
     const n = nodes[id]
     if (n.kind === 'control') row.set(id, 0)
-    else if (n.kind !== 'port') row.set(id, isComb(n) ? depth - levelOf(id) : depth)
+    else if (n.kind !== 'port') row.set(id, staged(n) ? depth - levelOf(id) : depth)
   }
   // That holds only for a single control block. Any other input port bound for the
   // control block's row moves one row down (below), so it never stacks beside the

@@ -215,3 +215,22 @@ test('fold state is per instance, and layout is deterministic', () => {
   assert.ok(onlyTop.nodes.u_top.w < layoutHierarchy(root, () => true).nodes.u_top.w)
   assert.deepEqual(layoutHierarchy(root, () => true), layoutHierarchy(root, () => true))
 })
+
+test('a component that feeds another sits a row above it', () => {
+  // demo/sys: the host produces the samples the device consumes, so the two are
+  // stages, not neighbours. Everything in one row made a design of components
+  // come out as a long strip.
+  const sys = join(import.meta.dirname, '../../../demo/sys')
+  const read = (path: string) => {
+    try {
+      return readFileSync(join(sys, path), 'utf8')
+    } catch {
+      return undefined
+    }
+  }
+  const inner = loadHierarchy('sys/sys.rtlgraph-schematic.json', read).root!
+  const level = layoutComponent(inner.graph)
+  const [host, dev] = [level.nodes.u_host, level.nodes.u_dev]
+  assert.notEqual(host.row, dev.row, 'they are not in one row')
+  assert.ok(host.y > dev.y, `u_host (${host.y}) is below u_dev (${dev.y}), the way data flows up the rows`)
+})

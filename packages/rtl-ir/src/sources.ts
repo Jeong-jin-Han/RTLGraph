@@ -46,6 +46,38 @@ export function checkSources(graph: ComponentGraph, read: ReadSource): Diagnosti
     return cache.get(file)
   }
 
+  // A name the code uses must be on the line it claims; a name the extractor had
+  // to invent — a condition used twice, the enable of a register recovered from an
+  // always block, a block of assigns drawn as one control node — is on no line at
+  // all, so for those the line has to name something the element is wired to.
+  const known = new Map<string, boolean>()
+  const declared = (token: string) => {
+    if (!known.has(token)) {
+      known.set(token, graph.source.files.some(file => (linesOf(file) ?? []).some(line => mentions(line, token))))
+    }
+    return known.get(token)!
+  }
+  const netsAt = new Map<string, Set<string>>() // node id -> the nets on its pins
+  for (const [name, signal] of Object.entries(graph.signals)) {
+    for (const ref of [signal.driver, ...(Array.isArray(signal.sinks) ? signal.sinks : [])]) {
+      const node = ref.replace(/^@/, '@').split(':')[0]
+      netsAt.set(node, (netsAt.get(node) ?? new Set()).add(name))
+    }
+  }
+  // Around an invented name: the nets on its own pins, and the nets on the pins of
+  // whatever it is wired to — the line that computes it names its inputs.
+  const around = (id: string): string[] => {
+    const nets = new Set(netsAt.get(id) ?? [])
+    for (const name of [...nets]) {
+      const signal = graph.signals[name]
+      if (!signal) continue
+      for (const ref of [signal.driver, ...(signal.sinks ?? [])]) {
+        for (const other of netsAt.get(ref.split(':')[0]) ?? []) nets.add(other)
+      }
+    }
+    return [...nets]
+  }
+
   for (const file of graph.source.files) {
     if (!linesOf(file)) out.push({ severity: 'error', code: 'source-missing', msg: `source file "${file}" not found`, file })
   }
@@ -76,10 +108,12 @@ export function checkSources(graph: ComponentGraph, read: ReadSource): Diagnosti
   for (const [id, node] of Object.entries(graph.nodes)) {
     if (node.origin) {
       // A component box's origin may be its instance line or its module declaration.
-      const tokens = node.kind === 'component' ? [...originTokens(id), node.module] : originTokens(id)
-      // A register recovered from an always block sits on that block, and an
-      // "always @(posedge …)" line names the clock, not the register.
-      const always = lastSegment(id).endsWith('_reg') ? [/\balways\b/] : []
+      const own = node.kind === 'component' ? [...originTokens(id), node.module] : originTokens(id)
+      // A register or a block recovered from an always block sits on that block,
+      // and an "always" line names the clock, not what was recovered from it.
+      const recovered = !own.some(declared)
+      const always = recovered || lastSegment(id).endsWith('_reg') ? [/\balways\b/] : []
+      const tokens = recovered ? [...own, ...around(id)] : own
       check(node.origin, tokens, `node ${id}`, { node: id }, always)
     }
     if (node.kind === 'control' && node.truthTable?.origin) {
@@ -93,7 +127,11 @@ export function checkSources(graph: ComponentGraph, read: ReadSource): Diagnosti
   }
   for (const [name, signal] of Object.entries(graph.signals)) {
     if (signal.origin) {
-      check(signal.origin, [name, ...(signal.aliases ?? [])].flatMap(originTokens), `signal ${name}`, { signal: name })
+      const own = [name, ...(signal.aliases ?? [])].flatMap(originTokens)
+      const tokens = own.some(declared)
+        ? own
+        : [...own, ...new Set([signal.driver, ...(signal.sinks ?? [])].flatMap(ref => around(ref.split(':')[0])))]
+      check(signal.origin, tokens, `signal ${name}`, { signal: name })
     }
   }
   return out
