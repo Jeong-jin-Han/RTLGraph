@@ -193,8 +193,11 @@ function updateComponentTools() {
   rootButton.hidden = root === undefined || root.graph.kind === 'system' // already there
   componentTools.hidden = instances.length === 0
   selectionLabel.textContent = selected ?? selectedWire ?? 'none selected'
-  foldButton.title = selected ? `Fold ${selected}: only it, or it and everything inside` : 'Fold every component'
-  unfoldButton.title = selected ? `Unfold ${selected}: only it, or it and everything inside` : 'Unfold every component'
+  // Fold and unfold are about components; any other box is selected for what it
+  // is — its code, its place — so with one of those they act on the whole tree.
+  const box = selected !== undefined && instances.includes(selected) ? selected : undefined
+  foldButton.title = box ? `Fold ${box}: only it, or it and everything inside` : 'Fold every component'
+  unfoldButton.title = box ? `Unfold ${box}: only it, or it and everything inside` : 'Unfold every component'
   editButton.setAttribute('aria-pressed', String(editing))
   resetButton.hidden = !editing || !isArranged(arrangement)
   // Only worth offering when something in this file names a machine.
@@ -220,7 +223,7 @@ function report() {
 
 function markSelection() {
   stage.querySelectorAll('g.selected').forEach(g => g.classList.remove('selected'))
-  stage.querySelectorAll('g.component').forEach(g => {
+  stage.querySelectorAll('g.node, g.component').forEach(g => {
     if (g.getAttribute('data-node-id') === selected) g.classList.add('selected')
   })
   // What the reader cannot arrange from this file, while arranging.
@@ -591,7 +594,10 @@ function setFilter(next: ViewFilter) {
 
 function fold(action: FoldAction, scope: FoldScope, instance?: string) {
   if (!root) return
-  unfolded = applyFold(unfolded, instances, action, scope, instance)
+  // A box that is not a component cannot be folded; with one selected, the
+  // buttons act on the whole hierarchy rather than doing nothing.
+  const target = instance !== undefined && instances.includes(instance) ? instance : undefined
+  unfolded = applyFold(unfolded, instances, action, target ? scope : 'all', target)
   foldChosenHere = true
   if (selected !== undefined && !isInstanceShown(selected, unfolded)) selected = undefined
   relayout()
@@ -743,6 +749,9 @@ const CLICK_SLOP = 4
 // taken from the press. While arranging, a press on a box drags it and a press
 // on a frame's corner resizes it; otherwise the press pans.
 canvas.addEventListener('pointerdown', event => {
+  // A press inside the menu belongs to the menu: closing it here would take the
+  // button out from under the click that was about to land on it.
+  if (event.target instanceof Node && menu.contains(event.target)) return
   closeMenu()
   if (event.button !== 0) return
   const v = viewport ?? { x: 0, y: 0, zoom: 1 }
@@ -849,8 +858,11 @@ canvas.addEventListener('pointerdown', event => {
         persist()
         return
       }
+      // Any box can be selected — the code behind it is what the palette's
+      // "Open the Code of the Selected Box" needs — and a component box also
+      // folds when the marker itself was pressed.
       const instance = componentAt(start.target)
-      select(instance)
+      select(nodeAt(start.target))
       if (instance !== undefined && markerAt(start.target)) fold(isUnfolded(instance) ? 'fold' : 'unfold', 'node', instance)
     }
     persist()

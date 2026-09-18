@@ -20,7 +20,7 @@
     "@din": { "kind": "port", "dir": "in",  "flow": "data",    "origin": { "file": "shift_reg.v", "line": 7 } },
     "@q":   { "kind": "port", "dir": "out", "flow": "data",    "origin": { "file": "shift_reg.v", "line": 8 } },
     "op_q_D": {
-      "kind": "module", "flow": "data", "time": "comb", "module": "CONCAT",
+      "kind": "op", "flow": "data", "time": "comb", "module": "CONCAT",
       "label": "{q[6:0], din}",
       "ports": { "a": "in", "b": "in", "y": "out" },
       "origin": { "file": "shift_reg.v", "line": 13 }

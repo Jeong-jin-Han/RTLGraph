@@ -162,6 +162,13 @@ function nodeItems(id: string, node: RtlNode, b: NodeBox, controls = false): Ite
       { kind: 'text', x: cx, y: cy, text: def.label ?? def.module, anchor: 'middle', central: true, fill: PALETTE.ink },
     ]
   }
+  // Same reason as the shape: an operation with no symbol is drawn as one.
+  if (node.kind === 'op' || node.kind === 'mux') {
+    return [
+      { kind: 'rect', x: b.x, y: b.y, w: b.w, h: b.h, fill: PALETTE.nodeFill, stroke: PALETTE.ink, strokeWidth: 1.5 },
+      { kind: 'text', x: cx, y: cy, text: node.label ?? node.module, anchor: 'middle', central: true, fill: PALETTE.ink },
+    ]
+  }
   const control = node.kind === 'control'
   const component = node.kind === 'component'
   const items: Item[] = [

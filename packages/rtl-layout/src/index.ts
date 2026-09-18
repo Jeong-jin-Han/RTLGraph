@@ -198,6 +198,18 @@ function shapeOf(id: string, node: RtlNode, portSide: Side, frame?: Frame): Shap
     if (def.symbol === 'mux') return { w: Math.max(56, (bottom + 1) * 18), h: 20, titled: false, sides }
     return { w: Math.max(48, (bottom + 1) * 16, textWidth(def.label ?? def.module) + 20), h: 34, titled: false, sides }
   }
+  // An operation the registry has no symbol for is still an operation: a small
+  // box that takes its inputs from below and drives upward, like ADD and SUB,
+  // not the titled pin-list a sub-module gets. Assignment code is full of these
+  // — a reduction, a concatenation, an AND — and as pin-lists they read as if
+  // each one were a module of its own.
+  if (node.kind === 'op' || node.kind === 'mux') {
+    for (const [name, dir] of Object.entries(node.ports)) {
+      sides.set(name, dir === 'out' ? 'top' : name === 'sel' ? 'left' : 'bottom')
+    }
+    const below = [...sides.values()].filter(side => side === 'bottom').length
+    return { w: Math.max(48, below * 18, textWidth(node.label ?? node.module) + 20), h: 34, titled: false, sides }
+  }
   for (const [name, dir] of Object.entries(node.ports)) sides.set(name, dir === 'out' ? 'right' : 'left')
   const left = [...sides.values()].filter(s => s === 'left').length
   const longest = Math.max(0, ...Object.keys(node.ports).map(textWidth))

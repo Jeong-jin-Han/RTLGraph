@@ -178,6 +178,15 @@ export async function run(): Promise<void> {
   assert.equal(opened?.selection.start.line, 2, 'the cursor is on the line the box came from')
   log('Open Code jumps from a box to the line of Verilog it came from')
 
+  // The files kept in a folder of their own: the jump has to climb out of it, and
+  // the box is two levels down.
+  const lab = vscode.Uri.file(join(dirname(dirname(graphFile)), 'lab/rtlgraph/lab_top.rtlgraph.json'))
+  await vscode.commands.executeCommand('vscode.open', lab)
+  await until('the lab root', renderState)
+  const deepCode = await vscode.commands.executeCommand<string>('rtlgraph.openCode', 'lab/u_shift/q_reg')
+  assert.equal(deepCode, `${join(dirname(dirname(graphFile)), 'lab/src/shift_reg.v')}:11`)
+  log('Open Code climbs out of rtlgraph/ to ../src for a box two levels down')
+
   // ── state machines: demo/pwm, three levels with a machine at two of them ──
   const demo = dirname(dirname(graphFile))
   const pwmSchematic = vscode.Uri.file(join(demo, 'pwm/pwm/pwm.rtlgraph-schematic.json'))
