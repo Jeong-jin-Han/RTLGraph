@@ -131,7 +131,7 @@ def corners(shape, want=7):
     return best
 
 
-def rimmed(image, band=0.028, inset=0.020):
+def rimmed(image, band=0.014, inset=0.013):
     """The shape re-cut along its own outline, with a thin white band on the edge —
     NodeGraph's icon wears the same rim, and it is what keeps a dark heptagon from
     sinking into a dark background."""

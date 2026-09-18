@@ -5,7 +5,7 @@ import { join } from 'node:path'
 import type { ComponentGraph, Layout } from '@rtlgraph/ir'
 import {
   belongsToThisFile, cleared, emptyLayout, isArranged, isCut, linkedPair, movedTo, resizedTo, shapedTo,
-  linkDecision, turnedAt, vertexAt, withCut, withLink, withoutCut, withoutLink,
+  cornerFor, linkDecision, turnedAt, vertexAt, withCut, withLink, withoutCut, withoutLink,
 } from '../src/webview/edit.ts'
 
 test('only what this file draws can be arranged here', () => {
@@ -68,11 +68,14 @@ test('a right-click turns the corner under the hand the other way round', () => 
   assert.deepEqual(turnedAt(turned, { x: 0, y: 30 }, 8), elbow, 'and back again')
 })
 
-test('with no corner under the hand it turns the first one', () => {
+test('a click between corners turns the nearest one, not the first', () => {
+  //  (0,0) → (20,0) → (20,30) → (60,30): corners at (20,0) and (20,30)
   const zig = [{ x: 0, y: 0 }, { x: 20, y: 0 }, { x: 20, y: 30 }, { x: 60, y: 30 }]
-  assert.deepEqual(turnedAt(zig, { x: 55, y: 30 }, 4)[1], { x: 0, y: 30 })
+  assert.equal(cornerFor(zig, { x: 55, y: 30 }, 4), 2, 'the far end of the last run belongs to the corner it starts at')
+  assert.equal(cornerFor(zig, { x: 5, y: 0 }, 4), 1)
   // A straight run has no corner to turn, so it is left alone.
   const straight = [{ x: 0, y: 0 }, { x: 40, y: 0 }]
+  assert.equal(cornerFor(straight, { x: 20, y: 0 }, 8), undefined)
   assert.deepEqual(turnedAt(straight, { x: 20, y: 0 }, 8), straight)
 })
 

@@ -288,8 +288,18 @@ export function turnedCorner(points: readonly Point[], index: number): Point[] {
 
 // The right-click: turn the corner under the hand, else the first corner of the
 // run — "bend it the other way, from the start".
+// The corner a right-click means: the one under the hand, or — when the click
+// landed on a straight run between corners — the nearest one. Turning the first
+// corner of the wire instead, as this used to, moved a bend at the far end of
+// the picture and read as the editor doing something at random.
+export function cornerFor(points: readonly Point[], at: Point, within: number): number | undefined {
+  const under = vertexAt(points, at, within)
+  if (under !== undefined) return under
+  return vertexAt(points, at, Infinity)
+}
+
 export function turnedAt(points: readonly Point[], at: Point, within: number): Point[] {
-  const corner = vertexAt(points, at, within) ?? (points.length > 2 ? 1 : undefined)
+  const corner = cornerFor(points, at, within)
   return corner === undefined ? [...points] : turnedCorner(points, corner)
 }
 

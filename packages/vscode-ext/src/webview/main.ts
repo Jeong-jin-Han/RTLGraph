@@ -15,8 +15,8 @@ import {
   type FoldAction, type FoldScope, type ViewGroup, type Viewport,
 } from './state.ts'
 import {
-  belongsToThisFile, branchAt, branchesOf, cleared, emptyLayout, isArranged, isCut, midpoint,
-  linkDecision, movedSegment, movedTo, removedVertex, resizedTo, segmentAt, shapedTo, turnedAt, withCut,
+  belongsToThisFile, branchAt, branchesOf, cleared, cornerFor, emptyLayout, isArranged, isCut, midpoint,
+  linkDecision, movedSegment, movedTo, removedVertex, resizedTo, segmentAt, shapedTo, turnedCorner, withCut,
   withLink, withoutCut, withoutLink, type Point,
 } from './edit.ts'
 
@@ -990,9 +990,22 @@ canvas.addEventListener('contextmenu', event => {
   const branches = branchesOfSelected()
   const shape = shapeOfSelected()
   if (!shape) return
-  const turned = turnedAt(shape, at, TURN_REACH / (viewport?.zoom ?? 1))
+  // Turning a corner is the one edit with nothing to see while it happens — no
+  // drag, no grip moving under the hand — so it says what it did. A wire with no
+  // corner at all would otherwise look like a right-click that did nothing.
+  const corner = cornerFor(shape, at, TURN_REACH / (viewport?.zoom ?? 1))
+  if (corner === undefined) {
+    notice(`${shortName(name)} runs straight from one pin to the other — there is no corner to turn`)
+    return
+  }
+  const turned = turnedCorner(shape, corner)
+  if (turned.length === shape.length && turned.every((p, i) => p.x === shape[i].x && p.y === shape[i].y)) {
+    notice(`that corner of ${shortName(name)} cannot go the other way round`)
+    return
+  }
   arrangement = shapedTo(arrangement, name, (branches ?? [shape]).map((path, i) => (i === selectedBranch ? turned : path)))
   selectedVertex = undefined
+  notice(`turned a corner of ${shortName(name)} the other way round — right-click it again to bring it back`)
   saveArrangement()
 })
 

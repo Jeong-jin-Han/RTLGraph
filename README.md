@@ -185,7 +185,7 @@ example, handout included.
 | Drag a frame's corner | Resize it |
 | Drag a straight run of a wire | Shift that run sideways |
 | Drag from a pin | Draw a link — drop it on a pin, or anywhere over the target box and it snaps to the nearest pin that can take it; while you drag, only the pins that can take it stay lit |
-| Right-click a wire | Turn its corner the other way round |
+| Right-click a wire | Flip the nearest corner: an `L` becomes a `Γ` and back. A wire only ever turns at right angles, so two runs meeting at a corner span a rectangle and there are exactly two ways round it — right-clicking swaps them, and right-clicking again puts it back. The editor says which wire it turned; a wire that runs straight has no corner and says so |
 | `Delete` | Cut the selected link (drawing it again puts it back) |
 
 Everything here is written under `layout` in the file, and nothing else is.
