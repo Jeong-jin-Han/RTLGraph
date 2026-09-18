@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { webviewHtml } from '../src/webview/html.ts'
+import { columnRightOf } from '../src/tabs.ts'
 
 const ROOT = join(import.meta.dirname, '..')
 const manifest = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8'))
@@ -52,4 +53,18 @@ test('both bundles are built; only the host bundle loads vscode', () => {
   assert.match(host, /require\("vscode"\)/)
   assert.doesNotMatch(webview, /require\(|["']vscode["']|["']node:/)
   assert.match(webview, /acquireVsCodeApi/)
+})
+
+test('code opens in the group right of the schematic, and reuses it after that', () => {
+  // One group: there is nothing to the right yet, so one has to be made.
+  assert.equal(columnRightOf([1], 1), undefined)
+  // Two: the code goes in the second, and keeps going there.
+  assert.equal(columnRightOf([1, 2], 1), 2)
+  // Three or more: the one immediately right of the schematic, not the last.
+  assert.equal(columnRightOf([1, 2, 3], 1), 2)
+  assert.equal(columnRightOf([1, 2, 3], 2), 3)
+  assert.equal(columnRightOf([1, 2, 3], 3), undefined, 'the schematic is rightmost: a new group')
+  // Nothing to go by: the second group if there is one.
+  assert.equal(columnRightOf([1, 2], undefined), 2)
+  assert.equal(columnRightOf([1], undefined), undefined)
 })

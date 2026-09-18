@@ -33,7 +33,8 @@ RTL folder ──[AI agent + .agent/RTLGRAPH_SPEC.md]──→ *.rtlgraph.json +
    only or on everything inside it too; with nothing selected (`Esc`) they act on the whole hierarchy.
    Double-click a box to toggle just that one. **Right-click any box** to ask where to go: into a
    component's own schematic, or straight to the line of Verilog it came from (a net's right-click
-   menu opens its line too).
+   menu opens its line too). Code opens *beside* the drawing — a group is made to its right the
+   first time and reused after that, so the schematic stays on the left while you read.
 6. `Ctrl+Shift+P` → type `RTLGraph`:
 
    | Command | What it does |
@@ -43,7 +44,7 @@ RTL folder ──[AI agent + .agent/RTLGRAPH_SPEC.md]──→ *.rtlgraph.json +
    | `RTLGraph: Export Schematic (SVG / PNG / PDF)` | Exports the current view (also the **Export…** toolbar button) |
    | `RTLGraph: Fold Components` / `Unfold Components` | The selected component (only it, or with everything inside), else all |
    | `RTLGraph: Open Component Schematic` | Opens the selected component's own schematic file |
-   | `RTLGraph: Open the Code of the Selected Box` | Jumps to the `origin` line the box came from |
+   | `RTLGraph: Open the Code of the Selected Box` | Jumps to the `origin` line the box came from, in the editor group right of the schematic |
    | `RTLGraph: Set View Preset` | All · Datapath · Control path · Combinational only · Registers only · State registers only |
    | `RTLGraph: Fit View` | Fit the schematic to the window |
 

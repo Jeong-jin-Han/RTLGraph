@@ -7,6 +7,7 @@ import { collectHierarchyFiles } from './hierarchyFiles.ts'
 import { setLayoutEdit } from './jsonEdit.ts'
 import { normalizeFilter } from './webview/state.ts'
 import { webviewHtml } from './webview/html.ts'
+import { openCodeBeside } from './openCode.ts'
 
 const RASTER_TIMEOUT_MS = 20_000
 const RELOAD_DELAY_MS = 100
@@ -198,8 +199,7 @@ export class RtlGraphEditorProvider implements vscode.CustomTextEditorProvider {
           const what = message.node ?? message.signal
           if (!at) void vscode.window.showWarningMessage(`RTLGraph: ${what} does not say which line of the code it came from.`)
           else {
-            const line = Math.max(0, at.line - 1)
-            void vscode.window.showTextDocument(at.uri, { selection: new vscode.Range(line, 0, line, 0), preview: false })
+            void openCodeBeside(at.uri, at.line, document)
               .then(undefined, () => vscode.window.showWarningMessage(`RTLGraph: cannot open ${at.uri.path.split('/').pop()}.`))
           }
         } else if (message.type === 'command') {

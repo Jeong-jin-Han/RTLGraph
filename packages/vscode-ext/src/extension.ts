@@ -6,6 +6,7 @@ import { copyAgentSpec } from './agent/copyAgentSpec.ts'
 import { exportSchematic } from './export.ts'
 import { EXPORT_FORMATS, viewName, type ExportFormat } from './exportFiles.ts'
 import { collectHierarchyFiles } from './hierarchyFiles.ts'
+import { openCodeBeside } from './openCode.ts'
 import { fsmFileName, graphFileKind, graphName, hierarchyEntries, loadHierarchy, schematicFileName } from '@rtlgraph/ir'
 import type { FoldAction, FoldScope } from './protocol.ts'
 
@@ -331,8 +332,7 @@ export function activate(context: vscode.ExtensionContext): void {
         void vscode.window.showWarningMessage(`RTLGraph: ${target} does not say which line of the code it came from.`)
         return undefined
       }
-      const line = Math.max(0, at.line - 1)
-      await vscode.window.showTextDocument(at.uri, { selection: new vscode.Range(line, 0, line, 0), preview: false })
+      await openCodeBeside(at.uri, at.line, RtlGraphEditorProvider.activeDocument())
       return `${at.uri.fsPath}:${at.line}`
     }),
 

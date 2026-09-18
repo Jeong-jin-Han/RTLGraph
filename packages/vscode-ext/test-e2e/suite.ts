@@ -171,12 +171,20 @@ export async function run(): Promise<void> {
   // ── the code behind a box ──
   await vscode.commands.executeCommand('vscode.open', uri)
   await until('the acc root once more', renderState)
+  assert.equal(vscode.window.tabGroups.all.length, 1, 'one group so far')
   const code = await vscode.commands.executeCommand<string>('rtlgraph.openCode', 'acc')
   assert.equal(code, `${join(dirname(graphFile), 'acc/seq/acc_top.v')}:3`)
   const opened = vscode.window.activeTextEditor
   assert.equal(opened?.document.uri.fsPath, join(dirname(graphFile), 'acc/seq/acc_top.v'))
   assert.equal(opened?.selection.start.line, 2, 'the cursor is on the line the box came from')
-  log('Open Code jumps from a box to the line of Verilog it came from')
+  // Beside the drawing, not on top of it: the schematic keeps its own group.
+  assert.equal(vscode.window.tabGroups.all.length, 2, 'a group was made to the right')
+  assert.equal(opened?.viewColumn, vscode.ViewColumn.Two)
+  log('Open Code jumps from a box to the line of Verilog it came from, beside the schematic')
+
+  // Jumping again goes to the same group instead of splitting the window further.
+  await vscode.commands.executeCommand('rtlgraph.openCode', 'acc')
+  assert.equal(vscode.window.tabGroups.all.length, 2, 'and keeps using that group')
 
   // The files kept in a folder of their own: the jump has to climb out of it, and
   // the box is two levels down.
