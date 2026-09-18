@@ -28,11 +28,18 @@ test('prompts: every kind in two languages, each pointing at a workflow the spec
     rtl: byLetter.B, // specification → new RTL
     refactor: byLetter.C, // existing RTL → restructured RTL
     rtlgraph: byLetter.A, // RTL → schematic
+    assignment: byLetter.A, // the same, for code that may not be touched
   }
   for (const kind of PROMPT_KINDS) {
     for (const language of PROMPT_LANGUAGES) {
       const prompt = flat(read(`assets/prompt/${kind}/${language}.md`))
       assert.ok(prompt.includes(`"${expected[kind]}"`), `${kind}/${language} names "${expected[kind]}"`)
+      // Code that may not be touched: the prompt has to say so, and say where the files go.
+      if (kind === 'assignment') {
+        for (const needle of ['Follow the code', 'layout-follows-code']) {
+          assert.ok(prompt.includes(needle), `${kind}/${language} mentions ${needle}`)
+        }
+      }
       // The spec workflow writes a document, not RTLGraph files, so it runs no validator.
       const needles = ['.agent/RTLGRAPH_SPEC.md', '.agent/ENVIRONMENT.md', '<PROJECT_ROOT_ABSOLUTE_PATH>']
       for (const needle of kind === 'spec' ? [...needles, 'SPEC.md'] : [...needles, 'rtlgraph-validate.mjs']) {

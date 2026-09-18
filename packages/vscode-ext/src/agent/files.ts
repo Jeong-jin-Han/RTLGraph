@@ -2,8 +2,10 @@
 // Paths: `from` is relative to the extension root, `to` to the target folder.
 
 // spec → an idea becomes a specification · rtl → that spec becomes new RTL ·
-// refactor → existing RTL is restructured and extended · rtlgraph → RTL becomes a schematic
-export const PROMPT_KINDS = ['spec', 'rtl', 'refactor', 'rtlgraph'] as const
+// refactor → existing RTL is restructured and extended · rtlgraph → RTL becomes a
+// schematic · assignment → the same, for code that may not be touched at all, so
+// the files follow the folders the code already has.
+export const PROMPT_KINDS = ['spec', 'rtl', 'refactor', 'rtlgraph', 'assignment'] as const
 export const PROMPT_LANGUAGES = ['korean', 'english'] as const
 
 export const VALIDATOR_BUNDLE = 'dist/agent/rtlgraph-validate.mjs'

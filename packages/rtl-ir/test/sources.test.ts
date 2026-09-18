@@ -18,10 +18,14 @@ test('the golden graph agrees with its sources', () => {
   assert.deepEqual(checkSources(graph, read), [])
 })
 
-test('inferred node names point at the net they drive', () => {
-  assert.deepEqual(originTokens('data_path.op_CNT_D'), ['op_CNT_D', 'CNT_D'])
-  assert.deepEqual(originTokens('ACC_Q_reg'), ['ACC_Q_reg', 'ACC_Q'])
+test('inferred node names point at the net they drive, all the way back', () => {
+  // The names are chained, so the chain is followed to the one the code uses:
+  // op_Q_D__t1 is a step of Q_D, which is the value going into Q.
+  assert.deepEqual(originTokens('data_path.op_CNT_D'), ['op_CNT_D', 'CNT_D', 'CNT'])
+  assert.deepEqual(originTokens('ACC_Q_reg'), ['ACC_Q_reg', 'ACC_Q', 'ACC'])
+  assert.deepEqual(originTokens('op_Q_D__t1'), ['op_Q_D__t1', 'Q_D__t1', 'Q_D', 'Q'])
   assert.deepEqual(originTokens('@ACC'), ['ACC'])
+  assert.deepEqual(originTokens('u_counter'), ['u_counter'], 'a name the code uses is checked as it is')
 })
 
 test('reports missing files and wrong or out-of-range lines', () => {

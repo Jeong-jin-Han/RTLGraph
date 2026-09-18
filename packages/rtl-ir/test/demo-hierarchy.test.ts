@@ -40,6 +40,15 @@ const PROJECTS: Record<string, { root: string; entries: [string, string, string]
       ['pwm/u_rdy', 'pwm/rdy/rdy.rtlgraph-schematic.json', 'component'],
     ],
   },
+  // The assignment case: the skeleton's own flat folder, JSON beside the code.
+  hw: {
+    root: 'hw_top.rtlgraph.json',
+    entries: [
+      ['', 'hw_top.rtlgraph.json', 'system'],
+      ['hw', 'hw.rtlgraph-schematic.json', 'component'],
+      ['hw/u_counter', 'counter.rtlgraph-schematic.json', 'component'],
+    ],
+  },
   sys: {
     root: 'sys_top.rtlgraph.json',
     entries: [

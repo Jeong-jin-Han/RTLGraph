@@ -44,6 +44,8 @@ export async function run(): Promise<void> {
   assert.match(readFileSync(join(folder, ENVIRONMENT_FILE), 'utf8'), /^# RTLGraph — Agent Environment Report/)
   const prompts = expected.filter(f => f.startsWith('.prompt/')).length
   log(`Copy Agent Spec wrote ${expected.length} files: spec, validator, environment report, ${prompts} prompts`)
+  const assignment = readFileSync(join(folder, '.prompt/assignment/korean.md'), 'utf8')
+  assert.match(assignment, /Follow the code/)
 
   const validate = spawnSync('node', [join(folder, '.agent/rtlgraph-validate.mjs'), graphFile], { encoding: 'utf8' })
   assert.equal(validate.status, 0, validate.stdout + validate.stderr)

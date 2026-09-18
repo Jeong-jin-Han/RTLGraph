@@ -1,0 +1,43 @@
+{
+  "version": "0.1.0",
+  "kind": "system",
+  "title": "hw_top",
+  "created": "2026-09-18T00:00:00.000Z",
+  "modified": "2026-09-18T00:00:00.000Z",
+  "source": {
+    "root": ".",
+    "files": ["hw_top.v"],
+    "top": "hw_top",
+    "contractCheck": "fail"
+  },
+  "signals": {
+    "CLK":   { "width": 1, "flow": "clock",   "driver": "@CLK",   "sinks": ["hw:CLK"],   "hidden": true, "origin": { "file": "hw_top.v", "line": 7 } },
+    "nRST":  { "width": 1, "flow": "reset",   "driver": "@nRST",  "sinks": ["hw:nRST"],  "meaning": "active-low: 0 clears the counter at once", "origin": { "file": "hw_top.v", "line": 8 } },
+    "EN":    { "width": 1, "flow": "control", "driver": "@EN",    "sinks": ["hw:EN"],    "meaning": "1=count on this edge", "origin": { "file": "hw_top.v", "line": 9 } },
+    "LIMIT": { "width": 4, "flow": "data",    "driver": "@LIMIT", "sinks": ["hw:LIMIT"], "meaning": "the count the run ends at", "origin": { "file": "hw_top.v", "line": 10 } },
+    "CNT":   { "width": 4, "flow": "data",    "driver": "hw:CNT", "sinks": ["@CNT"],     "origin": { "file": "hw_top.v", "line": 11 } },
+    "DONE":  { "width": 1, "flow": "control", "driver": "hw:DONE", "sinks": ["@DONE"],   "meaning": "1=the count has reached LIMIT", "origin": { "file": "hw_top.v", "line": 12 } }
+  },
+  "nodes": {
+    "@CLK":   { "kind": "port", "dir": "in",  "flow": "clock",   "origin": { "file": "hw_top.v", "line": 7 } },
+    "@nRST":  { "kind": "port", "dir": "in",  "flow": "reset",   "origin": { "file": "hw_top.v", "line": 8 } },
+    "@EN":    { "kind": "port", "dir": "in",  "flow": "control", "origin": { "file": "hw_top.v", "line": 9 } },
+    "@LIMIT": { "kind": "port", "dir": "in",  "flow": "data",    "origin": { "file": "hw_top.v", "line": 10 } },
+    "@CNT":   { "kind": "port", "dir": "out", "flow": "data",    "origin": { "file": "hw_top.v", "line": 11 } },
+    "@DONE":  { "kind": "port", "dir": "out", "flow": "control", "origin": { "file": "hw_top.v", "line": 12 } },
+    "hw": {
+      "kind": "component", "name": "hw", "module": "hw_top",
+      "ref": "hw.rtlgraph-schematic.json",
+      "ports": { "CLK": "in", "nRST": "in", "EN": "in", "LIMIT": "in", "CNT": "out", "DONE": "out" },
+      "origin": { "file": "hw_top.v", "line": 6 }
+    }
+  },
+  "diagnostics": [
+    {
+      "severity": "info",
+      "code": "layout-follows-code",
+      "msg": "the code is a handed-out skeleton: its folders are left as they are and every RTLGraph file sits beside the module it describes",
+      "file": "hw_top.v"
+    }
+  ]
+}

@@ -109,8 +109,17 @@ the JSON.
    .agent/ENVIRONMENT.md            which simulators / tools this machine has
    .agent/rtlgraph-validate.mjs     validator the agent runs on what it wrote
    .prompt/rtlgraph/korean.md       existing RTL → RTLGraph   (english.md too)
+   .prompt/assignment/korean.md     the same, for a skeleton that may not be touched at all
    .prompt/rtl/korean.md            spec → RTL in the three-layer layout, then RTLGraph (english.md too)
+   .prompt/refactor/korean.md       existing RTL → restructured RTL, then RTLGraph
+   .prompt/spec/korean.md           an idea → SPEC.md
    ```
+
+   **Which one.** `rtlgraph` and `assignment` both draw code you keep as it is; they differ in where
+   the files go. `rtlgraph` builds the contract layout (a folder per component) — use it on your own
+   projects. `assignment` creates no folder at all and puts each JSON beside the module it describes,
+   so a handed-out skeleton keeps the shape it was handed out in; `demo/hw` is what that looks like.
+   `refactor` is the one that restructures the code, and it is a separate task on purpose.
 3. Open `.prompt/rtlgraph/korean.md`, fill in the project path, and paste it into your agent (Claude
    Code, Codex, Cursor…). The agent reads the code without changing it, writes the root and one
    schematic per component, and validates them.
@@ -132,6 +141,7 @@ the same symbols, and every inference or contract violation is listed under the 
 | `demo/acc` | D01-2 accumulator: root, main component `acc/` with its schematic, golden SVGs |
 | `demo/base` | Shared primitives (`DFF INC ADD SUB MUX2 CMP_EQ`) |
 | `demo/pwm` | D02-2 PWM controller: three levels of components and three state machines |
+| `demo/hw` | An assignment skeleton: one flat folder, RTLGraph files beside the code |
 | `docs/DECISIONS.md` | Schema, layout, filter, editor and agent decisions |
 
 Only `packages/vscode-ext` imports `vscode`.

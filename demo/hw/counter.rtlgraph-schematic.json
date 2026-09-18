@@ -1,0 +1,57 @@
+{
+  "version": "0.1.0",
+  "kind": "component",
+  "title": "counter",
+  "created": "2026-09-18T00:00:00.000Z",
+  "modified": "2026-09-18T00:00:00.000Z",
+  "source": {
+    "root": ".",
+    "files": ["counter.v"],
+    "top": "counter",
+    "contractCheck": "fail"
+  },
+  "signals": {
+    "CLK":    { "width": 1, "flow": "clock",   "driver": "@CLK",  "sinks": ["Q_reg:CLK"], "hidden": true, "origin": { "file": "counter.v", "line": 7 } },
+    "nRST":   { "width": 1, "flow": "reset",   "driver": "@nRST", "sinks": ["Q_reg:RST"], "meaning": "active-low: 0 clears Q at once, without waiting for an edge", "origin": { "file": "counter.v", "line": 8 } },
+    "EN":     { "width": 1, "flow": "control", "driver": "@EN",   "sinks": ["Q_reg:EN"], "meaning": "1=take the next value on this edge", "origin": { "file": "counter.v", "line": 9 } },
+    "CLR":    { "width": 1, "flow": "control", "driver": "@CLR",  "sinks": ["op_Q_D:sel"], "meaning": "1=the next value is 0 instead of Q+1", "origin": { "file": "counter.v", "line": 10 } },
+    "Q_D__t1":  { "width": 4, "flow": "data",    "driver": "op_Q_D__t1:y", "sinks": ["op_Q_D:d0"], "meaning": "one more than the count: the first step of what Q takes next", "origin": { "file": "counter.v", "line": 17 } },
+    "Q_D":    { "width": 4, "flow": "data",    "driver": "op_Q_D:y", "sinks": ["Q_reg:D"], "meaning": "what Q takes on the next edge", "origin": { "file": "counter.v", "line": 16 } },
+    "Q":      { "width": 4, "flow": "data",    "driver": "Q_reg:Q", "sinks": ["op_Q_D__t1:a", "@Q"], "origin": { "file": "counter.v", "line": 11 } }
+  },
+  "nodes": {
+    "@CLK":  { "kind": "port", "dir": "in",  "flow": "clock",   "origin": { "file": "counter.v", "line": 7 } },
+    "@nRST": { "kind": "port", "dir": "in",  "flow": "reset",   "origin": { "file": "counter.v", "line": 8 } },
+    "@EN":   { "kind": "port", "dir": "in",  "flow": "control", "origin": { "file": "counter.v", "line": 9 } },
+    "@CLR":  { "kind": "port", "dir": "in",  "flow": "control", "origin": { "file": "counter.v", "line": 10 } },
+    "@Q":    { "kind": "port", "dir": "out", "flow": "data",    "origin": { "file": "counter.v", "line": 11 } },
+    "op_Q_D__t1": {
+      "kind": "op", "flow": "data", "time": "comb", "module": "INC", "params": { "BW": 3 },
+      "ports": { "a": "in", "y": "out" },
+      "origin": { "file": "counter.v", "line": 17 }
+    },
+    "op_Q_D": {
+      "kind": "mux", "flow": "data", "time": "comb", "module": "MUX2", "params": { "BW": 3 },
+      "ports": { "sel": "in", "d0": "in", "d1": "in", "y": "out" },
+      "consts": { "d1": "4'd0" },
+      "origin": { "file": "counter.v", "line": 16 }
+    },
+    "Q_reg": {
+      "kind": "reg", "flow": "data", "time": "seq", "module": "DFF", "params": { "BW": 3 },
+      "label": "Q",
+      "ports": { "CLK": "in", "RST": "in", "EN": "in", "D": "in", "Q": "out" },
+      "rstKind": "async", "rstPriority": "rst>en", "rstValue": "0", "rstActive": "low", "enActive": "high",
+      "origin": { "file": "counter.v", "line": 14 }
+    }
+  },
+  "diagnostics": [
+    {
+      "severity": "info",
+      "code": "inferred",
+      "msg": "the always block is drawn as a register with the two ways into it: Q+1 (op_Q_D__t1) or 0 when CLR (op_Q_D)",
+      "file": "counter.v",
+      "line": 14,
+      "node": "Q_reg"
+    }
+  ]
+}

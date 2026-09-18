@@ -17,29 +17,25 @@ const lastSegment = (name: string) => name.replace(/^@/, '').split('.').pop()!
 // recovered from an expression, "<net>_reg" for a register recovered from an
 // always block, "<net>__t1" for a step of a split expression, "<net>_D" for the
 // value going into a register. None of those spellings is in the code, so the
-// origin line is allowed to mention the net they are derived from.
+// origin line is allowed to mention the net they are derived from — and, since
+// those names are chained ("op_Q_D__t1" is a step of the value going into Q),
+// the whole chain back to the name the code does use.
 export function originTokens(id: string): string[] {
   const seg = lastSegment(id)
   const tokens = new Set([seg])
   let base = seg
   const peel = (next: string | undefined) => {
-    if (next === undefined || next === '') return
+    if (next === undefined || next === '' || tokens.has(next)) return false
     base = next
     tokens.add(next)
+    return true
   }
   if (base.startsWith('op_')) peel(base.slice(3))
   if (base.endsWith('_reg')) peel(base.slice(0, -4))
-  peel(/^(.+?)__t\d+$/.exec(base)?.[1])
+  for (let more = true; more; ) {
+    more = peel(/^(.+?)__t\d+$/.exec(base)?.[1]) || peel(/^(.+)_[DQ]$/.exec(base)?.[1])
+  }
   return [...tokens]
-}
-
-// A net an extractor had to name itself — the value going into a register it
-// recovered ("q_D" for the code's "q"), or a step of a split expression — is
-// declared nowhere, so its origin line may name what it came from.
-const signalTokens = (name: string): string[] => {
-  const tokens = originTokens(name)
-  const paired = /^(.+)_[DQ]$/.exec(tokens[tokens.length - 1])?.[1]
-  return paired ? [...tokens, paired] : tokens
 }
 
 export function checkSources(graph: ComponentGraph, read: ReadSource): Diagnostic[] {
@@ -58,7 +54,7 @@ export function checkSources(graph: ComponentGraph, read: ReadSource): Diagnosti
     if (!linesOf(lib + file)) out.push({ severity: 'warn', code: 'source-missing', msg: `library file "${lib + file}" not found`, file: lib + file })
   }
 
-  const check = (origin: Origin, tokens: string[] | RegExp, what: string, at: Partial<Diagnostic>) => {
+  const check = (origin: Origin, tokens: string[] | RegExp, what: string, at: Partial<Diagnostic>, also: RegExp[] = []) => {
     const where = { ...at, file: origin.file, line: origin.line }
     const lines = linesOf(origin.file)
     if (!lines) {
@@ -70,7 +66,7 @@ export function checkSources(graph: ComponentGraph, read: ReadSource): Diagnosti
       return
     }
     const text = lines[origin.line - 1]
-    const ok = tokens instanceof RegExp ? tokens.test(text) : tokens.some(t => mentions(text, t))
+    const ok = (tokens instanceof RegExp ? tokens.test(text) : tokens.some(t => mentions(text, t))) || also.some(re => re.test(text))
     if (!ok) {
       const expected = tokens instanceof RegExp ? String(tokens) : tokens.map(t => `"${t}"`).join(' or ')
       out.push({ severity: 'warn', code: 'origin-mismatch', msg: `${what}: line ${origin.line} does not mention ${expected}: ${text.trim()}`, ...where })
@@ -81,7 +77,10 @@ export function checkSources(graph: ComponentGraph, read: ReadSource): Diagnosti
     if (node.origin) {
       // A component box's origin may be its instance line or its module declaration.
       const tokens = node.kind === 'component' ? [...originTokens(id), node.module] : originTokens(id)
-      check(node.origin, tokens, `node ${id}`, { node: id })
+      // A register recovered from an always block sits on that block, and an
+      // "always @(posedge …)" line names the clock, not the register.
+      const always = lastSegment(id).endsWith('_reg') ? [/\balways\b/] : []
+      check(node.origin, tokens, `node ${id}`, { node: id }, always)
     }
     if (node.kind === 'control' && node.truthTable?.origin) {
       check(node.truthTable.origin, /\b(case[xz]?|if)\b/, `truth table of ${id}`, { node: id })
@@ -94,7 +93,7 @@ export function checkSources(graph: ComponentGraph, read: ReadSource): Diagnosti
   }
   for (const [name, signal] of Object.entries(graph.signals)) {
     if (signal.origin) {
-      check(signal.origin, [name, ...(signal.aliases ?? [])].flatMap(signalTokens), `signal ${name}`, { signal: name })
+      check(signal.origin, [name, ...(signal.aliases ?? [])].flatMap(originTokens), `signal ${name}`, { signal: name })
     }
   }
   return out

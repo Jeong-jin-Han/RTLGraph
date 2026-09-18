@@ -1,0 +1,50 @@
+{
+  "version": "0.1.0",
+  "kind": "component",
+  "title": "hw",
+  "created": "2026-09-18T00:00:00.000Z",
+  "modified": "2026-09-18T00:00:00.000Z",
+  "source": {
+    "root": ".",
+    "files": ["hw_top.v"],
+    "top": "hw_top",
+    "contractCheck": "fail"
+  },
+  "signals": {
+    "CLK":   { "width": 1, "flow": "clock",   "driver": "@CLK",  "sinks": ["u_counter:CLK"], "hidden": true, "origin": { "file": "hw_top.v", "line": 7 } },
+    "nRST":  { "width": 1, "flow": "reset",   "driver": "@nRST", "sinks": ["u_counter:nRST"], "meaning": "active-low: 0 clears the counter at once", "origin": { "file": "hw_top.v", "line": 8 } },
+    "EN":    { "width": 1, "flow": "control", "driver": "@EN",   "sinks": ["u_counter:EN"], "meaning": "1=count on this edge", "origin": { "file": "hw_top.v", "line": 9 } },
+    "LIMIT": { "width": 4, "flow": "data",    "driver": "@LIMIT", "sinks": ["op_clear:b"], "meaning": "the count the run ends at", "origin": { "file": "hw_top.v", "line": 10 } },
+    "cnt_q": { "width": 4, "flow": "data",    "driver": "u_counter:Q", "sinks": ["op_clear:a", "@CNT"], "aliases": ["CNT"], "meaning": "what the counter holds now", "origin": { "file": "hw_top.v", "line": 15 } },
+    "clear": { "width": 1, "flow": "control", "driver": "op_clear:y", "sinks": ["u_counter:CLR", "@DONE"], "aliases": ["DONE"], "meaning": "1=the count has reached LIMIT, so the next edge starts again at 0", "origin": { "file": "hw_top.v", "line": 16 } }
+  },
+  "nodes": {
+    "@CLK":   { "kind": "port", "dir": "in",  "flow": "clock",   "origin": { "file": "hw_top.v", "line": 7 } },
+    "@nRST":  { "kind": "port", "dir": "in",  "flow": "reset",   "origin": { "file": "hw_top.v", "line": 8 } },
+    "@EN":    { "kind": "port", "dir": "in",  "flow": "control", "origin": { "file": "hw_top.v", "line": 9 } },
+    "@LIMIT": { "kind": "port", "dir": "in",  "flow": "data",    "origin": { "file": "hw_top.v", "line": 10 } },
+    "@CNT":   { "kind": "port", "dir": "out", "flow": "data",    "origin": { "file": "hw_top.v", "line": 11 } },
+    "@DONE":  { "kind": "port", "dir": "out", "flow": "control", "origin": { "file": "hw_top.v", "line": 12 } },
+    "u_counter": {
+      "kind": "component", "name": "counter", "module": "counter",
+      "ref": "counter.rtlgraph-schematic.json",
+      "ports": { "CLK": "in", "nRST": "in", "EN": "in", "CLR": "in", "Q": "out" },
+      "origin": { "file": "hw_top.v", "line": 18 }
+    },
+    "op_clear": {
+      "kind": "op", "flow": "data", "time": "comb", "module": "CMP_EQ", "params": { "BW": 3 },
+      "ports": { "a": "in", "b": "in", "y": "out" },
+      "origin": { "file": "hw_top.v", "line": 26 }
+    }
+  },
+  "diagnostics": [
+    {
+      "severity": "info",
+      "code": "inferred",
+      "msg": "clear comes from an assign, not from an instance: drawn as CMP_EQ (op_clear)",
+      "file": "hw_top.v",
+      "line": 26,
+      "node": "op_clear"
+    }
+  ]
+}

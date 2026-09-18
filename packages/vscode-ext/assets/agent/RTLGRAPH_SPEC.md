@@ -17,6 +17,7 @@ it never changes the RTL.
 | The user gives you | Workflow | Result |
 |---|---|---|
 | A folder of **existing** RTL, asks for a schematic ("apply RTLGraph", "RTLGraph 만들어줘") | **Workflow A — RTL → RTLGraph** | `<top>.rtlgraph.json` + one `<name>.rtlgraph-schematic.json` per component, RTL untouched |
+| An **assignment** whose skeleton must be kept as handed out | **Workflow A**, placing the files *beside the code* (Step 2, "Follow the code") | the same files, and not one folder or name changed |
 | An **idea** (a file, a paragraph) and no code yet | **Workflow S — Idea → Spec** | `SPEC.md`: ports, components, control table, states — no code |
 | A spec, and an **empty or new** project | **Workflow B — Spec → RTL** | new RTL in the three-layer layout, then Workflow A |
 | **Existing** RTL to restructure, often with a feature to add | **Workflow C — Existing RTL → Refactored RTL** | the same design in the three-layer layout, the feature added separately, then Workflow A |
@@ -80,8 +81,18 @@ cannot be recovered with confidence, record a diagnostic instead of guessing.
     schematic goes in its own folder inside the parent's folder, and may contain boxes again. Several
     instances of one module share one schematic — in the folder under the first parent that
     instantiates it (in file order) — and every box's `ref` points at it.
-  - **Folders the code does not have** are created to hold only the schematic: `PROJECT_FOLDER/<main>/`,
-    `<main>/<child>/`, and so on. Never move or copy code.
+  - **Where the files go** — two ways, and the user's prompt says which:
+
+    | | **Follow the code** (default when the code is not yours to restructure: a handed-out skeleton, an assignment, someone else's repository) | **Build the contract layout** (default when the code already follows the contract, or you wrote it in Workflow B/C) |
+    |---|---|---|
+    | Folders | none are created; the tree stays exactly as it is | `PROJECT_FOLDER/<main>/`, `<main>/<child>/` are created to hold the schematics |
+    | A component's schematic | beside the file its component top is in (`counter.v` → `counter.rtlgraph-schematic.json` in the same folder) | in that component's own folder |
+    | `source.root` | usually `"."`: the code is right there | the path back to where the sources are |
+    | `ref` | the path from the parent's file to the child's, which in a flat project is just the file name | `child/child.rtlgraph-schematic.json` |
+
+    Either way: **never move, rename or copy code**, and never change a name the code uses. When you
+    follow the code, say so in the root's `diagnostics` (`layout-follows-code`) so the next reader
+    knows the placement was deliberate.
   - **`source.root`** is the path from the schematic's folder to the folder its `source.files` are
     relative to: `"."` when the code sits in that folder, `".."` for `PROJECT_FOLDER/<main>/` over a
     flat project, `"../.."` one level deeper.
