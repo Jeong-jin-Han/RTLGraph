@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="packages/vscode-ext/resources/banner-hires.png" width="100%" alt="RTLGraph — Draw the RTL. Don't just read it." />
+</p>
+
 # RTLGraph
 
 A VS Code extension (in progress) that turns an **existing RTL project** into an

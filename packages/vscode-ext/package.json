@@ -2,6 +2,11 @@
   "name": "rtlgraph",
   "displayName": "RTLGraph",
   "description": "High-level schematics of RTL projects, drawn from *.rtlgraph.json",
+  "icon": "resources/icon-hires.png",
+  "galleryBanner": {
+    "color": "#1a1a14",
+    "theme": "dark"
+  },
   "version": "0.1.0",
   "publisher": "JeongjinHan",
   "private": true,
