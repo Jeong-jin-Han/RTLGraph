@@ -34,7 +34,8 @@ RTL folder ──[AI agent + .agent/RTLGRAPH_SPEC.md]──→ *.rtlgraph.json +
    Double-click a box to toggle just that one. **Right-click any box** to ask where to go: into a
    component's own schematic, or straight to the line of Verilog it came from (a net's right-click
    menu opens its line too). Code opens *beside* the drawing — a group is made to its right the
-   first time and reused after that, so the schematic stays on the left while you read.
+   first time and reused after that, so the schematic stays on the left while you read, and the
+   drawing refits itself to the narrower panel unless you had panned or zoomed it yourself.
 6. `Ctrl+Shift+P` → type `RTLGraph`:
 
    | Command | What it does |

@@ -576,13 +576,26 @@ function applyViewport() {
   drawHandles() // the grips are sized in screen pixels, so zooming resizes them
 }
 
+// Whether the view is still the one `fit` chose. Panning or zooming makes it the
+// reader's, and then a resize must leave it alone — being pulled back to the
+// whole drawing while you are looking at one corner of it is worse than a
+// picture that no longer fits.
+let fitted = false
+
 function fit() {
   if (view.w <= 0) return
   const box = canvas.getBoundingClientRect()
   viewport = fitViewport(view.w, view.h, box.width, box.height)
+  fitted = true
   applyViewport()
   persist()
 }
+
+// The window changes shape when the code opens beside the schematic, or when the
+// panel is dragged. If the reader had not taken the view over, follow it.
+new ResizeObserver(() => {
+  if (fitted) fit()
+}).observe(canvas)
 
 function setFilter(next: ViewFilter) {
   filter = next
@@ -674,6 +687,7 @@ function load(message: Extract<HostToWebview, { type: 'load' }>) {
 canvas.addEventListener('wheel', event => {
   event.preventDefault()
   const box = canvas.getBoundingClientRect()
+  fitted = false
   viewport = zoomAt(viewport ?? { x: 0, y: 0, zoom: 1 }, event.deltaY < 0 ? 1.1 : 1 / 1.1, event.clientX - box.left, event.clientY - box.top)
   applyViewport()
   persist()
@@ -832,6 +846,7 @@ canvas.addEventListener('pointerdown', event => {
     if (resizing) arrangement = resizedTo(arrangement, id!, box!.w + dx, box!.h + dy)
     else if (arranging) arrangement = movedTo(arrangement, id!, box!.x + dx, box!.y + dy)
     else {
+      fitted = false
       viewport = { ...start.v, x: start.v.x + e.clientX - start.px, y: start.v.y + e.clientY - start.py }
       applyViewport()
       return
