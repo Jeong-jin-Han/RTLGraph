@@ -576,25 +576,28 @@ function applyViewport() {
   drawHandles() // the grips are sized in screen pixels, so zooming resizes them
 }
 
-// Whether the view is still the one `fit` chose. Panning or zooming makes it the
-// reader's, and then a resize must leave it alone — being pulled back to the
-// whole drawing while you are looking at one corner of it is worse than a
-// picture that no longer fits.
-let fitted = false
-
 function fit() {
   if (view.w <= 0) return
   const box = canvas.getBoundingClientRect()
+  if (box.width <= 0 || box.height <= 0) return // hidden: there is nothing to fit to
   viewport = fitViewport(view.w, view.h, box.width, box.height)
-  fitted = true
   applyViewport()
   persist()
 }
 
-// The window changes shape when the code opens beside the schematic, or when the
-// panel is dragged. If the reader had not taken the view over, follow it.
+// The panel changes shape whenever a tab opens or closes beside it — the code
+// jump opens one, closing it gives the room back — so the drawing is fitted again
+// every time the room it has changes. Not while a drag is under way (the hand is
+// mid-gesture), and not when the panel is merely hidden, which arrives as a size
+// of zero and would otherwise throw the view away.
+let dragging = false
+let panel = { w: 0, h: 0 }
 new ResizeObserver(() => {
-  if (fitted) fit()
+  const box = canvas.getBoundingClientRect()
+  if (box.width <= 0 || box.height <= 0) return
+  const changed = Math.abs(box.width - panel.w) > 1 || Math.abs(box.height - panel.h) > 1
+  panel = { w: box.width, h: box.height }
+  if (changed && !dragging) fit()
 }).observe(canvas)
 
 function setFilter(next: ViewFilter) {
@@ -687,7 +690,6 @@ function load(message: Extract<HostToWebview, { type: 'load' }>) {
 canvas.addEventListener('wheel', event => {
   event.preventDefault()
   const box = canvas.getBoundingClientRect()
-  fitted = false
   viewport = zoomAt(viewport ?? { x: 0, y: 0, zoom: 1 }, event.deltaY < 0 ? 1.1 : 1 / 1.1, event.clientX - box.left, event.clientY - box.top)
   applyViewport()
   persist()
@@ -768,6 +770,9 @@ canvas.addEventListener('pointerdown', event => {
   if (event.target instanceof Node && menu.contains(event.target)) return
   closeMenu()
   if (event.button !== 0) return
+  dragging = true
+  canvas.addEventListener('pointerup', () => { dragging = false }, { once: true })
+  canvas.addEventListener('pointercancel', () => { dragging = false }, { once: true })
   const v = viewport ?? { x: 0, y: 0, zoom: 1 }
   const start = { px: event.clientX, py: event.clientY, v, target: event.target }
   // In edit mode a press on a wire takes hold of the straight run under it: a
@@ -846,7 +851,6 @@ canvas.addEventListener('pointerdown', event => {
     if (resizing) arrangement = resizedTo(arrangement, id!, box!.w + dx, box!.h + dy)
     else if (arranging) arrangement = movedTo(arrangement, id!, box!.x + dx, box!.y + dy)
     else {
-      fitted = false
       viewport = { ...start.v, x: start.v.x + e.clientX - start.px, y: start.v.y + e.clientY - start.py }
       applyViewport()
       return
