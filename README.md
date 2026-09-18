@@ -97,7 +97,7 @@ asked" is one click rather than a memory test.
 | **State machines** | `*.rtlgraph-fsm.json` draws Moore or Mealy as a diagram with the transition table beside it |
 | **Export** | SVG / PNG / PDF of exactly what is on screen, and XLSX of the tables behind it — all written without a dependency |
 | **Validator** | Schema, widths, ports, unreachable nets, missing `meaning`, and every `origin` checked against the Verilog itself |
-| **Its own file icon** | `*.rtlgraph.json`, `*.rtlgraph-schematic.json` and `*.rtlgraph-fsm.json` are picked out in the tab and the Explorer instead of looking like any other JSON — drawn for 16 px, not scaled down from the logo |
+| **Its own file icon** | `*.rtlgraph.json`, `*.rtlgraph-schematic.json` and `*.rtlgraph-fsm.json` are picked out in the tab and the Explorer instead of looking like any other JSON — drawn for 16 px, and on the tab it replaces the `{ }` whichever icon theme you use |
 | **Agent-friendly** | `.agent/RTLGRAPH_SPEC.md` plus five ready-to-paste prompts, one per kind of job |
 
 ---

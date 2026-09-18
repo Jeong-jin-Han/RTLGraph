@@ -17,6 +17,12 @@ const groupOf = (document: vscode.TextDocument | undefined): number | undefined 
   return (holding ?? vscode.window.tabGroups.activeTabGroup).viewColumn
 }
 
+// What an RTLGraph tab is marked with, wherever we own the tab: the drawing, the
+// state diagram, and the document reader below. Drawn for a tab's size rather
+// than scaled down from the marketplace logo.
+export const tabIcon = (context: vscode.ExtensionContext): vscode.Uri =>
+  vscode.Uri.joinPath(context.extensionUri, 'resources', 'file-icon.svg')
+
 let panel: vscode.WebviewPanel | undefined
 let showing: string | undefined // the folder the open panel is allowed to read from
 
@@ -60,6 +66,7 @@ export async function showSpec(
       retainContextWhenHidden: true,
       localResourceRoots: [context.extensionUri, folder],
     })
+    panel.iconPath = tabIcon(context)
     panel.onDidDispose(() => (panel = undefined))
     panel.webview.onDidReceiveMessage((message: { type: string } & SpecShown) => {
       if (message.type !== 'shown') return

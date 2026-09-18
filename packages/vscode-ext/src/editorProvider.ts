@@ -8,7 +8,7 @@ import { setLayoutEdit } from './jsonEdit.ts'
 import { normalizeFilter } from './webview/state.ts'
 import { webviewHtml } from './webview/html.ts'
 import { openCodeBeside } from './openCode.ts'
-import { openRequirement } from './specView.ts'
+import { openRequirement, tabIcon } from './specView.ts'
 
 const RASTER_TIMEOUT_MS = 20_000
 const RELOAD_DELAY_MS = 100
@@ -76,6 +76,11 @@ export class RtlGraphEditorProvider implements vscode.CustomTextEditorProvider {
 
   resolveCustomTextEditor(document: vscode.TextDocument, webviewPanel: vscode.WebviewPanel): void {
     const { webview } = webviewPanel
+    // The tab's icon. A file icon theme decides this by the file's language, and
+    // the drawing is not text to VS Code — an editor of our own gets to say what
+    // its tab looks like, which is the only way the JSON braces are replaced
+    // whichever icon theme the reader uses.
+    webviewPanel.iconPath = tabIcon(this.context)
     const filterKey = `rtlgraph.filter:${document.uri.toString()}`
     const foldKey = `rtlgraph.fold:${document.uri.toString()}`
     const storedFilter = () => normalizeFilter(this.context.workspaceState.get(filterKey))
