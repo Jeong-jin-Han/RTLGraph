@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <!-- The file icon, drawn for 16 px rather than scaled down from the logo: at a
+       tab's size the drawn letters, the wires and the MUX label turn to mush, so
+       this keeps only what survives — the heptagon, its thin white rim, and RTL
+       in the logo's yellow, with one wire and a mux to say what the file is. -->
+  <title>RTLGraph</title>
+  <g>
+    <polygon points="16,1.4 28.4,7.9 31,21.3 22.6,30.6 9.4,30.6 1,21.3 3.6,7.9"
+             fill="#1a1a14" stroke="#ffffff" stroke-width="1.3" stroke-linejoin="round"/>
+    <!-- a wire running across the letters, with a 2-1 mux on it -->
+    <path d="M6.5 9.4 H25.5" stroke="#ffffff" stroke-width="1" fill="none" opacity="0.9"/>
+    <path d="M14.1 8.2 h3.8 l-0.85 2 h-2.1 z" fill="#1a1a14" stroke="#ffffff" stroke-width="0.85" stroke-linejoin="round"/>
+    <path d="M16 10.2 V12" stroke="#ffffff" stroke-width="1"/>
+    <g fill="none" stroke="#e8b216" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+      <!-- R -->
+      <path d="M5.6 25.6 V13.2 h2.9 a3.1 3.1 0 0 1 0 6.2 H5.6"/>
+      <path d="M8.5 19.8 L11.4 25.6"/>
+      <!-- T -->
+      <path d="M13.3 13.2 H19.7"/>
+      <path d="M16.5 13.2 V25.6"/>
+      <!-- L -->
+      <path d="M22.6 13.2 V25.6 h3.8"/>
+    </g>
+  </g>
+</svg>

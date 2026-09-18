@@ -39,8 +39,8 @@
           "*.rtlgraph-fsm.json"
         ],
         "icon": {
-          "light": "resources/icon.png",
-          "dark": "resources/icon.png"
+          "light": "resources/file-icon.svg",
+          "dark": "resources/file-icon.svg"
         },
         "configuration": "resources/language-configuration.json"
       }

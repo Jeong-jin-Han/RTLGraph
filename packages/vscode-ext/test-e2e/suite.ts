@@ -224,6 +224,20 @@ export async function run(): Promise<void> {
   assert.equal(whole.found, false)
   log('a box that quotes nothing opens the brief itself, with no page')
 
+  // The file icon rides on a language of our own: if the association stops
+  // matching, these files silently go back to the plain JSON icon in the tab.
+  for (const [path, mine] of [
+    ['pwm/pwm_top.rtlgraph.json', true],
+    ['pwm/pwm/pwm.rtlgraph-schematic.json', true],
+    ['pwm/pwm/pwm.rtlgraph-fsm.json', true],
+    ['pwm/pwm/seq/pwm_top.v', false],
+  ] as const) {
+    const opened = await vscode.workspace.openTextDocument(vscode.Uri.file(join(demoDir, path)))
+    if (mine) assert.equal(opened.languageId, 'rtlgraph', `${path} is not associated with RTLGraph`)
+    else assert.notEqual(opened.languageId, 'rtlgraph', `${path} must not be claimed by RTLGraph`)
+  }
+  log('every *.rtlgraph*.json is bound to the RTLGraph language, and nothing else is')
+
   // ── state machines: demo/pwm, three levels with a machine at two of them ──
   const demo = demoDir
   const pwmSchematic = vscode.Uri.file(join(demo, 'pwm/pwm/pwm.rtlgraph-schematic.json'))
