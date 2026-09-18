@@ -91,7 +91,7 @@ asked" is one click rather than a memory test.
 | **Component hierarchy** | One root plus a schematic per component, each beside the code it describes; fold a frame to a box, or open three levels at once |
 | **Two-level filter** | **Comb** opens Data / Control, **Seq** opens Registers / FSM — the way a top module is drawn on a slide — plus presets (Datapath, Control path, Registers only…) |
 | **Code jump** | Right-click any box or net to open the exact `file:line` it came from, in the editor group to the right of the drawing |
-| **Requirement jump** | Right-click to open the brief the design was asked for, in a reader built on pdf.js — pages, zoom, find, selectable text — with the quoted sentence highlighted. It is located by the sentence, never by stored coordinates, so it is still found when the document is re-issued |
+| **Requirement jump** | Right-click to open the brief the design was asked for, in pdf.js's own viewer — sidebar, find bar, zoom, print — with the quoted sentence highlighted. It is located by the sentence, never by stored coordinates, so it is still found when the document has been re-issued |
 | **Hand editing that survives** | Move boxes and frames, resize, bend wires, cut a link, draw one the code lacks; all of it lives under `layout` and re-extraction leaves it alone |
 | **Open goals** | A link the RTL has no net for is drawn dashed and listed conclusion-first ("Drive CNT_FF:D — nothing does yet"), so the sketch can run ahead of the code |
 | **State machines** | `*.rtlgraph-fsm.json` draws Moore or Mealy as a diagram with the transition table beside it |
@@ -362,7 +362,7 @@ checked by the test suite.
 - **TypeScript, run directly** by Node ≥ 22.18's type stripping — no build step for the packages, `node --test` for the tests
 - **esbuild** for the two webview bundles and the extension-host bundle
 - **No runtime dependencies.** The SVG, PDF and XLSX writers are all ours — a PDF is a Scene of text and lines, an XLSX is a stored zip of XML parts
-- **pdf.js** (build time only, bundled) for the requirement reader; the sentence itself is located by our own matcher in `packages/rtl-pdf`
+- **pdf.js's reference viewer**, mounted whole for the requirement reader (`packages/vscode-ext/assets/pdfjs-viewer`, Apache-2.0); the sentence itself is located by our own matcher in `packages/rtl-pdf` and handed to the viewer's find controller
 - **Verified against real tools**: iverilog simulates every demo, LibreOffice and `pdftotext` read the exports back, and the end-to-end suite drives a real VS Code
 
 ---

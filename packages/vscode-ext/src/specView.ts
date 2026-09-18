@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs'
+import { randomBytes } from 'node:crypto'
 import * as vscode from 'vscode'
 import { columnRightOf } from './tabs.ts'
 import { openBeside } from './openCode.ts'
@@ -93,87 +95,60 @@ export async function showSpec(
     name,
     quote: at.quote,
     page: at.page,
-    fonts: `${panel.webview.asWebviewUri(vscode.Uri.joinPath(context.extensionUri, 'dist/pdfjs/standard_fonts')).toString()}/`,
-    cmaps: `${panel.webview.asWebviewUri(vscode.Uri.joinPath(context.extensionUri, 'dist/pdfjs/cmaps')).toString()}/`,
-    worker: panel.webview.asWebviewUri(vscode.Uri.joinPath(context.extensionUri, 'dist/pdfjs/pdf.worker.mjs')).toString(),
   })
   return report
 }
 
+// pdf.js's own viewer, served out of the extension with three changes: a CSP a
+// webview will accept, a <base> so its relative assets resolve to webview URIs,
+// and our bridge script (which finds the quoted sentence and hands it to the
+// viewer's find controller). Nothing else about the viewer is touched.
 function pageOf(webview: vscode.Webview, context: vscode.ExtensionContext): string {
-  const asset = (path: string) => webview.asWebviewUri(vscode.Uri.joinPath(context.extensionUri, path))
-  const script = asset('dist/pdfview.js')
-  const sheet = asset('dist/pdfjs/pdf_viewer.css')
+  const web = vscode.Uri.joinPath(context.extensionUri, 'dist/pdfjs-viewer/web')
+  const base = `${webview.asWebviewUri(web).toString()}/`
+  const nonce = randomBytes(16).toString('base64')
   const csp = [
     `default-src 'none'`,
-    `img-src ${webview.cspSource} data: blob:`,
-    `style-src 'unsafe-inline' ${webview.cspSource}`,
-    `script-src ${webview.cspSource}`,
-    `font-src ${webview.cspSource} data:`,
-    // The document is fetched from a resource URI; the worker is fetched as text
-    // and started from a blob, which is the only way a webview can have one.
-    `connect-src ${webview.cspSource} blob:`,
+    // 'wasm-unsafe-eval' is the viewer's own requirement: it decodes some images
+    // with WebAssembly.
+    `script-src ${webview.cspSource} 'nonce-${nonce}' 'wasm-unsafe-eval'`,
+    // The worker is fetched as text and started from a blob — a webview's
+    // resources are not same-origin, so it cannot be started from its URI.
     `worker-src blob:`,
+    `style-src ${webview.cspSource} 'unsafe-inline'`,
+    `img-src ${webview.cspSource} blob: data:`,
+    `media-src blob:`,
+    `font-src ${webview.cspSource} data:`,
+    `connect-src ${webview.cspSource} blob: data:`,
   ].join('; ')
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="${csp}">
-<link rel="stylesheet" href="${sheet}">
-<style>
-  :root { color-scheme: light dark }
-  body { margin: 0; font: 12px var(--vscode-font-family); color: var(--vscode-foreground);
-         background: var(--vscode-editor-background); display: flex; flex-direction: column; height: 100vh; overflow: hidden }
-  /* The panel is usually half an editor wide, so the bar wraps rather than
-     hiding its right-hand half, and the status line takes a row of its own. */
-  #bar { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 6px; padding: 5px 8px;
-         border-bottom: 1px solid var(--vscode-panel-border);
-         background: var(--vscode-editorWidget-background); flex: none }
-  #title { font-weight: 600; margin-right: 4px }
-  #status { flex: 1 0 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; opacity: .85 }
-  #status.miss, #status.loose { color: var(--vscode-editorWarning-foreground); opacity: 1 }
-  button, input { background: var(--vscode-input-background, transparent); color: inherit;
-                  border: 1px solid var(--vscode-panel-border); border-radius: 3px; padding: 1px 6px; font: inherit }
-  button { cursor: pointer; background: transparent }
-  button:hover { background: var(--vscode-toolbar-hoverBackground) }
-  #page-now { width: 34px; text-align: right }
-  #find { flex: 1 1 90px; min-width: 60px }
-  #zoom { min-width: 38px; text-align: center; opacity: .85 }
-  .sep { width: 1px; height: 16px; background: var(--vscode-panel-border) }
-  /* pdf.js lays the pages out inside this; it must be positioned and scrollable. */
-  #viewerContainer { position: absolute; inset: 0; overflow: auto }
-  #frame { position: relative; flex: 1 }
-  .pdfViewer .page { margin: 10px auto; border: none; box-shadow: 0 1px 6px rgba(0,0,0,.35) }
-  /* The find controller's own marks, in the colour the schematic uses for a pick. */
-  .textLayer .highlight { background: rgba(255, 186, 0, .42); border-radius: 2px }
-  .textLayer .highlight.selected { background: rgba(255, 186, 0, .75) }
-</style>
-</head>
-<body>
-  <div id="bar" hidden>
-    <span id="title"></span>
-    <button id="back" title="Back to the quoted sentence" hidden>Requirement</button>
-    <span class="sep"></span>
-    <button id="prev" title="Previous page">‹</button>
-    <input id="page-now" value="1" inputmode="numeric">
-    <span id="page-count">/ 1</span>
-    <button id="next" title="Next page">›</button>
-    <span class="sep"></span>
-    <button id="zoom-out" title="Smaller">−</button>
-    <span id="zoom">100%</span>
-    <button id="zoom-in" title="Larger">+</button>
-    <button id="fit" title="Fit the width">Fit</button>
-    <span class="sep"></span>
-    <input id="find" placeholder="Find in document" spellcheck="false">
-    <span id="status"></span>
-  </div>
-  <div id="frame">
-    <div id="viewerContainer"><div id="viewer" class="pdfViewer"></div></div>
-  </div>
-  <script type="module" src="${script}"></script>
-</body>
-</html>`
+
+  const settings = JSON.stringify({
+    worker: webview.asWebviewUri(vscode.Uri.joinPath(context.extensionUri, 'dist/pdfjs-viewer/build/pdf.worker.mjs')).toString(),
+    fonts: `${webview.asWebviewUri(vscode.Uri.joinPath(web, 'standard_fonts')).toString()}/`,
+    cmaps: `${webview.asWebviewUri(vscode.Uri.joinPath(web, 'cmaps')).toString()}/`,
+  })
+
+  return readFileSync(vscode.Uri.joinPath(web, 'viewer.html').fsPath, 'utf8')
+    .replace(/<meta\s+http-equiv="Content-Security-Policy"[\s\S]*?\/>/, `<meta http-equiv="Content-Security-Policy" content="${csp}">`)
+    .replace('<head>', `<head>\n    <base href="${base}">`)
+    .replace('</head>', `  <style>
+      /* One line of ours under the viewer's toolbar: which sentence this was
+         opened for, and whether the document still says it. */
+      /* A strip above the viewer's own toolbar, so nothing of pdf.js is covered. */
+      #rtlgraph-note { position: absolute; top: 0; left: 0; right: 0; height: 22px; z-index: 100002;
+        box-sizing: border-box; padding: 0 10px; line-height: 21px;
+        font: 12px var(--vscode-font-family, sans-serif);
+        background: var(--vscode-editorWidget-background, #2b2b2b); color: var(--vscode-foreground, #ddd);
+        border-bottom: 1px solid var(--vscode-panel-border, #444);
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+      #rtlgraph-note.miss, #rtlgraph-note.loose { color: var(--vscode-editorWarning-foreground, #e2b03a) }
+      /* The viewer is height:100%, so making room for the strip means taking the
+         same 22px off its height — shifting it alone cut the bottom off. */
+      #outerContainer { position: relative; top: 22px; height: calc(100% - 22px) }
+    </style>
+    <script nonce="${nonce}">window.__RTLGRAPH__ = ${settings};</script>
+    <script type="module" nonce="${nonce}" src="bridge.mjs"></script>
+  </head>`)
 }
 
 // Following a `spec` link. A PDF goes to the viewer above — VS Code would only

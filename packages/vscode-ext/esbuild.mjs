@@ -47,30 +47,35 @@ const configs = [
     target: 'es2022',
   },
   {
-    // The requirement viewer. ESM, not IIFE: pdf.js is shipped as a module and
-    // reads import.meta.url, which an IIFE has nowhere to put.
+    // The bridge that drives pdf.js's viewer. A module, and a small one: the
+    // viewer itself is Mozilla's, mounted from assets/pdfjs-viewer.
     ...common,
     entryPoints: ['src/webview/pdf.ts'],
-    outfile: 'dist/pdfview.js',
+    outfile: 'dist/pdfjs-viewer/web/bridge.mjs',
     platform: 'browser',
     format: 'esm',
     target: 'es2022',
   },
 ]
 
-// pdf.js reads these at run time, per document: the base-14 fonts a PDF is
-// allowed to leave out, and the character maps a CJK document needs. They are
-// copied rather than bundled because pdf.js fetches them by URL.
+// The requirement reader is Mozilla's own viewer. What the repository carries is
+// only the part that is not on npm — viewer.html, viewer.mjs, viewer.css, its
+// images and two locales, from the pdf.js 6.3.289 legacy release. Everything
+// else (the library, the worker, the fonts, the character maps, the wasm
+// decoders) comes out of the installed pdfjs-dist, so the two cannot drift.
+//
+// Legacy, not modern: pdf.js 6 calls Map.getOrInsertComputed, which the Electron
+// behind VS Code does not have; the legacy bundles carry the polyfill.
 const require = createRequire(import.meta.url)
 const pdfjs = require.resolve('pdfjs-dist/package.json').replace(/package\.json$/, '')
-mkdirSync(`${import.meta.dirname}/dist/pdfjs`, { recursive: true })
-for (const part of ['standard_fonts', 'cmaps']) {
-  cpSync(`${pdfjs}${part}`, `${import.meta.dirname}/dist/pdfjs/${part}`, { recursive: true })
+const viewer = `${import.meta.dirname}/dist/pdfjs-viewer`
+mkdirSync(`${viewer}/build`, { recursive: true })
+cpSync(`${import.meta.dirname}/assets/pdfjs-viewer`, viewer, { recursive: true })
+cpSync(`${pdfjs}legacy/build/pdf.min.mjs`, `${viewer}/build/pdf.mjs`)
+cpSync(`${pdfjs}legacy/build/pdf.worker.min.mjs`, `${viewer}/build/pdf.worker.mjs`)
+for (const part of ['standard_fonts', 'cmaps', 'wasm', 'iccs']) {
+  cpSync(`${pdfjs}${part}`, `${viewer}/web/${part}`, { recursive: true })
 }
-// The viewer engine's stylesheet (page frames, text layer, find highlights) and
-// the worker, which the reader fetches and starts from a blob.
-cpSync(`${pdfjs}legacy/web/pdf_viewer.css`, `${import.meta.dirname}/dist/pdfjs/pdf_viewer.css`)
-cpSync(`${pdfjs}legacy/build/pdf.worker.min.mjs`, `${import.meta.dirname}/dist/pdfjs/pdf.worker.mjs`)
 
 if (watch) {
   for (const config of configs) await (await esbuild.context(config)).watch()
