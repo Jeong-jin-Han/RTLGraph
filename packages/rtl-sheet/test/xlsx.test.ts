@@ -40,9 +40,15 @@ function entries(bytes: Uint8Array): Map<string, string> {
 
 test('a workbook is a zip of the parts a spreadsheet expects', () => {
   const files = entries(renderXlsx([{ name: 'one', rows: [['a', 1]] }]))
+  // The parts every xlsx carries. Excel opens a file without styles or properties;
+  // other readers quietly show nothing, so the file looks like the usual shape.
   assert.deepEqual([...files.keys()], [
-    '[Content_Types].xml', '_rels/.rels', 'xl/workbook.xml', 'xl/_rels/workbook.xml.rels', 'xl/worksheets/sheet1.xml',
+    '[Content_Types].xml', '_rels/.rels', 'xl/workbook.xml', 'xl/_rels/workbook.xml.rels',
+    'xl/styles.xml', 'docProps/core.xml', 'docProps/app.xml', 'xl/worksheets/sheet1.xml',
   ])
+  assert.match(files.get('xl/worksheets/sheet1.xml')!, /<dimension ref="A1:B1"\/>/, 'and says how far it goes')
+  assert.match(files.get('[Content_Types].xml')!, /styles\+xml/)
+  assert.match(files.get('xl/_rels/workbook.xml.rels')!, /Target="styles.xml"/)
   const sheet = files.get('xl/worksheets/sheet1.xml')!
   assert.match(sheet, /<c r="A1" t="inlineStr"><is><t xml:space="preserve">a<\/t><\/is><\/c>/)
   assert.match(sheet, /<c r="B1"><v>1<\/v><\/c>/, 'a number is a number, not text')
