@@ -132,6 +132,10 @@ function pageOf(webview: vscode.Webview, context: vscode.ExtensionContext): stri
     .replace(/<meta\s+http-equiv="Content-Security-Policy"[\s\S]*?\/>/, `<meta http-equiv="Content-Security-Policy" content="${csp}">`)
     .replace('<head>', `<head>\n    <base href="${base}">`)
     .replace('</head>', `  <style>
+      /* VS Code gives a webview's body a side padding of its own. The viewer is
+         laid out to fill the window, so that padding pushed its toolbar right and
+         cut the buttons off the right-hand edge. */
+      html, body { margin: 0 !important; padding: 0 !important; width: 100%; height: 100%; overflow: hidden }
       /* One line of ours under the viewer's toolbar: which sentence this was
          opened for, and whether the document still says it. */
       /* A strip above the viewer's own toolbar, so nothing of pdf.js is covered. */
