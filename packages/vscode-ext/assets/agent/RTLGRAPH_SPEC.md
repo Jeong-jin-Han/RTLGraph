@@ -251,7 +251,11 @@ only holds data.
 When the user gives a document the design was asked for — an assignment PDF, a
 requirements page — record where each piece comes from:
 
-1. `source.spec`: the document, relative to `source.root` (`"spec/pwm_brief.pdf"`).
+1. `source.spec`: the document, relative to `source.root` (`"spec/pwm_brief.pdf"`, or
+   `"hw_brief.pdf"` when the handout sits beside the code). Name it in the **root**;
+   a schematic that does not name one inherits the nearest one above it, so every
+   box in the design can open the brief even where it quotes no sentence. Repeat it
+   in a child file only when that component was asked for by a different document.
 2. On the elements the document actually talks about, `spec: { quote, page }`:
    - `quote` is the sentence **verbatim**, copied from the document, not paraphrased —
      it is what finds the line again.

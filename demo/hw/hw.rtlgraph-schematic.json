@@ -6,6 +6,7 @@
   "modified": "2026-09-18T00:00:00.000Z",
   "source": {
     "root": ".",
+    "spec": "hw_brief.pdf",
     "files": ["hw_top.v"],
     "top": "hw_top",
     "contractCheck": "fail"
@@ -16,7 +17,7 @@
     "EN":    { "width": 1, "flow": "control", "driver": "@EN",   "sinks": ["u_counter:EN"], "meaning": "1=count on this edge", "origin": { "file": "hw_top.v", "line": 9 } },
     "LIMIT": { "width": 4, "flow": "data",    "driver": "@LIMIT", "sinks": ["op_clear:b"], "meaning": "the count the run ends at", "origin": { "file": "hw_top.v", "line": 10 } },
     "cnt_q": { "width": 4, "flow": "data",    "driver": "u_counter:Q", "sinks": ["op_clear:a", "@CNT"], "aliases": ["CNT"], "meaning": "what the counter holds now", "origin": { "file": "hw_top.v", "line": 15 } },
-    "clear": { "width": 1, "flow": "control", "driver": "op_clear:y", "sinks": ["u_counter:CLR", "@DONE"], "aliases": ["DONE"], "meaning": "1=the count has reached LIMIT, so the next edge starts again at 0", "origin": { "file": "hw_top.v", "line": 16 } }
+    "clear": { "width": 1, "flow": "control", "driver": "op_clear:y", "sinks": ["u_counter:CLR", "@DONE"], "aliases": ["DONE"], "meaning": "1=the count has reached LIMIT, so the next edge starts again at 0", "spec": { "quote": "The count returns to zero on the edge after it reaches LIMIT.", "page": 1 }, "origin": { "file": "hw_top.v", "line": 16 } }
   },
   "nodes": {
     "@CLK":   { "kind": "port", "dir": "in",  "flow": "clock",   "origin": { "file": "hw_top.v", "line": 7 } },

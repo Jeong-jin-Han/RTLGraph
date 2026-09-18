@@ -6,6 +6,7 @@
   "modified": "2026-09-18T00:00:00.000Z",
   "source": {
     "root": ".",
+    "spec": "hw_brief.pdf",
     "files": ["hw_top.v"],
     "top": "hw_top",
     "contractCheck": "fail"
@@ -16,7 +17,7 @@
     "EN":    { "width": 1, "flow": "control", "driver": "@EN",    "sinks": ["hw:EN"],    "meaning": "1=count on this edge", "origin": { "file": "hw_top.v", "line": 9 } },
     "LIMIT": { "width": 4, "flow": "data",    "driver": "@LIMIT", "sinks": ["hw:LIMIT"], "meaning": "the count the run ends at", "origin": { "file": "hw_top.v", "line": 10 } },
     "CNT":   { "width": 4, "flow": "data",    "driver": "hw:CNT", "sinks": ["@CNT"],     "origin": { "file": "hw_top.v", "line": 11 } },
-    "DONE":  { "width": 1, "flow": "control", "driver": "hw:DONE", "sinks": ["@DONE"],   "meaning": "1=the count has reached LIMIT", "origin": { "file": "hw_top.v", "line": 12 } }
+    "DONE":  { "width": 1, "flow": "control", "driver": "hw:DONE", "sinks": ["@DONE"],   "meaning": "1=the count has reached LIMIT", "spec": { "quote": "DONE : High for the cycle the count reaches LIMIT.", "page": 1 }, "origin": { "file": "hw_top.v", "line": 12 } }
   },
   "nodes": {
     "@CLK":   { "kind": "port", "dir": "in",  "flow": "clock",   "origin": { "file": "hw_top.v", "line": 7 } },
@@ -29,6 +30,7 @@
       "kind": "component", "name": "hw", "module": "hw_top",
       "ref": "hw.rtlgraph-schematic.json",
       "ports": { "CLK": "in", "nRST": "in", "EN": "in", "LIMIT": "in", "CNT": "out", "DONE": "out" },
+      "spec": { "quote": "Count up while EN is high and clear the count at LIMIT.", "page": 1 },
       "origin": { "file": "hw_top.v", "line": 6 }
     }
   },

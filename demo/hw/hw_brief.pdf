@@ -1,0 +1,179 @@
+%PDF-1.4
+%‚„œ”
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 4 0 R /F2 5 0 R >> >> /Contents 6 0 R >>
+endobj
+4 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>
+endobj
+5 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>
+endobj
+6 0 obj
+<< /Length 1586 >>
+stream
+1 1 1 rg
+0 0 595 842 re
+f
+q
+0.07 0.09 0.15 rg
+BT
+/F2 20 Tf
+60 772 Td
+(HW-1: Limit counter) Tj
+ET
+Q
+q
+0.07 0.09 0.15 rg
+BT
+/F2 13 Tf
+60 732 Td
+(A counter that stops itself) Tj
+ET
+Q
+q
+0.07 0.09 0.15 rg
+BT
+/F1 11 Tf
+60 710 Td
+(Count up while EN is high and clear the count at LIMIT.) Tj
+ET
+Q
+q
+0.07 0.09 0.15 rg
+BT
+/F1 11 Tf
+60 692 Td
+(Keep the module and port names of the skeleton exactly.) Tj
+ET
+Q
+q
+0.07 0.09 0.15 rg
+BT
+/F2 13 Tf
+60 652 Td
+(Interface signals) Tj
+ET
+Q
+q
+0.07 0.09 0.15 rg
+BT
+/F1 11 Tf
+60 630 Td
+(CLK : Core clock) Tj
+ET
+Q
+q
+0.07 0.09 0.15 rg
+BT
+/F1 11 Tf
+60 612 Td
+(nRST : Active-low reset, asynchronous) Tj
+ET
+Q
+q
+0.07 0.09 0.15 rg
+BT
+/F1 11 Tf
+60 594 Td
+(EN : Count on this edge while high) Tj
+ET
+Q
+q
+0.07 0.09 0.15 rg
+BT
+/F1 11 Tf
+60 576 Td
+(LIMIT : The count the run ends at) Tj
+ET
+Q
+q
+0.07 0.09 0.15 rg
+BT
+/F1 11 Tf
+60 558 Td
+(CNT : The count now held) Tj
+ET
+Q
+q
+0.07 0.09 0.15 rg
+BT
+/F1 11 Tf
+60 540 Td
+(DONE : High for the cycle the count reaches LIMIT.) Tj
+ET
+Q
+q
+0.07 0.09 0.15 rg
+BT
+/F2 13 Tf
+60 500 Td
+(Detailed operations) Tj
+ET
+Q
+q
+0.07 0.09 0.15 rg
+BT
+/F1 11 Tf
+60 478 Td
+(Hold nRST low to clear the counter at once.) Tj
+ET
+Q
+q
+0.07 0.09 0.15 rg
+BT
+/F1 11 Tf
+60 460 Td
+(The counter advances only on a rising edge with EN high.) Tj
+ET
+Q
+q
+0.07 0.09 0.15 rg
+BT
+/F1 11 Tf
+60 442 Td
+(The count returns to zero on the edge after it reaches LIMIT.) Tj
+ET
+Q
+q
+0.07 0.09 0.15 rg
+BT
+/F1 11 Tf
+60 410 Td
+(Leave the given folder as it is: one flat directory.) Tj
+ET
+Q
+q
+0.42 0.45 0.5 rg
+BT
+/F1 9 Tf
+60 50 Td
+(page 1 of 1 - the handout demo/hw was given with) Tj
+ET
+Q
+endstream
+endobj
+7 0 obj
+<< /Producer (RTLGraph) >>
+endobj
+xref
+0 8
+0000000000 65535 f 
+0000000015 00000 n 
+0000000064 00000 n 
+0000000121 00000 n 
+0000000257 00000 n 
+0000000354 00000 n 
+0000000456 00000 n 
+0000002094 00000 n 
+trailer
+<< /Size 8 /Root 1 0 R /Info 7 0 R >>
+startxref
+2136
+%%EOF

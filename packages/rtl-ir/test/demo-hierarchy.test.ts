@@ -223,5 +223,6 @@ test('every requirement a demo quotes is really in the document it names', () =>
       }
     }
   }
-  assert.ok(checked >= 6, `only ${checked} requirements are linked`)
+  // 6 in demo/pwm (spec/ beside the root), 3 in demo/hw (the handout in the flat folder)
+  assert.equal(checked, 9, 'every linked requirement was checked against its document')
 })
