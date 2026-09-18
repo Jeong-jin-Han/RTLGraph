@@ -201,8 +201,13 @@ export async function run(): Promise<void> {
   await vscode.commands.executeCommand('vscode.open', pwmRoot)
   await until('the pwm root drawn', renderState)
   const groupsBefore = vscode.window.tabGroups.all.length
-  const brief = await vscode.commands.executeCommand<string>('rtlgraph.openSpec', 'pwm')
-  assert.equal(brief, `${join(demoDir, 'pwm/spec/pwm_brief.pdf')}#page=1`)
+  const brief = await vscode.commands.executeCommand<
+    { path: string; page?: number; pages?: number; found?: boolean; error?: string }>('rtlgraph.openSpec', 'pwm')
+  assert.equal(brief.error, undefined, `the reader failed: ${brief.error}`)
+  assert.equal(brief.path, join(demoDir, 'pwm/spec/pwm_brief.pdf'))
+  assert.equal(brief.page, 1)
+  assert.equal(brief.pages, 1, `the reader read the document, not just the file name (got ${JSON.stringify(brief)})`)
+  assert.equal(brief.found, true, 'and found the sentence the box quotes')
   const briefTab = await until('the brief to open', () =>
     vscode.window.tabGroups.all.flatMap(group => group.tabs.map(tab => ({ group, tab })))
       .find(({ tab }) => tab.label.endsWith('pwm_brief.pdf')))
@@ -212,8 +217,11 @@ export async function run(): Promise<void> {
 
   // A box that quotes no sentence is still part of a design built from a brief,
   // so it opens the document — just without a page to jump to.
-  const whole = await vscode.commands.executeCommand<string>('rtlgraph.openSpec', 'pwm/PERIOD_FF')
-  assert.equal(whole, join(demoDir, 'pwm/spec/pwm_brief.pdf'))
+  const whole = await vscode.commands.executeCommand<{ path: string; page?: number; found?: boolean }>(
+    'rtlgraph.openSpec', 'pwm/PERIOD_FF')
+  assert.equal(whole.path, join(demoDir, 'pwm/spec/pwm_brief.pdf'))
+  assert.equal(whole.page, undefined, 'nothing was quoted, so no page is claimed')
+  assert.equal(whole.found, false)
   log('a box that quotes nothing opens the brief itself, with no page')
 
   // ── state machines: demo/pwm, three levels with a machine at two of them ──

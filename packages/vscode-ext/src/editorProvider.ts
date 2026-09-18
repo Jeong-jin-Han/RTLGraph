@@ -7,7 +7,8 @@ import { collectHierarchyFiles } from './hierarchyFiles.ts'
 import { setLayoutEdit } from './jsonEdit.ts'
 import { normalizeFilter } from './webview/state.ts'
 import { webviewHtml } from './webview/html.ts'
-import { openBeside, openCodeBeside } from './openCode.ts'
+import { openCodeBeside } from './openCode.ts'
+import { openRequirement } from './specView.ts'
 
 const RASTER_TIMEOUT_MS = 20_000
 const RELOAD_DELAY_MS = 100
@@ -221,14 +222,10 @@ export class RtlGraphEditorProvider implements vscode.CustomTextEditorProvider {
           const at = panel.specAt(message)
           if (!at) void vscode.window.showWarningMessage(`RTLGraph: ${message.node ?? message.signal} names no requirement.`)
           else {
-            // The document opens beside the drawing like the code does; which page
-            // it is on is said out loud, since a PDF viewer is not ours to drive.
-            void openBeside(at.uri, document).then(
-              () => vscode.window.showInformationMessage(
-                at.quote === undefined
-                  ? `RTLGraph: ${at.uri.path.split('/').pop()} — the brief this design was asked for`
-                  : `RTLGraph: page ${at.page ?? '?'} — "${at.quote}"`,
-              ),
+            // A PDF opens in RTLGraph's own reader, beside the drawing, with the
+            // sentence found and painted; anything else opens as an editor.
+            void openRequirement(this.context, at, document).then(
+              undefined,
               () => vscode.window.showWarningMessage(`RTLGraph: cannot open ${at.uri.path.split('/').pop()}.`),
             )
           }

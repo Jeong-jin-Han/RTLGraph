@@ -1,4 +1,6 @@
 import * as esbuild from 'esbuild'
+import { cpSync, mkdirSync } from 'node:fs'
+import { createRequire } from 'node:module'
 
 // Two bundles: the extension host (Node, `vscode` provided at runtime) and the
 // webview (browser). The @rtlgraph/* packages are TypeScript sources and get
@@ -44,7 +46,27 @@ const configs = [
     format: 'iife',
     target: 'es2022',
   },
+  {
+    // The requirement viewer. ESM, not IIFE: pdf.js is shipped as a module and
+    // reads import.meta.url, which an IIFE has nowhere to put.
+    ...common,
+    entryPoints: ['src/webview/pdf.ts'],
+    outfile: 'dist/pdfview.js',
+    platform: 'browser',
+    format: 'esm',
+    target: 'es2022',
+  },
 ]
+
+// pdf.js reads these at run time, per document: the base-14 fonts a PDF is
+// allowed to leave out, and the character maps a CJK document needs. They are
+// copied rather than bundled because pdf.js fetches them by URL.
+const require = createRequire(import.meta.url)
+const pdfjs = require.resolve('pdfjs-dist/package.json').replace(/package\.json$/, '')
+mkdirSync(`${import.meta.dirname}/dist/pdfjs`, { recursive: true })
+for (const part of ['standard_fonts', 'cmaps']) {
+  cpSync(`${pdfjs}${part}`, `${import.meta.dirname}/dist/pdfjs/${part}`, { recursive: true })
+}
 
 if (watch) {
   for (const config of configs) await (await esbuild.context(config)).watch()

@@ -7,6 +7,7 @@ import { exportSchematic } from './export.ts'
 import { EXPORT_FORMATS, viewName, type ExportFormat } from './exportFiles.ts'
 import { collectHierarchyFiles } from './hierarchyFiles.ts'
 import { openBeside, openCodeBeside } from './openCode.ts'
+import { openRequirement } from './specView.ts'
 import { fsmFileName, graphFileKind, graphName, hierarchyEntries, loadHierarchy, schematicFileName } from '@rtlgraph/ir'
 import type { FoldAction, FoldScope } from './protocol.ts'
 
@@ -349,13 +350,11 @@ export function activate(context: vscode.ExtensionContext): void {
         void vscode.window.showWarningMessage(`RTLGraph: ${target} names no requirement.`)
         return undefined
       }
-      await openBeside(at.uri, RtlGraphEditorProvider.activeDocument())
-      void vscode.window.showInformationMessage(
-        at.quote === undefined
-          ? `RTLGraph: ${at.uri.path.split('/').pop()} — the brief this design was asked for`
-          : `RTLGraph: page ${at.page ?? '?'} — "${at.quote}"`,
-      )
-      return at.page === undefined ? at.uri.fsPath : `${at.uri.fsPath}#page=${at.page}`
+      // What comes back says what the reader ended up looking at: the page the
+      // sentence is really on, which is not always the page the JSON guessed.
+      const shown = await openRequirement(context, at, RtlGraphEditorProvider.activeDocument())
+      if (shown?.error) void vscode.window.showWarningMessage(`RTLGraph: ${shown.error}`)
+      return { path: at.uri.fsPath, page: shown?.page ?? at.page, pages: shown?.pages, found: shown?.found, error: shown?.error }
     }),
 
     vscode.commands.registerCommand('rtlgraph.fitView', () => RtlGraphEditorProvider.postToActive({ type: 'fitView' })),

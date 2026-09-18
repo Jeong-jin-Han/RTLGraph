@@ -78,6 +78,31 @@ test('case, curly quotes, ligatures and extra spacing do not hide a sentence', (
   assert.ok(found?.exact, 'the fold makes both sides the same sentence')
 })
 
+// The three shapes a real handout (EE.50078 P01, a PowerPoint deck) turned out
+// to have. Each of them made a sentence unfindable before it was folded away.
+test('a sentence is found when its quote marks arrive as runs of their own', () => {
+  const pieces = line(60, 'data_out_valid', ' ', ': indicate', ' ', '\u201c', 'data_out', '\u201d', ' ', 'is valid')
+  const found = findQuote(pieces, 'data_out_valid : indicate "data_out" is valid')
+  assert.ok(found?.exact, 'whether two runs have a space between them is not something the document says')
+  assert.equal(found.rects.length, 1)
+})
+
+test('a name written in mathematical italics is the same name', () => {
+  // PowerPoint's equation editor writes SymbolEdgeTime in U+1D400's blocks.
+  const italic = [...'SymbolEdgeTime'].map(c => {
+    const base = c >= 'a' ? 0x1d44e - 0x61 : 0x1d434 - 0x41
+    return String.fromCodePoint(base + c.charCodeAt(0))
+  }).join('')
+  const found = findQuote(line(60, `Receive 1b per ${italic}.`), 'Receive 1b per SymbolEdgeTime.')
+  assert.ok(found?.exact, 'nobody types the mathematical letters by hand')
+})
+
+test('an arrow is the same as the way it is typed', () => {
+  const found = findQuote(line(60, 'When observed serial_in is 1\u2019b1 \u2192 1\u2019b0, start reception.'),
+    "When observed serial_in is 1'b1 -> 1'b0, start reception.")
+  assert.ok(found?.exact)
+})
+
 test('the page hint is followed, but a wrong hint still finds the page that says it', () => {
   const pages = [line(70, 'A cover page.'), PAGE, line(70, 'CLK : Core clock')]
   const onHint = findQuoteInPages(pages, 'CLK : Core clock', 2)
