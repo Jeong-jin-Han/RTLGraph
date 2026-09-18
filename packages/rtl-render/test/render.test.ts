@@ -208,6 +208,25 @@ test('matches the golden three-level SVG', () => {
   assert.equal(svg, readFileSync(file, 'utf8'))
 })
 
+// demo/pwm is the one with frames three deep, a state register in two of them and
+// operations the registry has no symbol for: the drawing most likely to shift
+// under a layout change.
+test('matches the golden pwm SVG, frames and all', () => {
+  const dir = join(import.meta.dirname, '../../../demo/pwm')
+  const read = (path: string) => {
+    try {
+      return readFileSync(join(dir, path), 'utf8')
+    } catch {
+      return undefined
+    }
+  }
+  const pwm = loadHierarchy('pwm_top.rtlgraph.json', read).root!
+  const file = join(dir, 'pwm_top.svg')
+  const svg = renderHierarchySvg(pwm, { isUnfolded: () => true })
+  if (process.env.UPDATE_GOLDEN) writeFileSync(file, svg)
+  assert.equal(svg, readFileSync(file, 'utf8'))
+})
+
 test('the page grows around a wire dragged out of the layout box', () => {
   const dragged = structuredClone(graph)
   // The reader pulled this net up above everything, the way a corner grip does.
