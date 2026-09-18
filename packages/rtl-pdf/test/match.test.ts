@@ -34,6 +34,12 @@ test('a sentence that is there is found, and painted as one box per line', () =>
   assert.ok(rect.w > 50 * UNIT * 0.9, 'and covers the whole sentence')
 })
 
+test('the match carries the page\'s own wording, for a viewer to search with', () => {
+  const found = findQuote(PAGE, 'Generate a square wave, with an adjustable duty cycle.')
+  assert.equal(found?.text, 'Generate a square wave with a configurable duty cycle.',
+    'what the page says, not what the JSON quotes')
+})
+
 test('a sentence split across two runs is one box when they share a line', () => {
   const found = findQuote(PAGE, 'RDY : Active-low when the PWM core is activated')
   assert.ok(found?.exact)

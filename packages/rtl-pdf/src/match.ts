@@ -22,6 +22,11 @@ export interface TextPiece {
 
 export interface Highlight {
   rects: { x: number; y: number; w: number; h: number }[]
+  // The matched words as the *page* spells them, not as the quote does. A real
+  // viewer highlights by searching its own text, so it has to be handed the
+  // document's own wording — which is not the quote whenever the match was fuzzy
+  // or the page broke a word across two runs.
+  text: string
   score: number // 1 for an exact match, down to 0
   exact: boolean
 }
@@ -198,7 +203,13 @@ export function findQuote(pieces: TextPiece[], quote: string): Highlight | undef
     else touched.set(index, { from: flat.at[i], to: flat.at[i] + 1 })
   }
   const rects = boxes(pieces, touched)
-  return rects.length > 0 ? { rects, score: found.score, exact: found.score === 1 } : undefined
+  const text = [...touched.entries()]
+    .sort((a, b) => a[0] - b[0])
+    .map(([index, span]) => pieces[index].str.slice(span.from, Math.max(span.to, span.from + 1)))
+    .join(' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+  return rects.length > 0 ? { rects, text, score: found.score, exact: found.score === 1 } : undefined
 }
 
 // The whole document, when the page hint is wrong or missing: the page that says

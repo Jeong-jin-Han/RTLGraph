@@ -67,6 +67,10 @@ mkdirSync(`${import.meta.dirname}/dist/pdfjs`, { recursive: true })
 for (const part of ['standard_fonts', 'cmaps']) {
   cpSync(`${pdfjs}${part}`, `${import.meta.dirname}/dist/pdfjs/${part}`, { recursive: true })
 }
+// The viewer engine's stylesheet (page frames, text layer, find highlights) and
+// the worker, which the reader fetches and starts from a blob.
+cpSync(`${pdfjs}legacy/web/pdf_viewer.css`, `${import.meta.dirname}/dist/pdfjs/pdf_viewer.css`)
+cpSync(`${pdfjs}legacy/build/pdf.worker.min.mjs`, `${import.meta.dirname}/dist/pdfjs/pdf.worker.mjs`)
 
 if (watch) {
   for (const config of configs) await (await esbuild.context(config)).watch()
