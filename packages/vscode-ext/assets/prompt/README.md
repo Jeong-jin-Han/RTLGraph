@@ -1,0 +1,122 @@
+# Which prompt? — read this, then pick one
+
+*(한국어: `README.korean.md`)*
+
+These five folders are ready-made instructions for an AI agent. You do not edit
+them and you do not paste their contents: you paste **their path**, plus the path
+of the project you want worked on. Which one you paste decides what happens —
+that is the whole interface.
+
+```
+RTLGraph: Copy Prompt Path        ← pick a branch; the path lands on the clipboard
+```
+
+then, in your agent (Claude Code, Codex, Cursor…):
+
+```
+/home/me/work/uart/.prompt/assignment/korean.md 를 읽고 그대로 해줘.
+PROJECT_FOLDER = /home/me/work/uart
+```
+
+Each prompt starts with a few `NAME = <value>` lines. Fill those in — the project
+path, the brief's path if there is one — and leave the rest alone.
+
+---
+
+## Start here
+
+| What you have in front of you | Use | What you get back |
+|---|---|---|
+| RTL you wrote or inherited, and you want to **see** it | **`rtlgraph`** | a schematic per component, nothing in the code touched |
+| A **handed-out skeleton** — an assignment, someone else's repo — that must stay as it is | **`assignment`** | the same, plus testbenches and (if the brief is a PDF) every box linked to the sentence it exists for |
+| RTL that works but is a mess, and you are allowed to restructure it | **`refactor`** | the code rearranged into the three-layer layout, then drawn |
+| A specification, and no code yet | **`rtl`** | new RTL written to that spec, simulated, then drawn |
+| An idea, and not even a specification | **`spec`** | a `SPEC.md` you can read, argue with, and then feed to `rtl` |
+
+If two of them look right, the question to ask is **"may the code change?"** —
+`rtlgraph` and `assignment` never touch it, `refactor` and `rtl` do.
+
+---
+
+## The five, one at a time
+
+### `rtlgraph` — existing RTL → a schematic
+
+The everyday one. The agent reads the Verilog, writes one `*.rtlgraph.json` per
+component in that component's folder, and validates what it wrote. Nothing in the
+code moves.
+
+Use it when the project is yours, or at least when new folders are acceptable —
+it places files the way RTLGraph's own layout expects.
+
+Afterwards: open the root file. Every box right-clicks to the line of code it came
+from; if a box's `origin` is wrong, the validator would have said so.
+
+### `assignment` — a skeleton that may not be touched
+
+The one for coursework, or for reading a repository you have no right to
+rearrange. It creates **no folders for code** and changes no name. Two placements,
+your choice:
+
+- leave `RTLGRAPH_FOLDER` empty → each JSON sits beside the module it describes;
+- set it (`rtlgraph`, say) → every RTLGraph file goes in that one folder instead,
+  and the code is left completely alone.
+
+It also asks for **testbenches** — one for the normal path, one per edge case the
+brief implies, each saying at the top what it is there to catch — and, when the
+brief is a PDF, `source.spec` plus the quoted sentence on the elements the
+document actually talks about. Right-clicking such a box then opens the document
+at that sentence, highlighted.
+
+Where the code instantiates a primitive it does not ship (`DFF` is the usual one),
+it points `source.lib` at the `.base/` folder that came with this one.
+
+### `refactor` — restructure, then draw
+
+The only prompt that rewrites code. It is separate on purpose: restructuring and
+drawing are different decisions, and you should be able to ask for one without
+the other. It records a behavioural baseline first, restructures into
+`comb/ control_path/ data_path/ seq/`, re-simulates against that baseline, and
+only then rebuilds the RTLGraph files.
+
+Do not point this at an assignment.
+
+### `rtl` — specification → new RTL
+
+Writes the modules, the testbenches and the RTLGraph files from a spec document.
+Needs a simulator; `.agent/ENVIRONMENT.md` says which ones this machine has.
+
+### `spec` — an idea → `SPEC.md`
+
+For when the idea is still in your head or in a paragraph. Produces a
+specification with a **Decisions** section (everything it had to choose, and why)
+and an **Open questions** section (everything it could not settle). Read those two
+first — they are where the misunderstandings are — then hand the result to `rtl`.
+
+---
+
+## Two things that change what a prompt does
+
+**The language.** Every folder has `korean.md` and `english.md`. They ask for the
+same work; they differ in what language the agent writes `meaning`, labels and its
+report in. Names from the code are never translated either way.
+
+**What is installed.** `.agent/ENVIRONMENT.md` is regenerated every time you run
+`RTLGraph: Copy Agent Spec to Workspace`, and the prompts defer to it: which
+simulator to run, and whether to write a NodeGraph verification map (only if that
+extension is installed). If you install a tool later, run the command again so the
+report catches up.
+
+---
+
+## After the agent says it is done
+
+1. **Read the validator line it quotes.** `0 errors` is the bar. Warnings are
+   either real findings about the code or something it should have fixed — the
+   prompt asks it to tell you which.
+2. **Open the root** `*.rtlgraph.json`. The drawing is the answer; the JSON is
+   just how it is stored.
+3. **Check one box against the code.** Right-click → *Open the Code*. If the line
+   is right, the rest usually is.
+4. **Arrange it if you like.** Anything you move, resize or re-route is written
+   under `layout`, and re-running the agent leaves it alone.

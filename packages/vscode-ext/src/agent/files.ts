@@ -25,6 +25,11 @@ export interface BundledFile {
 export const AGENT_FILES: readonly BundledFile[] = [
   { from: 'assets/agent/RTLGRAPH_SPEC.md', to: '.agent/RTLGRAPH_SPEC.md' },
   { from: VALIDATOR_BUNDLE, to: '.agent/rtlgraph-validate.mjs' },
+  // For the reader, not the agent: which of the five to reach for, and why.
+  ...PROMPT_LANGUAGES.map(language => ({
+    from: `assets/prompt/README${language === 'english' ? '' : `.${language}`}.md`,
+    to: `.prompt/README${language === 'english' ? '' : `.${language}`}.md`,
+  })),
   ...PROMPT_KINDS.flatMap(kind =>
     PROMPT_LANGUAGES.map(language => ({ from: `assets/prompt/${kind}/${language}.md`, to: `.prompt/${kind}/${language}.md` })),
   ),

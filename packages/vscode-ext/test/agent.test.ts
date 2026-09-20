@@ -16,7 +16,10 @@ const spec = read('assets/agent/RTLGRAPH_SPEC.md')
 
 test('every file the command copies exists in the extension', () => {
   for (const { from } of AGENT_FILES) assert.ok(existsSync(join(ROOT, from)), from)
-  assert.equal(AGENT_FILES.filter(f => f.to.startsWith('.prompt/')).length, PROMPT_KINDS.length * PROMPT_LANGUAGES.length)
+  // a prompt per kind per language, plus the guide that says which to reach for
+  assert.equal(AGENT_FILES.filter(f => /^\.prompt\/[a-z]+\//.test(f.to)).length, PROMPT_KINDS.length * PROMPT_LANGUAGES.length)
+  assert.deepEqual(AGENT_FILES.filter(f => /^\.prompt\/README/.test(f.to)).map(f => f.to).sort(),
+    ['.prompt/README.korean.md', '.prompt/README.md'])
 })
 
 test('prompts: every kind in two languages, each pointing at a workflow the spec defines', () => {

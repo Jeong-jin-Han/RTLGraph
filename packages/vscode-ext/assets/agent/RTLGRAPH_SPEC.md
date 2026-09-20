@@ -5,7 +5,8 @@
 > first.** Also read `.agent/ENVIRONMENT.md` (which simulators and tools exist on this machine).
 > Validate what you write with `node .agent/rtlgraph-validate.mjs <top>.rtlgraph.json`.
 >
-> Beside this file, the same command wrote `.prompt/` (a ready-made prompt per kind of job) and
+> Beside this file, the same command wrote `.prompt/` (a ready-made prompt per kind of job, with a
+> `README.md` for the person choosing between them — not for you) and
 > `.base/` (the six primitives RTLGraph draws with symbols — `DFF INC ADD SUB MUX2 CMP_EQ` — with a
 > note of their own). `.base/` is there so a project that instantiates them can be simulated and
 > elaborated on its own; see "Primitive definitions" below.

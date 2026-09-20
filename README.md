@@ -118,6 +118,7 @@ click rather than a memory test.
 > .prompt/rtl/{korean,english}.md          spec → RTL in the three-layer layout, then RTLGraph
 > .prompt/refactor/{korean,english}.md     existing RTL → restructured RTL, then RTLGraph
 > .prompt/spec/{korean,english}.md         an idea → SPEC.md
+> .prompt/README.md, README.korean.md     which of the five to reach for — for you, not the agent
 > .base/{DFF,INC,ADD,SUB,MUX2,CMP_EQ}.v    the primitives RTLGraph draws with symbols, plus a note
 > ```
 >
@@ -127,8 +128,9 @@ click rather than a memory test.
 > `DFF` takes `BITWIDTH`, the width, where ours takes `BW`, the top bit index — adapt the copy and
 > say so; RTLGraph still draws it as a register and reads its width from the nets.
 >
-> **Which prompt.** `rtlgraph` and `assignment` both leave the code exactly as it is; they differ in
-> where the JSON goes. `rtlgraph` builds the contract layout (a folder per component) — use it on your
+> **Which prompt.** `.prompt/README.md` answers that in one table and a page per branch — it is
+> written for a person deciding, not for an agent. In short: `rtlgraph` and `assignment` both leave
+> the code exactly as it is; they differ in where the JSON goes. `rtlgraph` builds the contract layout (a folder per component) — use it on your
 > own projects. `assignment` creates no folder: each JSON sits beside the module it describes
 > (`demo/hw`), or set `RTLGRAPH_FOLDER` in the prompt and they all go in one folder of their own
 > (`demo/lab`, code left in `src/`). `refactor` is the only one that restructures code, and it is a

@@ -42,7 +42,8 @@ export async function run(): Promise<void> {
   assert.deepEqual([...(written ?? [])].sort(), expected)
   for (const file of expected) assert.ok(existsSync(join(folder, file)), file)
   assert.match(readFileSync(join(folder, ENVIRONMENT_FILE), 'utf8'), /^# RTLGraph — Agent Environment Report/)
-  const prompts = expected.filter(f => f.startsWith('.prompt/')).length
+  const prompts = expected.filter(f => /^\.prompt\/[a-z]+\//.test(f)).length
+  const guides = expected.filter(f => /^\.prompt\/README/.test(f)).length
   const primitives = expected.filter(f => f.startsWith('.base/') && f.endsWith('.v')).length
   // The primitives are copied, not referenced: a project that instantiates DFF
   // has to carry DFF or it will not elaborate anywhere else.
@@ -50,7 +51,7 @@ export async function run(): Promise<void> {
     readFileSync(join(dirname(dirname(graphFile)), 'base/DFF.v'), 'utf8'),
     'the copied library is the one the demos use')
   log(`Copy Agent Spec wrote ${expected.length} files: spec, validator, environment report, `
-    + `${prompts} prompts, ${primitives} primitives in .base/`)
+    + `${prompts} prompts and ${guides} guides to choosing one, ${primitives} primitives in .base/`)
   const assignment = readFileSync(join(folder, '.prompt/assignment/korean.md'), 'utf8')
   assert.match(assignment, /Follow the code/)
 
