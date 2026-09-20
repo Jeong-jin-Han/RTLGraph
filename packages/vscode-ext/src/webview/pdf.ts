@@ -129,6 +129,57 @@ async function locate(quote: string, hint?: number): Promise<{ page: number; hig
   return best
 }
 
+// Put the match in the middle of the window rather than wherever the viewer's
+// own scroll happened to stop — which, for a sentence near the foot of a page,
+// is the very bottom edge. NodeGraph centres the same way.
+function centre(): void {
+  const marks = Array.from(document.querySelectorAll('.textLayer .highlight.selected'))
+  const pane = document.getElementById('viewerContainer')
+  if (marks.length === 0 || !pane) return
+  const boxes = marks.map(mark => mark.getBoundingClientRect())
+  const top = Math.min(...boxes.map(box => box.top))
+  const bottom = Math.max(...boxes.map(box => box.bottom))
+  const frame = pane.getBoundingClientRect()
+  pane.scrollTo({
+    top: pane.scrollTop + (top + bottom) / 2 - (frame.top + frame.height / 2),
+    behavior: 'smooth',
+  })
+}
+
+// The mark is painted a moment after the search is asked for, so centring waits
+// for it to appear instead of running against a page that has none yet.
+function centreWhenPainted(): void {
+  const started = Date.now()
+  const before = document.querySelector('.textLayer .highlight.selected')
+  const look = () => {
+    const now = document.querySelector('.textLayer .highlight.selected')
+    if (now && (now !== before || Date.now() - started > 600)) {
+      setTimeout(centre, 250) // after the viewer's own scroll has settled
+      return
+    }
+    if (Date.now() - started < 5000) setTimeout(look, 100)
+  }
+  look()
+}
+
+// The viewer scrolls a match into view its own way; when the jump is ours, that
+// is followed by a centring. A find the reader types is left alone.
+let ours = false
+
+function centreOurMatches(): void {
+  const finder = app().findController as
+    { scrollMatchIntoView?: (match: unknown) => void; rtlgraphCentres?: boolean } | undefined
+  if (!finder?.scrollMatchIntoView || finder.rtlgraphCentres) return
+  const scroll = finder.scrollMatchIntoView.bind(finder)
+  finder.scrollMatchIntoView = (match: unknown) => {
+    scroll(match)
+    if (!ours) return
+    ours = false
+    setTimeout(centre, 100)
+  }
+  finder.rtlgraphCentres = true
+}
+
 // Ask the viewer to find its own words: the highlight, the match count and the
 // find bar all come out right, because this is the viewer's own search.
 const paint = (text: string) => app().eventBus.dispatch('find', {
@@ -160,7 +211,11 @@ async function show(message: Show): Promise<void> {
   hit = message.quote === undefined ? undefined : await locate(message.quote, message.page)
   if (hit) {
     viewer.page = hit.page
+    centreOurMatches()
+    ours = true
+    setTimeout(() => (ours = false), 3000) // the jump is over; later finds are the reader's
     paint(hit.highlight.text)
+    centreWhenPainted()
     say(hit.highlight.exact
       ? `the requirement, on page ${hit.page}: “${message.quote}”`
       : `page ${hit.page} — the closest the document now comes to “${message.quote}”`,
