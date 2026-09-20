@@ -120,6 +120,15 @@ says about itself (an inferred node, a pin left open, a contract it does not fol
 setting) and are ignored. Delete them freely; they are regenerated on the next
 export, and an old one can show a drawing several changes out of date.
 
+## Where the primitives come from
+
+`demo/base/` is the shared library these projects point `source.lib` at — the six
+modules RTLGraph draws with symbols. The extension ships the same six, and
+`RTLGraph: Copy Agent Spec to Workspace` writes them into a project as `.base/`,
+so a project of your own carries its own copy instead of referencing this folder.
+`packages/vscode-ext/test/agent.test.ts` checks the two copies are identical, and
+the end-to-end run checks the copied `DFF.v` is the one the demos are drawn from.
+
 ## A real assignment, kept out of the repository
 
 Course material cannot be committed, so a handed-out assignment is dropped in as
@@ -133,3 +142,12 @@ between two logic levels, a name set in the equation editor's italics.
 The last run of it: the validator clean (0 errors), and right-clicking three
 boxes opened the handout at pages 2, 3 and 7 with the quoted sentence
 highlighted; a box that quotes nothing opened the handout itself.
+
+It is also where `.base/` earns its keep. `uart_transmitter.v` instantiates
+`DFF #(.BITWIDTH(4))` and the handout ships no `DFF`, so nothing elaborates until
+the project has one: `.base/DFF.v` is that copy, adapted to the parameter the code
+uses (the stock one takes `BW`, the top bit index). With it, Vivado elaborates
+`uart_transmitter` on its own; the schematic says `params: { BITWIDTH: 4 }`, and
+the validator answers `registry-params` — the width is read from the nets rather
+than from the registry — instead of inventing one and reporting errors that are
+not there.

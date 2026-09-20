@@ -39,6 +39,15 @@ Those quotes are what the reader jumps to: right-clicking a box opens the
 document beside the drawing with that sentence highlighted, and the workbook
 export lists every requirement against whatever carries it.
 
+If the code instantiates a primitive it does not ship — a handed-out skeleton
+often instantiates DFF without carrying one — use `.base/`, which
+`RTLGraph: Copy Agent Spec to Workspace` wrote beside `.agent/`: point
+source.lib at it, list what the design uses in source.libFiles, and record in
+diagnostics that the library came from there. Where the code's primitive differs
+from the stock one (a DFF parameterised by BITWIDTH, the width, rather than BW,
+the top bit index), believe the code: write that parameter, adapt the copy in
+.base/ to match, and leave a library-adapted diagnostic.
+
 Write meaning, label, note and diagnostic messages in English. Keep net, module,
 instance and pin names exactly as they appear in the code.
 

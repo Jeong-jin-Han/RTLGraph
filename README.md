@@ -118,7 +118,14 @@ click rather than a memory test.
 > .prompt/rtl/{korean,english}.md          spec → RTL in the three-layer layout, then RTLGraph
 > .prompt/refactor/{korean,english}.md     existing RTL → restructured RTL, then RTLGraph
 > .prompt/spec/{korean,english}.md         an idea → SPEC.md
+> .base/{DFF,INC,ADD,SUB,MUX2,CMP_EQ}.v    the primitives RTLGraph draws with symbols, plus a note
 > ```
+>
+> `.base/` is copied, not referenced: a handed-out skeleton often instantiates `DFF` without
+> shipping one, and a project that cannot elaborate on its own is not much of a project. Point
+> `source.lib` at it. If the code's primitive differs from the stock one — the UART assignment's
+> `DFF` takes `BITWIDTH`, the width, where ours takes `BW`, the top bit index — adapt the copy and
+> say so; RTLGraph still draws it as a register and reads its width from the nets.
 >
 > **Which prompt.** `rtlgraph` and `assignment` both leave the code exactly as it is; they differ in
 > where the JSON goes. `rtlgraph` builds the contract layout (a folder per component) — use it on your

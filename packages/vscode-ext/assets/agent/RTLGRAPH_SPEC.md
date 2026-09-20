@@ -4,6 +4,11 @@
 > `*.rtlgraph-schematic.json`), or writing RTL for an RTLGraph project, read this whole document
 > first.** Also read `.agent/ENVIRONMENT.md` (which simulators and tools exist on this machine).
 > Validate what you write with `node .agent/rtlgraph-validate.mjs <top>.rtlgraph.json`.
+>
+> Beside this file, the same command wrote `.prompt/` (a ready-made prompt per kind of job) and
+> `.base/` (the six primitives RTLGraph draws with symbols — `DFF INC ADD SUB MUX2 CMP_EQ` — with a
+> note of their own). `.base/` is there so a project that instantiates them can be simulated and
+> elaborated on its own; see "Primitive definitions" below.
 
 RTLGraph is a VS Code extension that draws a high-level schematic — registers, `+1`/`ADD`/`SUB`
 boxes, MUXes, a control block with its truth table, component boxes that open into their own
@@ -125,6 +130,16 @@ and set `source.contractCheck` to `"pass"` (none), `"partial"` (only C3/C4/C5/C7
 - **Primitive definitions** (a `DFF`, `ADD`, … module) are exempt from C1 and C3 — their `posedge` is
   expected. Inside the project they go in `source.files`; in a shared library they go in
   `source.libFiles`, with `source.lib` naming the folder.
+  - **`.base/`** is that folder when the project has no library of its own: `RTLGraph: Copy Agent
+    Spec to Workspace` writes the six the registry knows (`DFF INC ADD SUB MUX2 CMP_EQ`) there, so
+    a project can be simulated and elaborated on its own. A handed-out skeleton often instantiates
+    `DFF` without shipping one — when that happens, point `source.lib` at `.base` and list what the
+    design uses in `source.libFiles`, and say in `diagnostics` that the library came from there.
+  - **When the code's primitive is not the stock one**, believe the code. The UART assignment
+    instantiates `DFF #(.BITWIDTH(4))` where the stock `DFF` takes `BW`, the *top bit index*: write
+    `params: { "BITWIDTH": 4 }`, adapt the copy in `.base/` to match the code, and leave a
+    `library-adapted` diagnostic. RTLGraph keeps drawing it as a register and keeps checking its
+    ports; the width then comes from the nets, and it says so (`registry-params`).
 - **A `reg` node's `rstKind`, `rstPriority` and `rstValue`** describe the flip-flop it instantiates, so
   for a registry primitive they come from that primitive's own definition (`base/DFF.v`: synchronous,
   `RST` beats `EN`, clears to 0). Reading them there is not invention.
@@ -291,6 +306,7 @@ The codes you are most likely to see, and what each means:
 | `undriven`, `multi-driven` | a net with no driver, or a pin driven twice |
 | `meaning-missing` | a `control` or `reset` net does not say what it means when asserted |
 | `origin-mismatch` | the line named does not mention that element (a name you invented may name anything it is wired to) |
+| `registry-params` | a registry primitive is given a parameter the registry does not know (a project's own `DFF #(.BITWIDTH(4))`), so its width is read from the nets instead |
 | `source-root`, `source-lib` | **none** of the files are where `source.root` (or `source.lib`) points — usually the JSON sits in a folder of its own and the root was left as `"."`; the message says what it should be |
 | `source-missing` | one named file is not there, while the rest are |
 | `registry-*`, `width` | a primitive's ports or widths do not match `base/` |

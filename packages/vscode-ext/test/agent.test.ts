@@ -5,7 +5,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 
 import { tmpdir } from 'node:os'
 import { join, relative } from 'node:path'
 import { BASE_REGISTRY } from '@rtlgraph/registry'
-import { AGENT_FILES, PROMPT_KINDS, PROMPT_LANGUAGES, VALIDATOR_BUNDLE } from '../src/agent/files.ts'
+import { AGENT_FILES, BASE_MODULES, PROMPT_KINDS, PROMPT_LANGUAGES, VALIDATOR_BUNDLE } from '../src/agent/files.ts'
 import { buildEnvironmentReport } from '../src/agent/environment.ts'
 
 const ROOT = join(import.meta.dirname, '..')
@@ -145,4 +145,16 @@ test('the spec documents every field the IR has grown', () => {
   }
   // layout.links is the reader's, not the agent's: the spec says to leave layout alone.
   assert.match(spec, /`layout`, `view` \| \*\*owned by the user and the extension/)
+})
+
+// The primitives are shipped so a project can carry its own copy; the demos use
+// the same six. Two copies drift unless something says they must not.
+test('the library the extension ships is the one the demos are drawn from', () => {
+  for (const module of BASE_MODULES) {
+    const shipped = readFileSync(join(ROOT, `assets/base/${module}.v`), 'utf8')
+    const demo = readFileSync(join(ROOT, `../../demo/base/${module}.v`), 'utf8')
+    assert.equal(shipped, demo, `${module}.v differs between assets/base and demo/base`)
+  }
+  assert.equal(AGENT_FILES.filter(f => f.to.startsWith('.base/')).length, BASE_MODULES.length + 1,
+    'every primitive plus the note that says what they are')
 })

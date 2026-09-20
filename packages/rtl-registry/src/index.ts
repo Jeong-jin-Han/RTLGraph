@@ -103,19 +103,65 @@ export function checkNodeAgainstRegistry(id: string, node: RtlNode): Diagnostic[
   return out
 }
 
+// A primitive's own copy may be parameterised differently: a course's DFF takes
+// BITWIDTH (the width), ours takes BW (the top bit index). When a node's params
+// name neither the registry's width parameter nor nothing at all, the registry
+// cannot know how wide the instance is — and using its default would invent a
+// number and report width errors that are not there. The nets are then the
+// authority: every parameterised port of that instance must simply agree.
+const foreignWidth = (def: SymbolDef, params: Record<string, number> | undefined): boolean =>
+  params !== undefined && Object.keys(params).length > 0 && !(def.widthParam.name in params)
+
 export function checkSignalWidths(graph: ComponentGraph): Diagnostic[] {
   const out: Diagnostic[] = []
+  const byOwnParams = new Map<string, Map<string, number>>() // node id -> port -> net width
+  const foreign = new Map<string, Set<string>>() // module -> the parameter names it is given here
+
   for (const [name, signal] of Object.entries(graph.signals)) {
     for (const ref of [signal.driver, ...signal.sinks]) {
       const { node: id, port } = parseEndpoint(ref)
       const node = graph.nodes[id]
       if (!node || node.kind === 'port' || node.kind === 'component' || port === null) continue
       const def = lookupSymbol(node.module)
-      const width = def && portWidth(def, port, node.params)
+      if (!def) continue
+      if (foreignWidth(def, node.params)) {
+        const named = foreign.get(node.module) ?? new Set<string>()
+        for (const param of Object.keys(node.params ?? {})) named.add(param)
+        foreign.set(node.module, named)
+        if (def.ports.find(p => p.name === port)?.width === 'param') {
+          const seen = byOwnParams.get(id) ?? new Map<string, number>()
+          seen.set(port, signal.width)
+          byOwnParams.set(id, seen)
+        }
+        continue
+      }
+      const width = portWidth(def, port, node.params)
       if (width !== undefined && width !== signal.width) {
         out.push({ severity: 'error', code: 'width', msg: `"${ref}" is ${width} bits but "${name}" is ${signal.width}`, node: id, signal: name })
       }
     }
+  }
+
+  // Without a width to compare against, the instance must at least be consistent.
+  for (const [id, ports] of byOwnParams) {
+    const widths = [...new Set(ports.values())]
+    if (widths.length > 1) {
+      const spread = [...ports].map(([port, width]) => `${port}=${width}`).join(', ')
+      out.push({
+        severity: 'error',
+        code: 'width',
+        msg: `the nets on ${id} disagree about its width (${spread})`,
+        node: id,
+      })
+    }
+  }
+  for (const [module, named] of foreign) {
+    out.push({
+      severity: 'warn',
+      code: 'registry-params',
+      msg: `${module} here takes ${[...named].join(', ')} rather than ${lookupSymbol(module)!.widthParam.name}: `
+        + 'its width is taken from the nets, not from the registry',
+    })
   }
   return out
 }

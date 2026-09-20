@@ -43,7 +43,14 @@ export async function run(): Promise<void> {
   for (const file of expected) assert.ok(existsSync(join(folder, file)), file)
   assert.match(readFileSync(join(folder, ENVIRONMENT_FILE), 'utf8'), /^# RTLGraph — Agent Environment Report/)
   const prompts = expected.filter(f => f.startsWith('.prompt/')).length
-  log(`Copy Agent Spec wrote ${expected.length} files: spec, validator, environment report, ${prompts} prompts`)
+  const primitives = expected.filter(f => f.startsWith('.base/') && f.endsWith('.v')).length
+  // The primitives are copied, not referenced: a project that instantiates DFF
+  // has to carry DFF or it will not elaborate anywhere else.
+  assert.equal(readFileSync(join(folder, '.base/DFF.v'), 'utf8'),
+    readFileSync(join(dirname(dirname(graphFile)), 'base/DFF.v'), 'utf8'),
+    'the copied library is the one the demos use')
+  log(`Copy Agent Spec wrote ${expected.length} files: spec, validator, environment report, `
+    + `${prompts} prompts, ${primitives} primitives in .base/`)
   const assignment = readFileSync(join(folder, '.prompt/assignment/korean.md'), 'utf8')
   assert.match(assignment, /Follow the code/)
 
