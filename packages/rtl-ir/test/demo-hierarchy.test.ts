@@ -190,6 +190,12 @@ test('the brief is reachable from anything in the design that was built from it'
   assert.equal(briefOf(pwm, { node: 'pwm/u_pulse/u_cnt/CNT_FF' }), 'spec/pwm_brief.pdf')
   assert.equal(briefOf(pwm, { signal: 'RDY' }), 'spec/pwm_brief.pdf')
 
+  // A box this hierarchy does not have is not answered with the brief: an id
+  // from another file would otherwise look like it had been found.
+  assert.equal(briefOf(pwm, { node: 'pwm/nowhere' }), undefined)
+  assert.equal(briefOf(pwm, { node: 'nowhere/PERIOD_FF' }), undefined)
+  assert.equal(briefOf(pwm, { signal: 'NO_SUCH_NET' }), undefined)
+
   // A design built from no document offers nothing rather than a broken link.
   const acc = loadHierarchy('acc_top.rtlgraph.json', reader('acc')).root!
   assert.equal(briefOf(acc, { node: 'acc' }), undefined)

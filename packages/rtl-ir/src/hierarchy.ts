@@ -158,7 +158,13 @@ export function briefOf(root: HierarchyEntry | undefined, of: { node?: string; s
   if (!root || id === undefined) return undefined
   const entries = hierarchyEntries(root)
   const parts = id.split('/')
-  parts.pop()
+  const own = parts.pop()!
+  // Only for something that is really there. Asking about a box this hierarchy
+  // does not have — an id from another file, a name that has since changed —
+  // used to open the brief anyway, which reads as an answer when it is not one.
+  const holds = entries.find(e => e.instance === parts.join('/'))
+  const graph = holds?.graph
+  if (!graph || (of.node !== undefined ? graph.nodes[own] : graph.signals[own]) === undefined) return undefined
   // Up to the nearest file that names one: a project is built from one brief,
   // and only the file that first cited it has to say where it is.
   for (let at = parts; ; at = at.slice(0, -1)) {
