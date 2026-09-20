@@ -41,9 +41,9 @@ things are added around them, and both are RTLGraph's:
 
 ## RTLGraph's own licence
 
-Not settled in this repository yet. `packages/vscode-ext/package.json` says MIT
-and the README carries an MIT badge, but there is no `LICENSE` file behind either
-of them — whichever licence is chosen, the file and those two claims need to
-agree. Nothing above depends on that choice: Apache-2.0 allows RTLGraph to be
-released under any licence, as long as pdf.js's licence text keeps travelling
-with pdf.js's files, which it does.
+MIT — [`LICENSE`](../LICENSE) at the root, matching what
+`packages/vscode-ext/package.json` declares and the badge in the README.
+
+Apache-2.0 allows that: pdf.js can be shipped inside an MIT-licensed extension as
+long as its licence text travels with its files, which it does
+(`packages/vscode-ext/assets/pdfjs-viewer/LICENSE`).
