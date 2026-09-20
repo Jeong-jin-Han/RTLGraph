@@ -102,9 +102,18 @@ for choice in "${want[@]}"; do
 done
 
 if [ ${#benches[@]} -eq 0 ]; then
-  echo "run-tb: no testbench found."
-  echo "  put the handed-out one in tb/given/ and your own in tb/mine/ — both are there, waiting —"
-  echo "  then: .agent/run-tb.sh given"
+  # Say which folder was looked in, not just "nothing found": an empty tb/given
+  # is the normal state until the marking bench arrives, and the other folder
+  # usually has something in it.
+  case "${want[*]}" in
+    given) echo "run-tb: tb/given/ is empty — nothing has been handed out to be marked against yet." ;;
+    mine)  echo "run-tb: tb/mine/ is empty — no bench of our own has been written yet." ;;
+    *)     echo "run-tb: no testbench anywhere. The handed-out one goes in tb/given/, ours in tb/mine/ — both folders are there, waiting." ;;
+  esac
+  for other in given mine; do
+    n=$(list_dir "$project/tb/$other" | wc -l)
+    [ "$n" -gt 0 ] && echo "        tb/$other/ has $n — run: .agent/run-tb.sh $other"
+  done
   exit 0
 fi
 

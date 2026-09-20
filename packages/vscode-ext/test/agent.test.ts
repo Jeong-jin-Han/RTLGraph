@@ -69,7 +69,7 @@ test('the testbench runner: two folders, the given one marked, the project folde
 
   const empty = run()
   assert.equal(empty.status, 0)
-  assert.match(empty.stdout, /no testbench found/)
+  assert.match(empty.stdout, /no testbench anywhere/)
   for (const folder of ['tb/given', 'tb/mine']) assert.ok(existsSync(join(dir, folder)), `${folder} is made up front`)
 
   // One of ours passes; the same bench in tb/given is called out as the ruler.
@@ -79,6 +79,11 @@ test('the testbench runner: two folders, the given one marked, the project folde
   assert.match(mine.stdout, /PASS\s+tb\/mine\/tb_hw\.v/)
   assert.match(mine.stdout, /reached the limit 4 times/) // the simulator's own words, not ours
   assert.ok(!existsSync(join(dir, 'tb_hw.v')), 'the bench it swapped in is taken back out')
+
+  // Asking for the one that has not arrived says so, and points at the other folder.
+  const none = run('given')
+  assert.match(none.stdout, /tb\/given\/ is empty — nothing has been handed out/)
+  assert.match(none.stdout, /tb\/mine\/ has 1 — run: \.agent\/run-tb\.sh mine/)
 
   writeFileSync(join(dir, 'tb/given/tb_hw.v'), readFileSync(join(demo, 'tb_hw.v')))
   assert.match(run('given').stdout, /PASS\s+tb\/given\/tb_hw\.v\s+← the one it is marked with/)

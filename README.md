@@ -131,6 +131,10 @@ click rather than a memory test.
 > `cp tb_uart.v <project>/tb/given/ && .agent/run-tb.sh given`. `--keep` leaves the last bench in
 > the project folder for Vivado's GUI.
 >
+> Running the command again refreshes everything except a primitive the project has adapted:
+> `.base/DFF.v` edited to take `BITWIDTH` stays as it is, and the notification says which files were
+> left alone. Overwriting it would leave a project that no longer elaborates.
+>
 > `.base/` is copied, not referenced: a handed-out skeleton often instantiates `DFF` without
 > shipping one, and a project that cannot elaborate on its own is not much of a project. Point
 > `source.lib` at it. If the code's primitive differs from the stock one — the UART assignment's

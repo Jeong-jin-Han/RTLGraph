@@ -1,7 +1,7 @@
 import * as vscode from 'vscode'
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
-import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs'
+import { existsSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import type { RenderState } from '../src/protocol.ts'
@@ -54,6 +54,24 @@ export async function run(): Promise<void> {
     + `${prompts} prompts and ${guides} guides to choosing one, ${primitives} primitives in .base/`)
   const assignment = readFileSync(join(folder, '.prompt/assignment/korean.md'), 'utf8')
   assert.match(assignment, /Follow the code/)
+
+  // Running the command again must not undo a primitive the project adapted to
+  // its own code — the UART assignment's DFF takes BITWIDTH, and overwriting it
+  // leaves a project that no longer elaborates.
+  const adapted = readFileSync(join(folder, '.base/DFF.v'), 'utf8').replace(/\bBW\b/g, 'BITWIDTH')
+  writeFileSync(join(folder, '.base/DFF.v'), adapted)
+  writeFileSync(join(folder, '.prompt/assignment/korean.md'), 'edited by hand\n')
+  await vscode.commands.executeCommand<string[]>('rtlgraph.copyAgentSpec', vscode.Uri.file(folder))
+  assert.equal(readFileSync(join(folder, '.base/DFF.v'), 'utf8'), adapted, '.base/DFF.v kept as the project adapted it')
+  assert.match(readFileSync(join(folder, '.prompt/assignment/korean.md'), 'utf8'), /Follow the code/, 'prompts are refreshed')
+  log('a second Copy Agent Spec refreshes the prompts and leaves the adapted .base/DFF.v alone')
+
+  // The runner ships with them, and it has to be executable to be of any use.
+  assert.ok((statSync(join(folder, '.agent/run-tb.sh')).mode & 0o111) !== 0, 'run-tb.sh is executable')
+  const madeFolders = spawnSync('bash', [join(folder, '.agent/run-tb.sh'), 'given'], { encoding: 'utf8' })
+  assert.match(madeFolders.stdout, /tb\/given\/ is empty/)
+  for (const made of ['tb/given', 'tb/mine']) assert.ok(existsSync(join(folder, made)), `${made} is there, waiting`)
+  log('run-tb.sh makes tb/given and tb/mine, and says which one is empty')
 
   // The prompts are picked by branch and the path goes to the clipboard, which is
   // how they are used: pasted into an agent.

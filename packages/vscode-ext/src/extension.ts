@@ -176,13 +176,15 @@ export function activate(context: vscode.ExtensionContext): void {
         return undefined
       }
       try {
-        const written = await vscode.window.withProgress(
+        const { written, kept } = await vscode.window.withProgress(
           { location: vscode.ProgressLocation.Notification, title: 'RTLGraph: writing agent files…' },
           () => copyAgentSpec(context.extensionUri, target),
         )
         void vscode.window.showInformationMessage(
           `RTLGraph: wrote .agent/ and .prompt/{spec,rtl,refactor,rtlgraph}/{korean,english}.md in ${target.fsPath}. ` +
-            'Paste .prompt/rtlgraph/korean.md (or english.md) into your agent to build a schematic of this RTL.',
+            'Paste .prompt/rtlgraph/korean.md (or english.md) into your agent to build a schematic of this RTL.' +
+            // A primitive this project adapted to its own code is the project's, not ours.
+            (kept.length > 0 ? ` Left as they were: ${kept.join(', ')} — this project had adapted them.` : ''),
         )
         return written
       } catch (err) {

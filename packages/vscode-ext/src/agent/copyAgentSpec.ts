@@ -50,19 +50,45 @@ function companion(id: string, spec: string): Companion | undefined {
   return { version, ...(existsSync(path) ? { spec: path } : {}) }
 }
 
+export interface CopyResult {
+  written: string[]
+  /** `.base/` files left as they were, because the project had adapted them. */
+  kept: string[]
+}
+
+// The prompts tell the agent to adapt a primitive to the code that instantiates
+// it — the UART assignment's DFF takes BITWIDTH where the stock one takes BW —
+// so overwriting `.base/` on the next run would break a project that elaborates.
+async function adapted(extensionUri: vscode.Uri, from: string, to: string, at: vscode.Uri): Promise<boolean> {
+  if (!to.startsWith('.base/') || !to.endsWith('.v')) return false
+  try {
+    const there = await vscode.workspace.fs.readFile(at)
+    const ours = await vscode.workspace.fs.readFile(vscode.Uri.joinPath(extensionUri, from))
+    return Buffer.compare(Buffer.from(there), Buffer.from(ours)) !== 0
+  } catch {
+    return false // not there yet, or unreadable: write it
+  }
+}
+
 // Opt-in: only runs from the command, never on activation, so nothing lands in a
 // repository the user did not choose.
-export async function copyAgentSpec(extensionUri: vscode.Uri, target: vscode.Uri): Promise<string[]> {
+export async function copyAgentSpec(extensionUri: vscode.Uri, target: vscode.Uri): Promise<CopyResult> {
   const write = async (to: string, bytes: Uint8Array) => {
     const destination = vscode.Uri.joinPath(target, to)
     await vscode.workspace.fs.createDirectory(vscode.Uri.joinPath(destination, '..'))
     await vscode.workspace.fs.writeFile(destination, bytes)
   }
   const written: string[] = []
+  const kept: string[] = []
   for (const { from, to } of AGENT_FILES) {
+    const destination = vscode.Uri.joinPath(target, to)
+    if (await adapted(extensionUri, from, to, destination)) {
+      kept.push(to)
+      written.push(to)
+      continue
+    }
     await write(to, await vscode.workspace.fs.readFile(vscode.Uri.joinPath(extensionUri, from)))
     // A script nobody can run is a script nobody uses; fs.writeFile has no mode.
-    const destination = vscode.Uri.joinPath(target, to)
     if (to.endsWith('.sh') && destination.scheme === 'file') {
       try {
         chmodSync(destination.fsPath, 0o755)
@@ -74,5 +100,5 @@ export async function copyAgentSpec(extensionUri: vscode.Uri, target: vscode.Uri
   }
   await write(ENVIRONMENT_FILE, new TextEncoder().encode(buildEnvironmentReport(collectEnvironment())))
   written.push(ENVIRONMENT_FILE)
-  return written
+  return { written, kept }
 }
