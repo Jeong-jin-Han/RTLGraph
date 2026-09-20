@@ -148,6 +148,13 @@ export async function run(): Promise<void> {
   await untilFold('unfolding a deep box opens the way to it', ['sys', 'sys/u_host', 'sys/u_dev', 'sys/u_dev/u_inbuf'])
   log('folding a branch and reopening the box two levels down both work')
 
+  // Opening a box shows one level: what was open inside it is not brought back.
+  await vscode.commands.executeCommand('rtlgraph.fold', { instance: 'sys/u_dev', scope: 'node' })
+  await untilFold('the branch folded on its own', ['sys', 'sys/u_host'])
+  await vscode.commands.executeCommand('rtlgraph.unfold', { instance: 'sys/u_dev', scope: 'node' })
+  await untilFold('reopening it shows one level', ['sys', 'sys/u_host', 'sys/u_dev'])
+  log('a box reopens to one level, not to whatever was open inside it before')
+
   const nested = await vscode.commands.executeCommand<string>('rtlgraph.openComponent', 'sys/u_dev/u_inbuf')
   assert.equal(nested, join(dirname(deep.fsPath), 'sys/dev/inbuf/inbuf.rtlgraph-schematic.json'))
   log('Open Component Schematic reaches a component two levels down')
@@ -156,7 +163,8 @@ export async function run(): Promise<void> {
   await until('the nested schematic to draw', renderState)
   const backToRoot = await vscode.commands.executeCommand<string>('rtlgraph.openRoot')
   assert.equal(backToRoot, deep.fsPath)
-  await untilFold('the root again, as it was left', ['sys', 'sys/u_host', 'sys/u_dev', 'sys/u_dev/u_inbuf'])
+  // As it was left: u_inbuf went back to folded when u_dev was folded and opened again.
+  await untilFold('the root again, as it was left', ['sys', 'sys/u_host', 'sys/u_dev'])
   log('Root walks back out of inbuf/ to sys_top.rtlgraph.json')
 
   // ── open a component's own schematic ──

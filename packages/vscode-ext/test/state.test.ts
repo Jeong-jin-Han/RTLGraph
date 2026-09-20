@@ -93,16 +93,20 @@ test('with nothing selected, fold and unfold act on the whole hierarchy', () => 
 })
 
 test('a selected box folds alone or with everything inside', () => {
-  assert.deepEqual(applyFold(ALL, ALL, 'fold', 'node', 'u_a'), ['u_a/u_x', 'u_a/u_x/u_deep', 'u_b'])
+  assert.deepEqual(applyFold(ALL, ALL, 'fold', 'node', 'u_a'), ['u_b'])
   assert.deepEqual(applyFold(ALL, ALL, 'fold', 'descendants', 'u_a'), ['u_b'])
   assert.deepEqual(applyFold([], ALL, 'unfold', 'node', 'u_a'), ['u_a'])
   assert.deepEqual(applyFold([], ALL, 'unfold', 'descendants', 'u_a'), ['u_a', 'u_a/u_x', 'u_a/u_x/u_deep'])
 })
 
-test('folding a box keeps what was open inside it for next time', () => {
+test('acting on a box puts what is inside it back to folded', () => {
+  // Opening a box shows one level, whatever was open in there before.
+  assert.deepEqual(applyFold(ALL, ALL, 'unfold', 'node', 'u_a'), ['u_a', 'u_b'])
   const folded = applyFold(ALL, ALL, 'fold', 'node', 'u_a')
   assert.ok(!isInstanceShown('u_a/u_x', folded))
-  assert.deepEqual(applyFold(folded, ALL, 'unfold', 'node', 'u_a'), ALL)
+  assert.deepEqual(applyFold(folded, ALL, 'unfold', 'node', 'u_a'), ['u_a', 'u_b'], 'and not the picture from before')
+  // What is outside the box is not touched either way.
+  assert.deepEqual(applyFold(['u_b'], ALL, 'unfold', 'node', 'u_a'), ['u_a', 'u_b'])
 })
 
 test('unfolding a nested box opens the way to it', () => {

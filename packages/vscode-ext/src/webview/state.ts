@@ -114,8 +114,11 @@ export function isInstanceShown(instance: string, unfolded: readonly string[]): 
   return parts.slice(0, -1).every((_, k) => unfolded.includes(parts.slice(0, k + 1).join('/')))
 }
 
-// Folding one component leaves the state of those inside it alone, so unfolding
-// it again brings back the same picture. Unfolding opens the way to it as well.
+// Acting on one component puts everything inside it back to how it starts —
+// folded. Opening a box then always shows one level: the box's own schematic
+// with its components as boxes, never whatever happened to be open in there
+// three folds ago. `descendants` is the way to ask for all the levels at once,
+// and unfolding something deep still opens the way down to it.
 export function applyFold(
   unfolded: readonly string[],
   instances: readonly string[],
@@ -125,7 +128,8 @@ export function applyFold(
 ): string[] {
   const whole = scope === 'all' || instance === undefined
   return instances.filter(i => {
-    if (whole || i === instance || (scope === 'descendants' && isInside(i, instance))) return action === 'unfold'
+    if (whole || i === instance) return action === 'unfold'
+    if (isInside(i, instance)) return scope === 'descendants' && action === 'unfold'
     if (action === 'unfold' && isInside(instance, i)) return true
     return unfolded.includes(i)
   })

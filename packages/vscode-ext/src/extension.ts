@@ -135,7 +135,7 @@ async function foldCommand(action: FoldAction, args: unknown): Promise<FoldScope
     const verb = action === 'fold' ? 'Fold' : 'Unfold'
     const picked = await vscode.window.showQuickPick(
       [
-        { label: `${verb} ${instance} only`, description: 'components inside it keep their own state', scope: 'node' as const },
+        { label: `${verb} ${instance} only`, description: 'one level: components inside it go back to folded', scope: 'node' as const },
         { label: `${verb} ${instance} and everything inside`, description: 'every component nested in it as well', scope: 'descendants' as const },
       ],
       { placeHolder: `${verb} the selected component` },

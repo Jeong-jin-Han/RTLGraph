@@ -88,7 +88,7 @@ asked" is one click rather than a memory test.
 
 | | |
 |---|---|
-| **Component hierarchy** | One root plus a schematic per component, each beside the code it describes; fold a frame to a box, or open three levels at once |
+| **Component hierarchy** | One root plus a schematic per component, each beside the code it describes; fold a frame to a box, or open three levels at once. Opening a box shows one level — what is inside it always starts folded, so the same box always opens to the same picture |
 | **Two-level filter** | **Comb** opens Data / Control, **Seq** opens Registers / FSM — the way a top module is drawn on a slide — plus presets (Datapath, Control path, Registers only…) |
 | **Code jump** | Right-click any box or net to open the exact `file:line` it came from, in the editor group to the right of the drawing |
 | **Requirement jump** | Right-click to open the brief the design was asked for, in pdf.js's own viewer — sidebar, find bar, zoom, print — with the quoted sentence highlighted. It is located by the sentence, never by stored coordinates, so it is still found when the document has been re-issued |
@@ -308,7 +308,7 @@ node packages/vscode-ext/dist/agent/rtlgraph-validate.mjs <graph>
 | `RTLGraph: Copy Prompt Path` | Pick a branch of work; its `.prompt/…md` path goes to the clipboard |
 | `RTLGraph: Mark RTLGraph Files in the Explorer` | Teaches Material Icon Theme about `*.rtlgraph.json` (asks before touching your settings) |
 | `RTLGraph: Export Schematic (SVG / PNG / PDF)` | Exports the current view (also the **Export…** toolbar button) |
-| `RTLGraph: Fold Components` / `Unfold Components` | The selected component (only it, or with everything inside), else all |
+| `RTLGraph: Fold Components` / `Unfold Components` | The selected component — on its own (what is inside goes back to folded) or with everything inside — else the whole hierarchy |
 | `RTLGraph: Open Component Schematic` | Opens the selected component's own schematic file |
 | `RTLGraph: Open the Code of the Selected Box` | Jumps to the `origin` line, in the editor group right of the schematic |
 | `RTLGraph: Open the Requirement of the Selected Box` | Opens the brief in the reader, with the quoted sentence highlighted |
