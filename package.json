@@ -11,7 +11,7 @@
     "check": "npm run typecheck && npm test",
     "e2e": "npm run e2e -w rtlgraph",
     "golden": "UPDATE_GOLDEN=1 node --test packages/rtl-render/test/render.test.ts",
-    "package": "npm run build -w rtlgraph --silent && cp README.md LICENSE packages/vscode-ext/ && cd packages/vscode-ext && npx --yes @vscode/vsce package --no-dependencies --baseContentUrl https://github.com/Jeong-jin-Han/RTLGraph/blob/main --baseImagesUrl https://raw.githubusercontent.com/Jeong-jin-Han/RTLGraph/main --out ../../rtlgraph-$npm_package_version.vsix"
+    "package": "npm run build -w rtlgraph --silent && cp README.md LICENSE packages/vscode-ext/ && mkdir -p releases && cd packages/vscode-ext && npx --yes @vscode/vsce package --no-dependencies --baseContentUrl https://github.com/Jeong-jin-Han/RTLGraph/blob/main --baseImagesUrl https://raw.githubusercontent.com/Jeong-jin-Han/RTLGraph/main --out ../../releases/"
   },
   "devDependencies": {
     "@types/node": "^22.20.2",
@@ -19,6 +19,5 @@
   },
   "engines": {
     "node": ">=22.18"
-  },
-  "version": "0.1.0"
+  }
 }

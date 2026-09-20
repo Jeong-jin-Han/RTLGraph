@@ -4,7 +4,7 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/VS%20Code-Extension-007ACC?logo=visualstudiocode&logoColor=white&style=for-the-badge" alt="VS Code Extension" />
-  <img src="https://img.shields.io/badge/version-0.1.0-orange?style=for-the-badge" alt="Version 0.1.0" />
+  <img src="https://img.shields.io/badge/version-0.1.1-orange?style=for-the-badge" alt="Version 0.1.1" />
   <img src="https://img.shields.io/badge/license-MIT-brightgreen?style=for-the-badge" alt="MIT License" />
 </p>
 
@@ -217,9 +217,12 @@ npm run check      # typecheck + tests; also builds the extension bundles
 Or build a `.vsix` and install that:
 
 ```bash
-npm run package                        # writes rtlgraph-<version>.vsix
-code --install-extension rtlgraph-0.1.0.vsix
+npm run package                            # writes releases/rtlgraph-<version>.vsix
+code --install-extension releases/rtlgraph-0.1.1.vsix
 ```
+
+Every build that was released is kept in `releases/`, so an older one can always
+be installed again.
 
 `npm run package` copies this README and the licence into the extension folder
 and rewrites their relative links to absolute GitHub ones, so the marketplace

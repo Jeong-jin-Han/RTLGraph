@@ -2,6 +2,9 @@ tmp/
 node_modules/
 dist/
 *.vsix
+# ...except the ones that were released: those are kept, the way NodeGraph keeps
+# its own, so an older build can be installed again.
+!releases/*.vsix
 .vscode-test/
 .out-*/
 
