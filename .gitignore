@@ -8,3 +8,8 @@ dist/
 # A real handed-out assignment, kept out of the repository: the handout is
 # course material. It sits in demo/ so it can be opened like any other demo.
 demo/uart-p01/
+
+# Copied from the repository root at package time so the marketplace page is the
+# same document as GitHub's, with its links rewritten to absolute ones.
+packages/vscode-ext/README.md
+packages/vscode-ext/LICENSE

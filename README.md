@@ -221,6 +221,10 @@ npm run package                        # writes rtlgraph-<version>.vsix
 code --install-extension rtlgraph-0.1.0.vsix
 ```
 
+`npm run package` copies this README and the licence into the extension folder
+and rewrites their relative links to absolute GitHub ones, so the marketplace
+page is this same document — images and all.
+
 Open the repository in VS Code and press **F5** (**Run RTLGraph**). An *Extension Development Host*
 opens on `demo/`; try `acc/acc_top.rtlgraph.json` or `pwm/pwm_top.rtlgraph.json`.
 
