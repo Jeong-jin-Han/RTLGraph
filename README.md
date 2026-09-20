@@ -377,5 +377,13 @@ agent — RTLGraph only reads the files it wrote.
 
 ## License
 
-MIT — the sibling of [NodeGraph](https://github.com/Jeong-jin-Han/NodeGraph), with Verilog instead of
-papers as input.
+RTLGraph's own licence is not settled in this repository yet — the badge above and
+`packages/vscode-ext/package.json` say MIT, and a `LICENSE` file has to be added
+to stand behind them.
+
+What is shipped inside the extension and under what terms is written down in
+**[docs/THIRD-PARTY.md](docs/THIRD-PARTY.md)**: the requirement reader is Mozilla's
+pdf.js viewer, Apache-2.0, mounted whole with its licence text beside it.
+
+The sibling of [NodeGraph](https://github.com/Jeong-jin-Han/NodeGraph), with
+Verilog instead of papers as input.
