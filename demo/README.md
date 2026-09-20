@@ -152,6 +152,16 @@ xsim: the given transmitter looped back into it returns four bytes unchanged, an
 a corner-case bench covers a byte nobody has taken yet, two frames with no gap, a
 dip too short to be a start bit, and a reset mid-frame.
 
+The verification is written down as well, in NodeGraph's format rather than
+RTLGraph's: `verification.nodegraph.json` has one node per thing a bench proves —
+what it drives, what it expects, what a failure would mean — each quoting the
+handout sentence behind it and carrying `code` links to both the check and the
+logic it exercises (`tb_uart_corner.v:73-79` → `uart_receiver.v:79-88`). The
+course's own testbench, which is what the mark comes from and was not in the zip,
+is a `gap` node, so what has *not* been shown is visible too. It validates
+against NodeGraph's published schema, and the prompts only ask for such a file
+when `.agent/ENVIRONMENT.md` reports that extension installed.
+
 It is also where `.base/` earns its keep. `uart_transmitter.v` instantiates
 `DFF #(.BITWIDTH(4))` and the handout ships no `DFF`, so nothing elaborates until
 the project has one: `.base/DFF.v` is that copy, adapted to the parameter the code

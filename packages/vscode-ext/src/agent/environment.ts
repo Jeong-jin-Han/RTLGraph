@@ -14,10 +14,20 @@ export const PROBES = {
 
 export type ProbedTool = keyof typeof PROBES
 
+// What the agent can do depends on what is installed, and that includes the
+// other half of this pair: NodeGraph draws the reasoning around code the way
+// RTLGraph draws the circuit. A prompt asks for a verification map only when
+// this says the extension is there to read it.
+export interface Companion {
+  version: string
+  spec?: string // its own agent spec, if it ships one on disk
+}
+
 export type EnvironmentFacts = { [K in ProbedTool]?: string } & {
   generated: string // ISO time
   platform: string // process.platform
   vivadoSettings: string[] // settings64.sh files found on disk
+  nodegraph?: Companion
 }
 
 const install = (platform: string, apt: string, brew: string) =>
@@ -63,6 +73,15 @@ export function buildEnvironmentReport(f: EnvironmentFacts): string {
     `| Python 3 | ${has(f.python)} | scripting |`,
     `| pyverilog | ${has(f.pyverilog)} | ${f.pyverilog ? 'Verilog parser library' : 'optional — `pip install pyverilog`'} |`,
     '',
+    '## Companion extensions',
+    '',
+    '| Extension | Available | Use |',
+    '|---|---|---|',
+    `| NodeGraph | ${f.nodegraph ? `✅ \`${f.nodegraph.version}\`` : '❌'} | ${f.nodegraph
+      ? 'write the verification map beside the schematic: one node per thing a testbench proves, each linked to the code it exercises'
+        + (f.nodegraph.spec ? ` — read its own spec first: \`${f.nodegraph.spec}\`` : '')
+      : 'not installed — skip anything a prompt says about `*.nodegraph.json`'} |`,
+    '',
     '## Recommendations',
     '',
     f.node
@@ -72,6 +91,9 @@ export function buildEnvironmentReport(f: EnvironmentFacts): string {
       ? `- **Simulate** with ${simulator}.`
       : '- ⚠️ **No Verilog simulator found** — Workflow B cannot verify behaviour or baselines; tell the user before changing code.',
     ...(f.verilator ? ['- **Lint** with `verilator --lint-only -Wall <files>`: MULTIDRIVEN / UNDRIVEN point at contract C6 problems.'] : []),
+    ...(f.nodegraph
+      ? ['- **Explain the verification** in a `*.nodegraph.json` beside the testbenches: what each one is there to catch, linked to the lines it drives.']
+      : []),
     '',
   ]
   return lines.join('\n')

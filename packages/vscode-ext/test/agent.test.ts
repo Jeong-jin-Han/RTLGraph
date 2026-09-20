@@ -158,3 +158,18 @@ test('the library the extension ships is the one the demos are drawn from', () =
   assert.equal(AGENT_FILES.filter(f => f.to.startsWith('.base/')).length, BASE_MODULES.length + 1,
     'every primitive plus the note that says what they are')
 })
+
+// What the agent may attempt depends on what is installed. NodeGraph is the
+// other half of this pair — the verification map only makes sense when it is
+// there to read it — so the report says which it is, either way.
+test('the report says whether NodeGraph is installed, and what that allows', () => {
+  const base = { generated: 'now', platform: 'linux', vivadoSettings: [] }
+  const without = buildEnvironmentReport(base)
+  assert.match(without, /\| NodeGraph \| ❌ \| not installed — skip anything a prompt says about `\*\.nodegraph\.json`/)
+  assert.doesNotMatch(without, /Explain the verification/)
+
+  const with_ = buildEnvironmentReport({ ...base, nodegraph: { version: '1.0.7', spec: '/x/.agent/NODEGRAPH_SPEC.md' } })
+  assert.match(with_, /\| NodeGraph \| ✅ `1\.0\.7` \| write the verification map/)
+  assert.match(with_, /read its own spec first: `\/x\/\.agent\/NODEGRAPH_SPEC\.md`/)
+  assert.match(with_, /- \*\*Explain the verification\*\* in a `\*\.nodegraph\.json`/)
+})

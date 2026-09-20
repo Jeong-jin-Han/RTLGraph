@@ -48,6 +48,53 @@ from the stock one (a DFF parameterised by BITWIDTH, the width, rather than BW,
 the top bit index), believe the code: write that parameter, adapt the copy in
 .base/ to match, and leave a library-adapted diagnostic.
 
+## Verifying it
+
+The skeleton is not yours to change, but what you write around it is. Add
+testbenches — `tb_<what>.v` beside the code, or in `tb/` if the handout already
+has one — that drive the given ports only, by their given names, and prove the
+design against the handout rather than against itself:
+
+- one that exercises the normal path end to end, self-checking, printing `PASS`
+  or `FAIL` with what it expected;
+- one per **edge case** the handout implies: a handshake whose other side is slow
+  or absent, back-to-back transactions with no gap, a pulse too short to be real,
+  a reset in the middle of an operation, the first and last value a counter can
+  hold, whatever the design's own wording makes possible. Name them for what they
+  catch.
+- Every testbench opens with a comment saying **what it is there to analyse** —
+  which sentence of the brief, which part of the design, and what a failure would
+  mean. A test whose purpose is not written down is a test nobody will trust
+  later.
+
+Drive inputs on the falling edge and check on the rising one, so the bench never
+changes a signal at the instant the design reads it. Run every bench on the
+simulator `.agent/ENVIRONMENT.md` lists, and say which ones passed.
+
+## The verification map (only if NodeGraph is installed)
+
+`.agent/ENVIRONMENT.md` has a "Companion extensions" row for NodeGraph. **If it
+says NodeGraph is not installed, skip this section entirely** and say so in your
+report; nothing below is worth writing without it.
+
+If it is installed, read the spec that row points at
+(`.agent/NODEGRAPH_SPEC.md` inside that extension) and write one
+`verification.nodegraph.json` beside the testbenches: RTLGraph draws what the
+circuit *is*, and this says what has been *shown about it* and why. One node per
+thing a bench proves, each carrying
+
+- a title naming the behaviour ("a byte stands until the host takes it"),
+- content saying what is driven, what is expected, and what a failure would mean,
+- `original` quoting the sentence of the handout it comes from, and
+- a `links` entry of `"type": "code"` pointing at the lines that do it —
+  `tb_uart_corner.v:73-80` for the check, and a second one at the RTL it
+  exercises (`uart_receiver.v:78-88`), so the graph walks from a requirement to
+  its test to the logic under test.
+
+Edges run from the requirement to the test to the code. Anything the handout asks
+for that no bench covers yet is a node too, of the `gap` template, so the hole is
+visible rather than forgotten.
+
 Write meaning, label, note and diagnostic messages in English. Keep net, module,
 instance and pin names exactly as they appear in the code.
 

@@ -3,7 +3,7 @@ import { execSync } from 'node:child_process'
 import { existsSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { AGENT_FILES, ENVIRONMENT_FILE } from './files.ts'
-import { buildEnvironmentReport, PROBES, type EnvironmentFacts, type ProbedTool } from './environment.ts'
+import { buildEnvironmentReport, PROBES, type Companion, type EnvironmentFacts, type ProbedTool } from './environment.ts'
 
 // First stdout line of a version command, or undefined when the tool is missing.
 function probe(command: string): string | undefined {
@@ -36,7 +36,18 @@ function vivadoSettings(): string[] {
 export function collectEnvironment(): EnvironmentFacts {
   const facts: EnvironmentFacts = { generated: new Date().toISOString(), platform: process.platform, vivadoSettings: vivadoSettings() }
   for (const tool of Object.keys(PROBES) as ProbedTool[]) facts[tool] = probe(PROBES[tool])
+  facts.nodegraph = companion('JeongjinHan.nodegraph', '.agent/NODEGRAPH_SPEC.md')
   return facts
+}
+
+// An extension this one can work with, and where its own agent spec is, so the
+// agent reads that rather than guessing at its file format.
+function companion(id: string, spec: string): Companion | undefined {
+  const found = vscode.extensions.getExtension(id)
+  if (!found) return undefined
+  const version = (found.packageJSON as { version?: string }).version ?? 'unknown'
+  const path = vscode.Uri.joinPath(found.extensionUri, spec).fsPath
+  return { version, ...(existsSync(path) ? { spec: path } : {}) }
 }
 
 // Opt-in: only runs from the command, never on activation, so nothing lands in a

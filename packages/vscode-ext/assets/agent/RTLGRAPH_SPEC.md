@@ -9,6 +9,13 @@
 > `.base/` (the six primitives RTLGraph draws with symbols — `DFF INC ADD SUB MUX2 CMP_EQ` — with a
 > note of their own). `.base/` is there so a project that instantiates them can be simulated and
 > elaborated on its own; see "Primitive definitions" below.
+>
+> **What else is installed matters.** `.agent/ENVIRONMENT.md` has a "Companion extensions" table.
+> When it says **NodeGraph** is there, a second kind of file is worth writing beside this one:
+> RTLGraph draws what the circuit *is*, NodeGraph records what is *known* about it — why each part
+> exists, what a testbench proves, which lines it exercises — with `"type": "code"` links that jump
+> to those lines. Read the spec that table points at before writing one, and write none at all when
+> the table says the extension is missing.
 
 RTLGraph is a VS Code extension that draws a high-level schematic — registers, `+1`/`ADD`/`SUB`
 boxes, MUXes, a control block with its truth table, component boxes that open into their own
