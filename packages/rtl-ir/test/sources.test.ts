@@ -87,3 +87,37 @@ test('a name the extractor had to invent may sit on a line that names what it is
   assert.deepEqual(strict.map(d => d.code), ['origin-mismatch'])
   assert.equal(strict[0].node, 'op_q9')
 })
+
+// Moving the JSON into a folder of its own — the assignment layout where the
+// code may not be touched — and leaving `source.root` behind is the easiest
+// mistake to make, and the loudest: every element's origin then points at a
+// file that is not there.
+test('a root pointing at the wrong folder is reported once, with the fix', () => {
+  const moved = (path: string) => (path.startsWith('../') ? read(path.slice(3)) : undefined)
+  const found = checkSources(graph, moved)
+  // One per root that is wrong — the code's and the shared library's — and
+  // nothing per element.
+  assert.deepEqual(found.map(d => d.code), ['source-root', 'source-lib'],
+    `one fault per root: ${found.map(d => d.msg).join(' | ')}`)
+  assert.match(found[0].msg, /source\.root should be "\.\."/)
+  assert.match(found[0].msg, /none of the \d+ source files/)
+})
+
+test('a single missing file is still named on its own', () => {
+  const short = { ...graph, source: { ...graph.source, files: [...graph.source.files, 'gone.v'] } }
+  const found = checkSources(short as ComponentGraph, read).filter(d => d.code.startsWith('source'))
+  assert.deepEqual(found.map(d => `${d.code}:${d.file}`), ['source-missing:gone.v'],
+    'the rest are where they should be, so only the one is reported')
+})
+
+test('nothing is guessed when the files are nowhere to be found', () => {
+  const nowhere = checkSources(graph, () => undefined)
+  assert.equal(nowhere[0].code, 'source-root')
+  assert.doesNotMatch(nowhere[0].msg, /should be/, 'no folder to point at, so no advice')
+})
+
+test('a library that moved is pointed at too', () => {
+  const moved = (path: string) => (path.startsWith('../') ? read(path.slice(3)) : undefined)
+  const lib = checkSources(graph, moved).find(d => d.code === 'source-lib')
+  assert.match(lib!.msg, /source\.lib should be/)
+})

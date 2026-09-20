@@ -285,6 +285,8 @@ The codes you are most likely to see, and what each means:
 | `undriven`, `multi-driven` | a net with no driver, or a pin driven twice |
 | `meaning-missing` | a `control` or `reset` net does not say what it means when asserted |
 | `origin-mismatch` | the line named does not mention that element (a name you invented may name anything it is wired to) |
+| `source-root`, `source-lib` | **none** of the files are where `source.root` (or `source.lib`) points — usually the JSON sits in a folder of its own and the root was left as `"."`; the message says what it should be |
+| `source-missing` | one named file is not there, while the rest are |
 | `registry-*`, `width` | a primitive's ports or widths do not match `base/` |
 | `hierarchy-missing`, `hierarchy-ports` | a `ref` that resolves nowhere, or a box whose ports differ from its schematic |
 | `fsm-missing`, `fsm-state`, `fsm-when`, `fsm-style`… | the machine file is missing, or its states and transitions do not hold together |

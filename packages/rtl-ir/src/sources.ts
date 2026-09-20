@@ -38,6 +38,19 @@ export function originTokens(id: string): string[] {
   return [...tokens]
 }
 
+// `source.root` is relative to the JSON file, and so is the folder the files
+// were found in — the new root is simply the two put together.
+function normalizeRoot(root: string, found: string): string {
+  const parts = [...(root === '.' || root === '' ? [] : root.split('/')), ...found.split('/')]
+  const out: string[] = []
+  for (const part of parts) {
+    if (part === '' || part === '.') continue
+    if (part === '..' && out.length > 0 && out[out.length - 1] !== '..') out.pop()
+    else out.push(part)
+  }
+  return out.join('/') || '.'
+}
+
 export function checkSources(graph: ComponentGraph, read: ReadSource): Diagnostic[] {
   const out: Diagnostic[] = []
   const cache = new Map<string, string[] | undefined>()
@@ -78,19 +91,58 @@ export function checkSources(graph: ComponentGraph, read: ReadSource): Diagnosti
     return [...nets]
   }
 
-  for (const file of graph.source.files) {
-    if (!linesOf(file)) out.push({ severity: 'error', code: 'source-missing', msg: `source file "${file}" not found`, file })
+  // When nothing is where `source.root` says, the cause is one thing, not one
+  // thing per file: the JSON was moved (into a folder of its own, say) and the
+  // root was left behind. Saying it once — with the folder the code seems to be
+  // in — beats a page of "not found" that never names the reason.
+  const missing = graph.source.files.filter(file => !linesOf(file))
+  const rootWrong = missing.length > 0 && missing.length === graph.source.files.length
+  if (rootWrong) {
+    const first = graph.source.files[0]
+    const elsewhere = ['..', '../..', '../src', 'src', '../rtl', '../hdl']
+      .find(where => read(`${where}/${first}`) !== undefined)
+    const root = graph.source.root === '.' || graph.source.root === '' ? 'the folder of this file' : `"${graph.source.root}"`
+    out.push({
+      severity: 'error',
+      code: 'source-root',
+      msg: elsewhere === undefined
+        ? `none of the ${missing.length} source files are where source.root (${root}) points`
+        : `none of the ${missing.length} source files are where source.root (${root}) points — "${first}" is at "${elsewhere}/${first}", so source.root should be "${normalizeRoot(graph.source.root, elsewhere)}"`,
+      file: first,
+    })
+  } else {
+    for (const file of missing) {
+      out.push({ severity: 'error', code: 'source-missing', msg: `source file "${file}" not found`, file })
+    }
   }
   const lib = graph.source.lib && graph.source.lib !== '.' ? `${graph.source.lib.replace(/\/+$/, '')}/` : ''
-  for (const file of graph.source.libFiles ?? []) {
-    if (!linesOf(lib + file)) out.push({ severity: 'warn', code: 'source-missing', msg: `library file "${lib + file}" not found`, file: lib + file })
+  const libFiles = graph.source.libFiles ?? []
+  const libMissing = libFiles.filter(file => !linesOf(lib + file))
+  // The shared library has a root of its own, and it goes wrong the same way.
+  if (libMissing.length > 0 && libMissing.length === libFiles.length) {
+    const first = libFiles[0]
+    const elsewhere = ['..', '../..', '../../..']
+      .find(where => read(`${where}/${lib}${first}`) !== undefined)
+    out.push({
+      severity: 'warn',
+      code: 'source-lib',
+      msg: elsewhere === undefined
+        ? `none of the ${libMissing.length} library files are under source.lib ("${graph.source.lib ?? '.'}")`
+        : `none of the ${libMissing.length} library files are under source.lib ("${graph.source.lib ?? '.'}") — "${first}" is at "${elsewhere}/${lib}${first}", so source.lib should be "${normalizeRoot(graph.source.lib ?? '.', elsewhere)}"`,
+      file: lib + first,
+    })
+  } else {
+    for (const file of libMissing) {
+      out.push({ severity: 'warn', code: 'source-missing', msg: `library file "${lib + file}" not found`, file: lib + file })
+    }
   }
 
   const check = (origin: Origin, tokens: string[] | RegExp, what: string, at: Partial<Diagnostic>, also: RegExp[] = []) => {
     const where = { ...at, file: origin.file, line: origin.line }
     const lines = linesOf(origin.file)
     if (!lines) {
-      out.push({ severity: 'error', code: 'origin', msg: `${what}: file "${origin.file}" not found`, ...where })
+      // One broken root is one fault, not one per element: it has been reported.
+      if (!rootWrong) out.push({ severity: 'error', code: 'origin', msg: `${what}: file "${origin.file}" not found`, ...where })
       return
     }
     if (!Number.isInteger(origin.line) || origin.line < 1 || origin.line > lines.length) {
