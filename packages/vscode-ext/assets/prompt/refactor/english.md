@@ -22,10 +22,18 @@ C1–C7 it breaks, and what has to change to fit REQUEST in. Then do the work.
 - Keep contracts C1–C7 and confirm compile, elaboration and simulation with a
   simulator listed in ENVIRONMENT.md.
 
-Finally rebuild the RTLGraph files with Workflow A (root <top>.rtlgraph.json plus
-one <name>.rtlgraph-schematic.json per component) and validate the root with
+Finally rebuild the RTLGraph files with Workflow A: the root
+<top>.rtlgraph.json, one <name>.rtlgraph-schematic.json per component, and —
+where a component holds a state machine — its <name>.rtlgraph-fsm.json (Step
+7b), with the state register marked fsm. Restructuring moves files, so check
+every source.root afterwards: it is the path from each JSON file to the code it
+now describes, and a wrong one is reported as source-root, an error, naming the
+value it should have (source.lib likewise). Carry any spec quotes across to
+wherever their element ended up. Validate the root with
 node PROJECT_FOLDER/.agent/rtlgraph-validate.mjs until it reports 0 errors.
 Follow the spec exactly and run end to end without asking me anything. When done,
 tell me which files changed, the baseline diff from the restructuring step, the
 simulation results after the new behaviour, the RTLGraph validator summary, and
 which file to open in VS Code to see the schematic.
+
+Write the code and its comments in English, and report in English.

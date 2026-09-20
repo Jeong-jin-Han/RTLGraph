@@ -96,7 +96,11 @@ cannot be recovered with confidence, record a diagnostic instead of guessing.
     placement was deliberate.
   - **`source.root`** is the path from the schematic's folder to the folder its `source.files` are
     relative to: `"."` when the code sits in that folder, `".."` for `PROJECT_FOLDER/<main>/` over a
-    flat project, `"../.."` one level deeper.
+    flat project, `"../.."` one level deeper. **This is the field that goes wrong most often** — the
+    JSON is moved into a folder of its own and the root is left as `"."`. The validator then reports
+    `source-root`, an **error**, naming the folder the code is really in and the value `source.root`
+    should have; `source.lib` is checked the same way and reported as `source-lib`. Check it
+    whenever a file moves.
 
 ### Step 3 — Decide how conforming the code is
 The project **conforms** when it follows the RTLGraph authoring contract (Workflow B):
@@ -254,8 +258,10 @@ requirements page — record where each piece comes from:
 1. `source.spec`: the document, relative to `source.root` (`"spec/pwm_brief.pdf"`, or
    `"hw_brief.pdf"` when the handout sits beside the code). Name it in the **root**;
    a schematic that does not name one inherits the nearest one above it, so every
-   box in the design can open the brief even where it quotes no sentence. Repeat it
-   in a child file only when that component was asked for by a different document.
+   box in the design can open the brief even where it quotes no sentence. Repeating it in a
+   child file is allowed and changes nothing (`demo/pwm` names it in the root and in
+   the main component's schematic); it is only *needed* when that component was asked
+   for by a different document.
 2. On the elements the document actually talks about, `spec: { quote, page }`:
    - `quote` is the sentence **verbatim**, copied from the document, not paraphrased —
      it is what finds the line again.
@@ -302,9 +308,18 @@ everything else, and update `modified`. Because node ids are names from the code
 placement survives.
 
 ### Step 10 — Finish
-Tell the user the file paths, the validator summary, the contract check result, and that opening the
-root in VS Code shows the schematic with its components as boxes that fold and unfold (it refreshes
-automatically when any of the files changes).
+Tell the user the file paths, the validator summary and the contract check result, and say what
+opening the root in VS Code gives them. It refreshes by itself whenever any of the files changes;
+what a reader does there, and therefore what is worth mentioning:
+
+| In the editor | What it does |
+|---|---|
+| Fold / Unfold a component | Opens **one level**: the box's own schematic with its components as boxes. Whatever was open inside it goes back to folded, so the same box always opens to the same picture. "and everything inside" opens every level at once |
+| **Prev** | Walks back out a level at a time — up to the component this schematic sits inside, or all the way to the root |
+| Right-click a box or net | Its code (`origin`), the schematic inside it, and — where `source.spec` is set — **the requirement**: the document opens beside the drawing in the editor's own PDF reader with the quoted sentence highlighted. A box that quotes nothing offers the document itself |
+| Export | SVG / PNG / PDF of the current view, and XLSX of the tables behind it — control signals, truth tables, state transitions, and **one tab of requirements against whatever carries each**, which is what the `spec` quotes of Step 7c are for |
+
+So say which boxes carry a requirement, if any, and which file to open first.
 
 ---
 
@@ -627,4 +642,14 @@ Never use line numbers or counters in ids — the user's layout is matched by id
 - [ ] Contract violations and inferred elements listed in `diagnostics`; `contractCheck` set
 - [ ] A component with a state machine has `<name>.rtlgraph-fsm.json`, and its state register carries `fsm` and `flow: "control"`
 - [ ] Existing `layout`, `view`, `created` preserved; `modified` updated
+- [ ] Every file's `source.root` points at the code it describes (no `source-root` / `source-lib`)
 - [ ] `node .agent/rtlgraph-validate.mjs <top>.rtlgraph.json` reports `0 errors`
+
+---
+
+## About this document
+
+It is copied into a workspace by `RTLGraph: Copy Agent Spec to Workspace` and describes RTLGraph,
+a VS Code extension released under the MIT licence. The extension ships Mozilla's pdf.js viewer
+(Apache-2.0) for reading a brief; the project's `docs/THIRD-PARTY.md` records that. Nothing here
+constrains what you may do with the RTL you are reading — it is the user's.

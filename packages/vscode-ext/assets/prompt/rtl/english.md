@@ -22,9 +22,19 @@ Keep contracts C1–C7 and confirm compile, elaboration and simulation with a
 simulator listed in ENVIRONMENT.md. Put testbenches in tb/, driving inputs on the
 falling edge and checking on the rising edge.
 
-Finally build the RTLGraph files with Workflow A (root <top>.rtlgraph.json plus one
-<name>.rtlgraph-schematic.json per component) and validate the root with
-node PROJECT_FOLDER/.agent/rtlgraph-validate.mjs until it reports 0 errors. Follow
+Finally build the RTLGraph files with Workflow A: the root <top>.rtlgraph.json,
+one <name>.rtlgraph-schematic.json per component, and — where a component holds
+a state machine — its <name>.rtlgraph-fsm.json (Step 7b), with the state
+register marked fsm. Each file's source.root is the path from it to the code it
+describes; a wrong one is reported as source-root, an error, naming the value it
+should have. SPEC_DOC is the document this design was asked for, so record it:
+source.spec in the root (inherited by every file below) and, on the elements the
+document really talks about, spec: { quote, page } — the sentence verbatim.
+Validate the root with node PROJECT_FOLDER/.agent/rtlgraph-validate.mjs until it
+reports 0 errors. Follow
 the spec exactly and run end to end without asking me anything. When done, tell me
 which files you created, the simulation results, the RTLGraph validator summary,
-and which file to open in VS Code to see the schematic.
+which file to open in VS Code to see the schematic, and which boxes open a
+requirement.
+
+Write the code and its comments in English, and report in English.

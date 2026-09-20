@@ -64,9 +64,10 @@ Re-extraction never overwrites it. A link you draw that the RTL has no net for i
 listed as an open goal, the way a proof assistant lists what is left to prove: the sketch says what the
 code should do, and the panel keeps asking until it does.
 
-And an assignment arrives as a PDF. A box can quote the sentence of the brief it exists for; opening it
-shows the document *inside the editor* with that sentence highlighted, so "does the circuit do what was
-asked" is one click rather than a memory test.
+And an assignment arrives as a PDF. The root names it once in `source.spec` and every file below
+inherits it, so any box in the design can open the brief; a box that also quotes a sentence opens it
+*inside the editor* with that sentence highlighted, so "does the circuit do what was asked" is one
+click rather than a memory test.
 
 ---
 
@@ -211,9 +212,12 @@ Node ≥ 22.18 is required — the packages are TypeScript sources, run directly
 
 ### File icons
 
-The tab of anything RTLGraph draws carries its mark already. The Explorer is a
-different matter: that icon comes from your file icon theme, and a theme that
-resolves by extension — Material Icon Theme, say — sees `.json` and draws braces.
+The tab of anything RTLGraph draws carries its mark already: the editor owns its
+own tab, so it sets the icon whatever theme you use. The Explorer is a different
+matter. That icon comes from your file icon theme; RTLGraph contributes a
+`rtlgraph` language (JSON's grammar, unchanged, so highlighting survives) which
+the default theme falls back to, but a theme that resolves by extension —
+Material Icon Theme, say — sees `.json` and draws braces before ever asking.
 Run `RTLGraph: Mark RTLGraph Files in the Explorer` and it offers to add the three
 patterns to Material's associations (it asks first; it is your settings file). On
 the default theme nothing is needed — RTLGraph's own icon is used there.
@@ -336,6 +340,10 @@ node packages/vscode-ext/dist/agent/rtlgraph-validate.mjs <graph>
 | `demo/pwm` | D02-2 PWM controller: three levels, three state machines, a one-page brief |
 | `demo/hw` | An assignment skeleton: one flat folder, JSON beside the code, handout included |
 | `demo/lab` | The same idea, files kept together: code in `src/`, every JSON in `rtlgraph/` |
+| `demo/sys` | Three levels of hierarchy — the case for folding, and the render golden |
+| `demo/updown`, `demo/stopwatch` | Written end to end by an agent, and deliberately non-conforming student code |
+| `packages/vscode-ext/assets/pdfjs-viewer` | Mozilla's PDF viewer, mounted whole (Apache-2.0, licence beside it) |
+| `LICENSE`, `docs/THIRD-PARTY.md` | MIT, and what is shipped inside the extension under what terms |
 | `docs/DECISIONS.md` | Schema, layout, filter, editor and agent decisions, with the reason for each |
 | `tools/logo.py` | Makes the icon and banner from the drawn logo (run by hand; the PNGs are committed) |
 

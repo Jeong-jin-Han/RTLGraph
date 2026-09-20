@@ -22,6 +22,11 @@ saying what you chose and why. Put anything that contradicts the idea or stays
 unclear in an "Open questions" section. Do not ask me: decide sensibly and run
 to the end.
 
+IDEA_FILE may be a PDF as easily as a text file — an assignment handout, a page
+of requirements. Whichever it is, that document (or the SPEC.md you write from
+it) is what a later RTLGraph pass records as source.spec, and the sentences you
+carry across are the ones its boxes will quote, so keep them verbatim.
+
 Write the document in English, and choose signal, module and port names as
 identifiers that the code can use as they are.
 

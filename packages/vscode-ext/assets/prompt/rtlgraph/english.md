@@ -11,11 +11,23 @@ First, briefly explain this project's top module, its component tree (the main
 component and which modules become nested component boxes), and how far it follows
 contracts C1–C7. Then build the RTLGraph files right away: the root
 <top>.rtlgraph.json in PROJECT_FOLDER and one <name>.rtlgraph-schematic.json per
-component in that component's folder. If SPEC_DOCUMENT is given, follow Step 7c
-as well: set source.spec and quote, verbatim, the sentence each element is there
-for. Where a component holds a state machine,
+component in that component's folder. Where a component holds a state machine,
 write its <name>.rtlgraph-fsm.json as well (Step 7b) and mark the state register
 with fsm.
+
+Every file's source.root is the path from that file to the code it describes —
+"." when they sit together, ".." or "../src" when the JSON is one folder away.
+Getting it wrong is the usual way this goes wrong: the validator reports
+source-root, an error, naming the folder the code is really in and the value
+source.root should have. source.lib is checked the same way.
+
+If SPEC_DOCUMENT is given, follow Step 7c as well: name the document in
+source.spec in the root — every file below inherits it, so a box that quotes
+nothing can still open it — and on the elements the document really talks about
+add spec: { quote, page }, the sentence verbatim and the page it is on. Those
+quotes are what the reader jumps to: right-clicking a box opens the document
+beside the drawing with the sentence highlighted, and the workbook export lists
+every requirement against whatever carries it.
 
 Write meaning, label, note and diagnostic messages in English. Keep net, module,
 instance and pin names exactly as they appear in the code.
@@ -24,4 +36,5 @@ Validate the root with node PROJECT_FOLDER/.agent/rtlgraph-validate.mjs
 <top>.rtlgraph.json (it also checks every schematic the root reaches) until it
 reports 0 errors. Follow the spec exactly and run end to end without asking me
 anything. When done, tell me the file paths, the validator summary, the contract
-check result, and which file to open in VS Code to see the schematic.
+check result, and which file to open in VS Code to see the schematic. Say which
+boxes open a requirement, if any, so the reader knows the link is there.

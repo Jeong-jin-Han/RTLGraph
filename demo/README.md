@@ -12,7 +12,7 @@ on its own, and every root validates with 0 errors and 0 warnings.
 | `sys/` | root + 4 schematics | Written for RTLGraph: the deep case. Root → `sys` → `host`, `dev` → `inbuf`, three levels of component boxes, with a golden SVG of all of them open |
 | `pwm/` | root + 4 schematics + **3 FSM files** + **a brief** | The D02-2 PWM controller, written for RTLGraph: three levels of components (`pwm` → `pulse` → `cnt`, with `rdy` beside `pulse`) and a state machine at each of the top two levels plus the handshake. The case for `*.rtlgraph-fsm.json`, and for `spec`: `spec/pwm_brief.pdf` is the one-page brief the design was asked for, written by RTLGraph's own PDF writer (`node demo/pwm/spec/brief.mjs`), and six elements quote the sentence they are there for. Only the top two files name the document; anything deeper inherits it |
 | `hw/` | root + 2 schematics, **all in one flat folder** | An assignment as handed out: `hw_top.v` and `counter.v` side by side, names fixed, an active-low asynchronous reset, logic in `assign` and `always` rather than instances. The case for the "follow the code" placement — no folder is created and every JSON sits beside the module it describes. Its handout, `hw_brief.pdf`, sits in that same flat folder (`node demo/hw/brief.mjs`): right-clicking any box here opens it, and three elements quote the line they are there for |
-| `lab/` | root + 2 schematics, **all in `rtlgraph/`** | The other way to draw code you must not touch: `src/` is left exactly as handed out and every RTLGraph file is kept together in one folder of its own, with `source.root` climbing back out (`../src`). Also the case for logic with no symbol — a concatenation and a reduction `^` |
+| `lab/` | root + 2 schematics, **all in `rtlgraph/`** | The other way to draw code you must not touch: `src/` is left exactly as handed out and every RTLGraph file is kept together in one folder of its own, with `source.root` climbing back out (`../src`) — the field the `source-root` and `source-lib` diagnostics exist for, since leaving it as `"."` after moving the JSON is what breaks this layout. Also the case for logic with no symbol — a concatenation and a reduction `^` |
 | `stopwatch/` | **none, on purpose** | Typical non-conforming student code: flat folder, an FSM in `always` blocks, one positional connection, one counter module used twice, an active-low reset. The input for testing `.prompt/assignment/*.md` in a fresh session — its structure is exactly the kind that must be left alone |
 | `updown/` | root + 1 schematic | Written end to end by a fresh `claude -p` session from `.prompt/rtl/korean.md`: RTL, testbench, root and schematic. Kept in step with the spec since (the form it was produced in is in git) |
 
@@ -26,8 +26,13 @@ on its own, and every root validates with 0 errors and 0 warnings.
   `packages/rtl-render/test/render.test.ts` (`sys_top.svg`), plus the nested
   fold/unfold steps of the end-to-end test.
 - **`pwm`'s brief** — `packages/rtl-ir/test/demo-hierarchy.test.ts` resolves each
-  `spec` to the file it names and checks the sentence is in it; the end-to-end test
-  opens it beside the drawing with `RTLGraph: Open the Requirement…`.
+  `spec` to the file it names and checks the sentence is in it;
+  `packages/rtl-pdf/test/brief.test.ts` finds every one of those sentences through
+  pdf.js, on the page it claims; and the end-to-end test opens the document beside
+  the drawing with `RTLGraph: Open the Requirement of the Selected Box`, in the
+  editor's own pdf.js reader, with the sentence highlighted. A box that quotes
+  nothing opens the document itself — the root names it and every file below
+  inherits it.
 - **`pwm`** — also a render golden (`pwm_top.svg`): frames three deep, a state
   register in two of them, and operations the registry has no symbol for, which
   is the drawing most likely to shift under a layout change. It is what the
@@ -91,6 +96,15 @@ What each says:
 equivalence checks. It was produced with Vivado xsim; the testbench changes inputs
 at the same posedge it samples them, so other simulators order that race
 differently and the stimulus column shifts (the `ACC` column matches).
+
+## What the export gives back
+
+`RTLGraph: Export Schematic` writes the current view as SVG, PNG and PDF, and the
+tables behind it as XLSX: control signals per level, one tab per truth table, a
+machine's states and transitions — and, where a brief is cited, **one tab of
+requirements against whatever carries each**. `demo/pwm` is the project that
+exercises the last of those; `packages/rtl-sheet/test` checks the workbook, and
+the end-to-end test reads two of them back with LibreOffice.
 
 ## What the validator expects of all of them
 
