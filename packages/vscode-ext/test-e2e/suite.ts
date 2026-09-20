@@ -159,13 +159,25 @@ export async function run(): Promise<void> {
   assert.equal(nested, join(dirname(deep.fsPath), 'sys/dev/inbuf/inbuf.rtlgraph-schematic.json'))
   log('Open Component Schematic reaches a component two levels down')
 
-  // ── back out of a component, three folders deep, to the root ──
+  // ── back out of a component, three folders deep, a level at a time ──
   await until('the nested schematic to draw', renderState)
-  const backToRoot = await vscode.commands.executeCommand<string>('rtlgraph.openRoot')
+  const upOne = await vscode.commands.executeCommand<string>('rtlgraph.openPrevious', { step: 'up' })
+  assert.equal(upOne, join(dirname(deep.fsPath), 'sys/dev/dev.rtlgraph-schematic.json'), 'inbuf -> dev, not straight to the root')
+  await until('the schematic one level out', renderState)
+  const upAgain = await vscode.commands.executeCommand<string>('rtlgraph.openPrevious', { step: 'up' })
+  assert.equal(upAgain, join(dirname(deep.fsPath), 'sys/sys.rtlgraph-schematic.json'), 'dev -> sys')
+  await until('the main component', renderState)
+  const outToRoot = await vscode.commands.executeCommand<string>('rtlgraph.openPrevious', { step: 'up' })
+  assert.equal(outToRoot, deep.fsPath, 'and the step above the main component is the root')
+  log('Prev walks out of inbuf/ one level at a time: dev, sys, then the root')
+
+  await vscode.commands.executeCommand('vscode.open', vscode.Uri.file(join(dirname(deep.fsPath), 'sys/dev/inbuf/inbuf.rtlgraph-schematic.json')))
+  await until('the nested schematic again', renderState)
+  const backToRoot = await vscode.commands.executeCommand<string>('rtlgraph.openPrevious', { step: 'root' })
   assert.equal(backToRoot, deep.fsPath)
   // As it was left: u_inbuf went back to folded when u_dev was folded and opened again.
   await untilFold('the root again, as it was left', ['sys', 'sys/u_host', 'sys/u_dev'])
-  log('Root walks back out of inbuf/ to sys_top.rtlgraph.json')
+  log('and the other choice goes all the way out to sys_top.rtlgraph.json')
 
   // ── open a component's own schematic ──
   await vscode.commands.executeCommand('vscode.open', uri)

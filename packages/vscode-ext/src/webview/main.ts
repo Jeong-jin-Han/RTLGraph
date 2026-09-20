@@ -123,8 +123,9 @@ const exportButton = el('button', { type: 'button', textContent: 'Export…', ti
 exportButton.addEventListener('click', () => vscode.postMessage({ type: 'export' }))
 const fitButton = el('button', { type: 'button', textContent: 'Fit', title: 'Fit the schematic to the window' })
 fitButton.addEventListener('click', fit)
-// Opening a component leaves you inside its own file; this walks back out.
-const rootButton = commandButton('Root', 'rtlgraph.openRoot')
+// Opening a component leaves you inside its own file; this walks back out — one
+// level at a time, the way the reader came in, with the root as the other choice.
+const prevButton = commandButton('Prev', 'rtlgraph.openPrevious')
 // Between a component and its machine, both ways.
 const fsmButton = commandButton('FSM', 'rtlgraph.openFsm')
 fsmButton.title = 'Open the state machine of this component'
@@ -132,7 +133,7 @@ fsmButton.hidden = true
 const schematicButton = commandButton('Schematic', 'rtlgraph.openSchematic')
 schematicButton.title = 'Back to the schematic this machine belongs to'
 schematicButton.hidden = true
-rootButton.title = 'Open the root file this schematic belongs to'
+prevButton.title = 'Back out of this schematic: up one level, or all the way to the root'
 const editButton = el('button', { type: 'button', textContent: 'Edit', title: 'Arrange this schematic by hand; the file records it under "layout"' })
 editButton.addEventListener('click', () => setEditing(!editing))
 const resetButton = el('button', { type: 'button', textContent: 'Reset', title: 'Undo every hand arrangement in this file' })
@@ -142,7 +143,7 @@ resetButton.addEventListener('click', () => {
 })
 
 const toolbar = el('div', { id: 'toolbar' },
-  fitButton, rootButton, schematicButton, fsmButton, editButton, resetButton,
+  fitButton, prevButton, schematicButton, fsmButton, editButton, resetButton,
   combGroup, seqGroup, presetGroup,
   componentTools,
   el('span', { className: 'spacer' }), exportButton,
@@ -191,7 +192,7 @@ function notice(text: string) {
 
 // ── rendering ──
 function updateComponentTools() {
-  rootButton.hidden = root === undefined || root.graph.kind === 'system' // already there
+  prevButton.hidden = root === undefined || root.graph.kind === 'system' // already at the top
   componentTools.hidden = instances.length === 0
   selectionLabel.textContent = selected ?? selectedWire ?? 'none selected'
   // Fold and unfold are about components; any other box is selected for what it

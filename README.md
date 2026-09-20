@@ -313,7 +313,8 @@ node packages/vscode-ext/dist/agent/rtlgraph-validate.mjs <graph>
 | `RTLGraph: Open the Code of the Selected Box` | Jumps to the `origin` line, in the editor group right of the schematic |
 | `RTLGraph: Open the Requirement of the Selected Box` | Opens the brief in the reader, with the quoted sentence highlighted |
 | `RTLGraph: Open State Machine` / `Open the Component Schematic` | Walks between a component and its machine |
-| `RTLGraph: Open Root File` | Back out to the root of the hierarchy |
+| `RTLGraph: Back Out of This Schematic` | Up one level to the component this one sits inside, or out to the root — the **Prev** button asks which |
+| `RTLGraph: Open Root File` | Straight out to the root of the hierarchy |
 | `RTLGraph: Set View Preset` | All · Datapath · Control path · Combinational only · Registers only · State registers only |
 | `RTLGraph: Fit View` | Fit the schematic to the window |
 

@@ -82,9 +82,12 @@ async function machinesOf(document: vscode.TextDocument): Promise<vscode.Uri[]> 
   return candidates.filter((_, i) => found[i])
 }
 
-// The root file whose hierarchy contains `file`: the schematics sit in folders
-// under it, so look in this folder and then upwards.
-async function findRootOf(file: vscode.Uri): Promise<vscode.Uri | undefined> {
+// The hierarchy that contains `file`: its root, and every entry of it. The
+// schematics sit in folders under the root, so look in this folder and then
+// upwards.
+async function findHierarchyOf(
+  file: vscode.Uri,
+): Promise<{ rootUri: vscode.Uri; entries: { instance: string; uri: vscode.Uri }[] } | undefined> {
   const read = async (uri: vscode.Uri) => {
     const open = vscode.workspace.textDocuments.find(d => d.uri.toString() === uri.toString())
     if (open) return open.getText()
@@ -96,13 +99,13 @@ async function findRootOf(file: vscode.Uri): Promise<vscode.Uri | undefined> {
   }
   let dir = vscode.Uri.joinPath(file, '..')
   for (let up = 0; up < ROOT_SEARCH_DEPTH; up++) {
-    let entries: [string, vscode.FileType][] = []
+    let found: [string, vscode.FileType][] = []
     try {
-      entries = await vscode.workspace.fs.readDirectory(dir)
+      found = await vscode.workspace.fs.readDirectory(dir)
     } catch {
       return undefined
     }
-    for (const [name, type] of entries) {
+    for (const [name, type] of found) {
       if (type !== vscode.FileType.File || graphFileKind(name) !== 'system') continue
       const rootUri = vscode.Uri.joinPath(dir, name)
       if (rootUri.toString() === file.toString()) return undefined // this is the root
@@ -110,14 +113,28 @@ async function findRootOf(file: vscode.Uri): Promise<vscode.Uri | undefined> {
       if (text === undefined) continue
       const { files } = await collectHierarchyFiles(name, text, path => read(vscode.Uri.joinPath(dir, path)))
       const { root } = loadHierarchy(name, path => files[path])
-      const holds = hierarchyEntries(root).some(e => vscode.Uri.joinPath(dir, e.path).toString() === file.toString())
-      if (holds) return rootUri
+      const entries = hierarchyEntries(root).map(e => ({ instance: e.instance, uri: vscode.Uri.joinPath(dir, e.path) }))
+      if (entries.some(e => e.uri.toString() === file.toString())) return { rootUri, entries }
     }
     const parent = vscode.Uri.joinPath(dir, '..')
     if (parent.toString() === dir.toString()) return undefined
     dir = parent
   }
   return undefined
+}
+
+const findRootOf = async (file: vscode.Uri) => (await findHierarchyOf(file))?.rootUri
+
+// The file one step out: the schematic of the component this one sits inside,
+// or the root when there is nothing between them. Walking out a level at a time
+// is how a reader came in, and jumping straight to the root loses their place.
+async function findParentOf(file: vscode.Uri): Promise<vscode.Uri | undefined> {
+  const found = await findHierarchyOf(file)
+  if (!found) return undefined
+  const here = found.entries.find(e => e.uri.toString() === file.toString())
+  if (here === undefined) return undefined
+  const above = here.instance.split('/').slice(0, -1).join('/')
+  return found.entries.find(e => e.instance === above)?.uri ?? found.rootUri
 }
 
 // Returns the scope applied, or undefined when nothing was done.
@@ -240,6 +257,43 @@ export function activate(context: vscode.ExtensionContext): void {
     }),
 
     // Walks back out of a component schematic to the root that contains it.
+    // One step out of a component, with the root as the other way. The reader
+    // came in a level at a time; going back the same way keeps their place.
+    vscode.commands.registerCommand('rtlgraph.openPrevious', async (args?: unknown) => {
+      const document = RtlGraphEditorProvider.activeDocument()
+      if (!document) {
+        void vscode.window.showWarningMessage('RTLGraph: open a schematic first.')
+        return undefined
+      }
+      const given = (typeof args === 'object' && args !== null ? args : { step: args }) as { step?: unknown }
+      const asked = given.step === 'up' || given.step === 'root' ? given.step : undefined
+      const [up, rootUri] = await Promise.all([findParentOf(document.uri), findRootOf(document.uri)])
+      if (!up && !rootUri) {
+        void vscode.window.showWarningMessage('RTLGraph: nothing above this schematic.')
+        return undefined
+      }
+      let step = asked
+      if (step === undefined) {
+        // Only one place to go when the component sits directly under the root.
+        if (!up || !rootUri || up.toString() === rootUri.toString()) step = 'up'
+        else {
+          const picked = await vscode.window.showQuickPick(
+            [
+              { label: `Up to ${graphName(up.path)}`, description: 'the component this one sits inside', step: 'up' as const },
+              { label: `Out to ${graphName(rootUri.path)}`, description: 'the root of the hierarchy', step: 'root' as const },
+            ],
+            { placeHolder: 'Leave this schematic' },
+          )
+          step = picked?.step
+        }
+      }
+      if (step === undefined) return undefined
+      const target = step === 'root' ? rootUri ?? up : up ?? rootUri
+      if (!target) return undefined
+      await vscode.commands.executeCommand('vscode.open', target)
+      return target.fsPath
+    }),
+
     vscode.commands.registerCommand('rtlgraph.openRoot', async () => {
       const document = RtlGraphEditorProvider.activeDocument()
       if (!document) {

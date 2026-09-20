@@ -100,6 +100,10 @@
         "title": "RTLGraph: Open Component Schematic"
       },
       {
+        "command": "rtlgraph.openPrevious",
+        "title": "RTLGraph: Back Out of This Schematic"
+      },
+      {
         "command": "rtlgraph.openRoot",
         "title": "RTLGraph: Open Root File"
       },

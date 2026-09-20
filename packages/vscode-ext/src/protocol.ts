@@ -17,7 +17,7 @@ export type HostToWebview =
 
 // Toolbar buttons that need the host (a quick pick, opening a file) run these.
 export type ToolbarCommand =
-  | 'rtlgraph.fold' | 'rtlgraph.unfold' | 'rtlgraph.openComponent' | 'rtlgraph.openRoot'
+  | 'rtlgraph.fold' | 'rtlgraph.unfold' | 'rtlgraph.openComponent' | 'rtlgraph.openRoot' | 'rtlgraph.openPrevious'
   | 'rtlgraph.openFsm' | 'rtlgraph.openSchematic'
 
 export type WebviewToHost =
