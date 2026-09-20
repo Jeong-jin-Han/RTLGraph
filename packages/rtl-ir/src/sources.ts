@@ -63,12 +63,18 @@ export function checkSources(graph: ComponentGraph, read: ReadSource): Diagnosti
   // to invent — a condition used twice, the enable of a register recovered from an
   // always block, a block of assigns drawn as one control node — is on no line at
   // all, so for those the line has to name something the element is wired to.
+  // "Is this a name the code uses?" — asked of the file the element came from,
+  // not of the whole project. A project can hold two modules with a wire of the
+  // same name (uart_transmitter has bit_counter_d, uart_receiver invents one),
+  // and the second would otherwise be held to the first one's spelling.
   const known = new Map<string, boolean>()
-  const declared = (token: string) => {
-    if (!known.has(token)) {
-      known.set(token, graph.source.files.some(file => (linesOf(file) ?? []).some(line => mentions(line, token))))
+  const declared = (token: string, file?: string) => {
+    const where = file !== undefined && graph.source.files.includes(file) ? [file] : graph.source.files
+    const key = `${where.join('|')}\u0000${token}`
+    if (!known.has(key)) {
+      known.set(key, where.some(f => (linesOf(f) ?? []).some(line => mentions(line, token))))
     }
-    return known.get(token)!
+    return known.get(key)!
   }
   const netsAt = new Map<string, Set<string>>() // node id -> the nets on its pins
   for (const [name, signal] of Object.entries(graph.signals)) {
@@ -163,7 +169,7 @@ export function checkSources(graph: ComponentGraph, read: ReadSource): Diagnosti
       const own = node.kind === 'component' ? [...originTokens(id), node.module] : originTokens(id)
       // A register or a block recovered from an always block sits on that block,
       // and an "always" line names the clock, not what was recovered from it.
-      const recovered = !own.some(declared)
+      const recovered = !own.some(token => declared(token, node.origin?.file))
       const always = recovered || lastSegment(id).endsWith('_reg') ? [/\balways\b/] : []
       const tokens = recovered ? [...own, ...around(id)] : own
       check(node.origin, tokens, `node ${id}`, { node: id }, always)
@@ -180,7 +186,7 @@ export function checkSources(graph: ComponentGraph, read: ReadSource): Diagnosti
   for (const [name, signal] of Object.entries(graph.signals)) {
     if (signal.origin) {
       const own = [name, ...(signal.aliases ?? [])].flatMap(originTokens)
-      const tokens = own.some(declared)
+      const tokens = own.some(token => declared(token, signal.origin?.file))
         ? own
         : [...own, ...new Set([signal.driver, ...(signal.sinks ?? [])].flatMap(ref => around(ref.split(':')[0])))]
       check(signal.origin, tokens, `signal ${name}`, { signal: name })

@@ -143,6 +143,15 @@ The last run of it: the validator clean (0 errors), and right-clicking three
 boxes opened the handout at pages 2, 3 and 7 with the quoted sentence
 highlighted; a box that quotes nothing opened the handout itself.
 
+The receiver is written, too. The handout stops `uart_receiver.v` at its port
+list — that blank body is the assignment — so it was implemented here: a symbol
+counter, a sample at the middle of each symbol (the handout's own answer to
+sampling on an edge), a ten-bit shift register, and a valid flag that stands
+until the host takes the byte. Checked twice over, on iverilog and on Vivado's
+xsim: the given transmitter looped back into it returns four bytes unchanged, and
+a corner-case bench covers a byte nobody has taken yet, two frames with no gap, a
+dip too short to be a start bit, and a reset mid-frame.
+
 It is also where `.base/` earns its keep. `uart_transmitter.v` instantiates
 `DFF #(.BITWIDTH(4))` and the handout ships no `DFF`, so nothing elaborates until
 the project has one: `.base/DFF.v` is that copy, adapted to the parameter the code

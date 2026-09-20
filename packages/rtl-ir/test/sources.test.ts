@@ -121,3 +121,33 @@ test('a library that moved is pointed at too', () => {
   const lib = checkSources(graph, moved).find(d => d.code === 'source-lib')
   assert.match(lib!.msg, /source\.lib should be/)
 })
+
+// Two modules in one project may both have a wire called bit_counter_d — one
+// declared, one invented by the extractor. Asking "is this a name the code uses?"
+// of the whole project held the invented one to the other file's spelling.
+test('a name is looked for in the file the element came from', () => {
+  const two = {
+    ...graph,
+    source: { ...graph.source, files: ['acc_top.v', 'other.v'] },
+    nodes: {
+      ...graph.nodes,
+      op_invented: {
+        kind: 'op', flow: 'data', time: 'comb', module: 'ADD',
+        ports: { a: 'in', b: 'in', y: 'out' },
+        origin: { file: 'other.v', line: 1 },
+      },
+    },
+    signals: { ...graph.signals, invented: { width: 6, flow: 'data', driver: 'op_invented:y', sinks: [], origin: { file: 'other.v', line: 1 } } },
+  } as unknown as ComponentGraph
+
+  // other.v never says "invented", so the element is a recovered one and the
+  // line may name what it is wired to instead.
+  const readTwo = (path: string) => (path === 'other.v' ? 'assign something = invented_elsewhere;' : read(path))
+  const strict = checkSources(two, readTwo).filter(d => d.node === 'op_invented' || d.signal === 'invented')
+  assert.ok(strict.length > 0, 'a line that mentions nothing it touches is still reported')
+
+  // and when the file does say it, the same line is accepted
+  const readSaying = (path: string) => (path === 'other.v' ? 'assign invented = a + b;' : read(path))
+  const relaxed = checkSources(two, readSaying).filter(d => d.node === 'op_invented' || d.signal === 'invented')
+  assert.deepEqual(relaxed, [], 'the name is there, on that line, in that file')
+})
