@@ -62,8 +62,24 @@ your choice:
 - set it (`rtlgraph`, say) → every RTLGraph file goes in that one folder instead,
   and the code is left completely alone.
 
-It also asks for **testbenches** — one for the normal path, one per edge case the
-brief implies, each saying at the top what it is there to catch — and, when the
+It leaves two folders behind — `tb/given/` for whatever the course hands out and
+`tb/mine/` for what the agent wrote — and a runner, `.agent/run-tb.sh`, that
+swaps one bench at a time into the project folder, runs it against the rest of
+the design, and prints a verdict line. So the day the marking bench arrives:
+
+```
+cp ~/Downloads/tb_uart.v  <project>/tb/given/
+<project>/.agent/run-tb.sh given
+```
+
+That is the whole ritual. `run-tb.sh` on its own runs both folders, `mine` only
+yours, `--keep` leaves the bench sitting in the project folder for Vivado's GUI.
+**If the assignment came with the testbench up front, put its path in
+`GIVEN_TB`** and the agent will run it first, unchanged, quote its output
+verbatim, and treat any disagreement with its own benches as its own mistake. It
+also asks for **testbenches** of its own —
+one per edge case the brief implies, each saying at the top what it is there to
+catch — and, when the
 brief is a PDF, `source.spec` plus the quoted sentence on the elements the
 document actually talks about. Right-clicking such a box then opens the document
 at that sentence, highlighted.
@@ -111,12 +127,14 @@ report catches up.
 
 ## After the agent says it is done
 
-1. **Read the validator line it quotes.** `0 errors` is the bar. Warnings are
+1. **Read the given testbench's output first**, if there was one — that is the
+   result that counts; everything else is evidence around it.
+2. **Read the validator line it quotes.** `0 errors` is the bar. Warnings are
    either real findings about the code or something it should have fixed — the
    prompt asks it to tell you which.
-2. **Open the root** `*.rtlgraph.json`. The drawing is the answer; the JSON is
+3. **Open the root** `*.rtlgraph.json`. The drawing is the answer; the JSON is
    just how it is stored.
-3. **Check one box against the code.** Right-click → *Open the Code*. If the line
+4. **Check one box against the code.** Right-click → *Open the Code*. If the line
    is right, the rest usually is.
-4. **Arrange it if you like.** Anything you move, resize or re-route is written
+5. **Arrange it if you like.** Anything you move, resize or re-route is written
    under `layout`, and re-running the agent leaves it alone.

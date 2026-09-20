@@ -5,7 +5,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 
 import { tmpdir } from 'node:os'
 import { join, relative } from 'node:path'
 import { BASE_REGISTRY } from '@rtlgraph/registry'
-import { AGENT_FILES, BASE_MODULES, PROMPT_KINDS, PROMPT_LANGUAGES, VALIDATOR_BUNDLE } from '../src/agent/files.ts'
+import { AGENT_FILES, BASE_MODULES, PROMPT_KINDS, PROMPT_LANGUAGES, RUN_TB, VALIDATOR_BUNDLE } from '../src/agent/files.ts'
 import { buildEnvironmentReport } from '../src/agent/environment.ts'
 
 const ROOT = join(import.meta.dirname, '..')
@@ -52,6 +52,50 @@ test('prompts: every kind in two languages, each pointing at a workflow the spec
   }
   assert.ok(flat(read('assets/prompt/rtlgraph/korean.md')).includes('절대 수정하지 마'))
   assert.ok(read('assets/prompt/rtl/english.md').includes('REQUEST ='))
+})
+
+// The bench that decides the mark arrives late and has to be run at once, so
+// the runner is shipped with the prompts and the folder split is its contract.
+test('the testbench runner: two folders, the given one marked, the project folder left as it was', t => {
+  assert.ok(AGENT_FILES.some(f => f.to === RUN_TB), 'run-tb.sh is copied into the workspace')
+  const script = join(ROOT, 'assets/agent/run-tb.sh')
+  if (spawnSync('iverilog', ['-V']).status !== 0) return t.skip('iverilog not installed')
+
+  // A project as handed out: code at the top, no benches anywhere yet.
+  const dir = mkdtempSync(join(tmpdir(), 'rtlgraph-tb-'))
+  const demo = join(ROOT, '../../demo/hw')
+  for (const file of ['hw_top.v', 'counter.v']) writeFileSync(join(dir, file), readFileSync(join(demo, file)))
+  const run = (...args: string[]) => spawnSync('bash', [script, '--project', dir, ...args], { encoding: 'utf8' })
+
+  const empty = run()
+  assert.equal(empty.status, 0)
+  assert.match(empty.stdout, /no testbench found/)
+  for (const folder of ['tb/given', 'tb/mine']) assert.ok(existsSync(join(dir, folder)), `${folder} is made up front`)
+
+  // One of ours passes; the same bench in tb/given is called out as the ruler.
+  writeFileSync(join(dir, 'tb/mine/tb_hw.v'), readFileSync(join(demo, 'tb_hw.v')))
+  const mine = run('mine')
+  assert.equal(mine.status, 0, mine.stdout)
+  assert.match(mine.stdout, /PASS\s+tb\/mine\/tb_hw\.v/)
+  assert.match(mine.stdout, /reached the limit 4 times/) // the simulator's own words, not ours
+  assert.ok(!existsSync(join(dir, 'tb_hw.v')), 'the bench it swapped in is taken back out')
+
+  writeFileSync(join(dir, 'tb/given/tb_hw.v'), readFileSync(join(demo, 'tb_hw.v')))
+  assert.match(run('given').stdout, /PASS\s+tb\/given\/tb_hw\.v\s+← the one it is marked with/)
+  assert.match(run('given', '--keep').stdout, /kept tb_hw\.v in the project folder/)
+  assert.ok(existsSync(join(dir, 'tb_hw.v')), '--keep leaves it where Vivado would look')
+
+  // A design that misbehaves fails, and a bench that judges nothing is not a pass.
+  writeFileSync(join(dir, 'counter.v'), readFileSync(join(demo, 'counter.v'), 'utf8').replace("Q + 1'b1", "Q + 2'd2"))
+  const broken = run('mine')
+  assert.equal(broken.status, 1)
+  assert.match(broken.stdout, /FAIL\s+tb\/mine\/tb_hw\.v/)
+
+  writeFileSync(join(dir, 'tb/mine/tb_quiet.v'), 'module tb_quiet; initial $display("ran"); endmodule\n')
+  const quiet = run('tb/mine/tb_quiet.v'.replace(/^/, `${dir}/`))
+  assert.equal(quiet.status, 0)
+  assert.match(quiet.stdout, /SAID NOTHING/)
+  assert.match(quiet.stdout, /no PASS\/FAIL line of its own/)
 })
 
 test('the spec registry table matches the real registry', () => {

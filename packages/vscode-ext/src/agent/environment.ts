@@ -1,5 +1,6 @@
 // Builds .agent/ENVIRONMENT.md from probed tool versions. Pure — the extension
 // host runs the probes — so the report can be tested with made-up facts.
+import { RUN_TB } from './files.ts'
 
 export const PROBES = {
   node: 'node --version',
@@ -57,6 +58,7 @@ export function buildEnvironmentReport(f: EnvironmentFacts): string {
     '| Tool | Available | Use |',
     '|---|---|---|',
     `| Node.js | ${has(f.node)} | \`node .agent/rtlgraph-validate.mjs <file>\` — validate every \`*.rtlgraph.json\` you write |`,
+    `| Testbench runner | ✅ \`${RUN_TB}\` | \`${RUN_TB} given\` runs what the assignment handed out, \`mine\` runs ours, no argument runs both |`,
     '',
     '## Verilog tools',
     '',
@@ -88,7 +90,7 @@ export function buildEnvironmentReport(f: EnvironmentFacts): string {
       ? '- **Validate** each file with `node .agent/rtlgraph-validate.mjs <file>` until it reports `0 errors`.'
       : '- ⚠️ **Node.js not found** — the validator cannot run. Go through the spec checklist by hand and tell the user to install Node.js ≥ 18.',
     simulator
-      ? `- **Simulate** with ${simulator}.`
+      ? `- **Simulate** with ${simulator} — or let \`${RUN_TB}\` do it: it finds the benches in \`tb/given/\` and \`tb/mine/\`, compiles each against the rest of the design and prints one verdict line per bench.`
       : '- ⚠️ **No Verilog simulator found** — Workflow B cannot verify behaviour or baselines; tell the user before changing code.',
     ...(f.verilator ? ['- **Lint** with `verilator --lint-only -Wall <files>`: MULTIDRIVEN / UNDRIVEN point at contract C6 problems.'] : []),
     ...(f.nodegraph

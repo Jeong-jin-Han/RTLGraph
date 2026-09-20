@@ -80,6 +80,20 @@ iverilog -g2005 -o /tmp/sw.vvp demo/stopwatch/tb/tb_stopwatch.v \
 handed-out skeleton usually does — so a `find … ! -path '*/tb/*'` would compile it
 twice. That is why its line names the files.
 
+Or let the shipped runner work the files out:
+
+```bash
+bash packages/vscode-ext/assets/agent/run-tb.sh --project demo/hw
+```
+
+That is the script `RTLGraph: Copy Agent Spec to Workspace` writes as
+`.agent/run-tb.sh`. It finds the benches (`tb/given/` for whatever the course
+handed out, `tb/mine/` for the project's own), swaps one at a time into the
+project folder, compiles it against every other `.v` — `.base/` included — and
+prints a verdict line each. It is the demo projects' `iverilog` lines in one
+command, and the reason `demo/uart-p01` can run a marking bench the minute it
+arrives.
+
 What each says:
 
 | Project | The last line |
@@ -156,9 +170,10 @@ The verification is written down as well, in NodeGraph's format rather than
 RTLGraph's: `verification.nodegraph.json` has one node per thing a bench proves —
 what it drives, what it expects, what a failure would mean — each quoting the
 handout sentence behind it and carrying `code` links to both the check and the
-logic it exercises (`tb_uart_corner.v:73-79` → `uart_receiver.v:79-88`). The
+logic it exercises (`tb/mine/tb_uart_corner.v:73-79` → `uart_receiver.v:79-88`). The
 course's own testbench, which is what the mark comes from and was not in the zip,
-is a `gap` node, so what has *not* been shown is visible too. It validates
+is a `gap` node, so what has *not* been shown is visible too — and `tb/given/` is
+empty and waiting for it, beside the two benches in `tb/mine/`. It validates
 against NodeGraph's published schema, and the prompts only ask for such a file
 when `.agent/ENVIRONMENT.md` reports that extension installed.
 

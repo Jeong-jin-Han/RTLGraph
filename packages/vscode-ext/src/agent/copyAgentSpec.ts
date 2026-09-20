@@ -1,6 +1,6 @@
 import * as vscode from 'vscode'
 import { execSync } from 'node:child_process'
-import { existsSync, readdirSync } from 'node:fs'
+import { chmodSync, existsSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { AGENT_FILES, ENVIRONMENT_FILE } from './files.ts'
 import { buildEnvironmentReport, PROBES, type Companion, type EnvironmentFacts, type ProbedTool } from './environment.ts'
@@ -61,6 +61,15 @@ export async function copyAgentSpec(extensionUri: vscode.Uri, target: vscode.Uri
   const written: string[] = []
   for (const { from, to } of AGENT_FILES) {
     await write(to, await vscode.workspace.fs.readFile(vscode.Uri.joinPath(extensionUri, from)))
+    // A script nobody can run is a script nobody uses; fs.writeFile has no mode.
+    const destination = vscode.Uri.joinPath(target, to)
+    if (to.endsWith('.sh') && destination.scheme === 'file') {
+      try {
+        chmodSync(destination.fsPath, 0o755)
+      } catch {
+        // a filesystem without modes (a Windows share, say) — the file is still there
+      }
+    }
     written.push(to)
   }
   await write(ENVIRONMENT_FILE, new TextEncoder().encode(buildEnvironmentReport(collectEnvironment())))

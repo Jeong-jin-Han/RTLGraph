@@ -2,6 +2,7 @@ PROJECT_ROOT_ABSOLUTE_PATH = <PROJECT_ROOT_ABSOLUTE_PATH>
 PROJECT_FOLDER = PROJECT_ROOT_ABSOLUTE_PATH
 SPEC_DOCUMENT = <leave empty, or the path of the brief this design was asked for, e.g. spec/pwm_brief.pdf>
 RTLGRAPH_FOLDER = <leave empty to put each file beside its code, or name one folder to keep them all in, e.g. rtlgraph>
+GIVEN_TB = <leave empty, or the path of the testbench that came with the assignment — the one it will be marked with>
 
 This is an assignment: the skeleton was handed out and must stay exactly as it
 is. Do not modify, move, rename or reformat any .v/.sv file, do not change a
@@ -50,13 +51,65 @@ the top bit index), believe the code: write that parameter, adapt the copy in
 
 ## Verifying it
 
+Create these two folders first, before any bench exists, and say in your report
+that they are there. Which folder a file is in says who owns it:
+
+```
+tb/given/   what was handed out, byte for byte. Never edited, often still empty.
+tb/mine/    what you write. Additional evidence.
+```
+
+Put every bench you write in `tb/mine/`. `tb/given/` is the user's to fill: the
+marking bench usually arrives after you are done, and they drop it in then. If
+GIVEN_TB already names a file, copy it there unchanged (leaving the original
+where the handout put it); if it is empty, leave the folder empty and **do not
+invent a stand-in** — an empty `tb/given/` is an honest statement that nothing
+has been marked yet.
+
+Run benches with the script copied beside this prompt, never with hand-written
+`iverilog` lines:
+
+```
+.agent/run-tb.sh given     # only the handed-out bench
+.agent/run-tb.sh mine      # only yours
+.agent/run-tb.sh           # both
+```
+
+It swaps the bench it is running into the project folder — where a handout
+expects a testbench to sit, and where the bench's own relative paths resolve —
+runs it against every other `.v` in the project (`.base/` included), takes it
+back out, and prints one verdict line per bench. `--keep` leaves the last one in
+place; `--in-place` skips the swap. The point of the arrangement is the day the
+marking bench arrives: drop the file in `tb/given/`, one command, done.
+
+**If GIVEN_TB is set, that testbench is the authority.** It is the one the work
+will be marked with, so:
+
+- run it **first**, exactly as it came, before writing any bench of your own;
+- never edit it, and never change the design's ports or names to suit it — if it
+  does not compile, say what is missing and stop, rather than making it compile;
+- quote its output verbatim in your report, PASS or FAIL, and say which
+  simulator produced it. A handed-out bench often prints neither word, only
+  `$display` lines — then say what it printed and what that means, and do not
+  translate silence into a PASS;
+- when it disagrees with a bench of yours, **it is right and yours is wrong**:
+  fix the design or your bench, never the given one.
+
+Your own benches come after, and are additional — the handout usually says as
+much ("It is possible to use additional testbenches for verification").
+
+If GIVEN_TB is empty, leave `tb/given/` empty too, and say in your report that
+nothing was handed out to be marked against — so that when it does arrive, the
+only thing left to do is drop it in and run one command.
+
 The skeleton is not yours to change, but what you write around it is. Add
-testbenches — `tb_<what>.v` beside the code, or in `tb/` if the handout already
-has one — that drive the given ports only, by their given names, and prove the
-design against the handout rather than against itself:
+testbenches in `tb/mine/`, named `tb_<what>.v`, that drive the given ports only,
+by their given names, and prove the design against the handout rather than
+against itself:
 
 - one that exercises the normal path end to end, self-checking, printing `PASS`
-  or `FAIL` with what it expected;
+  or `FAIL` with what it expected (skip this one when GIVEN_TB already covers the
+  normal path — do not re-prove what the given bench proves);
 - one per **edge case** the handout implies: a handshake whose other side is slow
   or absent, back-to-back transactions with no gap, a pulse too short to be real,
   a reset in the middle of an operation, the first and last value a counter can
@@ -68,8 +121,9 @@ design against the handout rather than against itself:
   later.
 
 Drive inputs on the falling edge and check on the rising one, so the bench never
-changes a signal at the instant the design reads it. Run every bench on the
-simulator `.agent/ENVIRONMENT.md` lists, and say which ones passed.
+changes a signal at the instant the design reads it. Run them all with
+`.agent/run-tb.sh` (it uses the simulator `.agent/ENVIRONMENT.md` lists) and say
+which ones passed.
 
 ## The verification map (only if NodeGraph is installed)
 
@@ -87,13 +141,15 @@ thing a bench proves, each carrying
 - content saying what is driven, what is expected, and what a failure would mean,
 - `original` quoting the sentence of the handout it comes from, and
 - a `links` entry of `"type": "code"` pointing at the lines that do it —
-  `tb_uart_corner.v:73-80` for the check, and a second one at the RTL it
+  `tb/mine/tb_uart_corner.v:73-80` for the check, and a second one at the RTL it
   exercises (`uart_receiver.v:78-88`), so the graph walks from a requirement to
   its test to the logic under test.
 
 Edges run from the requirement to the test to the code. Anything the handout asks
 for that no bench covers yet is a node too, of the `gap` template, so the hole is
-visible rather than forgotten.
+visible rather than forgotten. GIVEN_TB gets a node of its own — it is the one
+result that decides the mark — and if it was not handed out, say so in that node
+rather than leaving the reader to assume your own benches are the verdict.
 
 Write meaning, label, note and diagnostic messages in English. Keep net, module,
 instance and pin names exactly as they appear in the code.
@@ -101,7 +157,8 @@ instance and pin names exactly as they appear in the code.
 Validate with node PROJECT_FOLDER/.agent/rtlgraph-validate.mjs on the root file
 you wrote — PROJECT_FOLDER/<top>.rtlgraph.json, or the one inside
 RTLGRAPH_FOLDER — until it reports 0 errors. Run end to end without asking me
-anything. When done, tell me the file paths, the validator summary, which file to
-open in VS Code, and — separately — anything in the code you would have
-restructured if you were allowed to, so I can decide whether to ask for that as
-its own task.
+anything. When done, tell me the file paths, the validator summary, **what the
+given testbench printed** (or that there was none), what your own benches
+printed, which file to open in VS Code, and — separately — anything in the code
+you would have restructured if you were allowed to, so I can decide whether to
+ask for that as its own task.

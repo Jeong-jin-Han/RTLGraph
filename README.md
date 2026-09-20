@@ -113,6 +113,7 @@ click rather than a memory test.
 > .agent/RTLGRAPH_SPEC.md        how to turn RTL into *.rtlgraph.json (and how to write RTL)
 > .agent/ENVIRONMENT.md          which simulators and tools this machine has
 > .agent/rtlgraph-validate.mjs   the validator the agent runs on what it wrote
+> .agent/run-tb.sh               runs the testbenches and says which passed
 > .prompt/rtlgraph/{korean,english}.md     existing RTL → RTLGraph
 > .prompt/assignment/{korean,english}.md   the same, for a skeleton that may not be touched
 > .prompt/rtl/{korean,english}.md          spec → RTL in the three-layer layout, then RTLGraph
@@ -121,6 +122,14 @@ click rather than a memory test.
 > .prompt/README.md, README.korean.md     which of the five to reach for — for you, not the agent
 > .base/{DFF,INC,ADD,SUB,MUX2,CMP_EQ}.v    the primitives RTLGraph draws with symbols, plus a note
 > ```
+>
+> `.agent/run-tb.sh` is there for one moment in particular. Coursework is marked with a testbench
+> that arrives after the work is done, so the benches are kept apart by who wrote them —
+> `tb/given/` for the handout's, `tb/mine/` for yours — and the script swaps one at a time into the
+> project folder, where a handout expects a bench to sit, runs it against the rest of the design,
+> takes it back out, and prints a verdict line per bench. The day it arrives:
+> `cp tb_uart.v <project>/tb/given/ && .agent/run-tb.sh given`. `--keep` leaves the last bench in
+> the project folder for Vivado's GUI.
 >
 > `.base/` is copied, not referenced: a handed-out skeleton often instantiates `DFF` without
 > shipping one, and a project that cannot elaborate on its own is not much of a project. Point
