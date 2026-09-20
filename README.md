@@ -214,6 +214,13 @@ npm install
 npm run check      # typecheck + tests; also builds the extension bundles
 ```
 
+Or build a `.vsix` and install that:
+
+```bash
+npm run package                        # writes rtlgraph-<version>.vsix
+code --install-extension rtlgraph-0.1.0.vsix
+```
+
 Open the repository in VS Code and press **F5** (**Run RTLGraph**). An *Extension Development Host*
 opens on `demo/`; try `acc/acc_top.rtlgraph.json` or `pwm/pwm_top.rtlgraph.json`.
 

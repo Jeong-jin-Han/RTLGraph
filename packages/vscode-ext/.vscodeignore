@@ -1,0 +1,23 @@
+# What stays out of the .vsix. The extension ships its bundles, the files the
+# agent command copies, and the artwork — nothing that is only used to build or
+# test it.
+src/**
+test/**
+test-e2e/**
+tsconfig.json
+esbuild.mjs
+**/*.map
+**/*.ts
+!assets/**/*.ts
+node_modules/**
+.vscode-test/**
+
+# The viewer's source copy: the build puts what is needed into dist/pdfjs-viewer,
+# so shipping assets/pdfjs-viewer as well would ship it twice.
+assets/pdfjs-viewer/**
+
+# Artwork the extension does not load: the drawing the icon was made from, and
+# the pictures the repository's own README uses.
+resources/logo-source.png
+resources/screenshot-*.png
+resources/banner.png

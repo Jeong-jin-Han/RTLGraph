@@ -25,6 +25,12 @@
   "activationEvents": [
     "onCustomEditor:rtlgraph.editor"
   ],
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": true,
+      "description": "RTLGraph reads the JSON and the Verilog beside it and draws them; it runs nothing from the workspace."
+    }
+  },
   "main": "./dist/extension.cjs",
   "contributes": {
     "languages": [
