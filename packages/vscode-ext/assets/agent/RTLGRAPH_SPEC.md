@@ -2,7 +2,7 @@
 
 > **If you are an AI agent creating or editing RTLGraph files (`*.rtlgraph.json`,
 > `*.rtlgraph-schematic.json`), or writing RTL for an RTLGraph project, read this whole document
-> first.** Also read `.agent/ENVIRONMENT.md` (which simulators and tools exist on this machine).
+> first.** Also read `.agent/RTLGRAPH_ENVIRONMENT.md` (which simulators and tools exist on this machine).
 > Validate what you write with `node .agent/rtlgraph-validate.mjs <top>.rtlgraph.json`.
 >
 > Beside this file, the same command wrote `.prompt/` (a ready-made prompt per kind of job, with a
@@ -11,7 +11,7 @@
 > note of their own). `.base/` is there so a project that instantiates them can be simulated and
 > elaborated on its own; see "Primitive definitions" below.
 >
-> **What else is installed matters.** `.agent/ENVIRONMENT.md` has a "Companion extensions" table.
+> **What else is installed matters.** `.agent/RTLGRAPH_ENVIRONMENT.md` has a "Companion extensions" table.
 > When it says **NodeGraph** is there, a second kind of file is worth writing beside this one:
 > RTLGraph draws what the circuit *is*, NodeGraph records what is *known* about it — why each part
 > exists, what a testbench proves, which lines it exercises — with `"type": "code"` links that jump
@@ -52,7 +52,7 @@ cannot be recovered with confidence, record a diagnostic instead of guessing.
 ## Workflow A — RTL → RTLGraph
 
 ### Step 0 — Setup
-1. Read `.agent/ENVIRONMENT.md`.
+1. Read `.agent/RTLGRAPH_ENVIRONMENT.md`.
 2. `PROJECT_FOLDER` is the folder the user named. **Do not modify any `.v`/`.sv` file.**
 3. If RTLGraph files already exist for this project, read them first (see Step 9).
 
@@ -153,7 +153,7 @@ and set `source.contractCheck` to `"pass"` (none), `"partial"` (only C3/C4/C5/C7
   `RST` beats `EN`, clears to 0). Reading them there is not invention.
 - **Code that does not compile** (missing `;`, trailing commas, undeclared names): still extract what
   the code clearly means, and add one `error` diagnostic with `code` `"syntax"`, `file` and `line` per
-  problem. If ENVIRONMENT.md lists a compiler, run it to find them. Put this first in your final
+  problem. If RTLGRAPH_ENVIRONMENT.md lists a compiler, run it to find them. Put this first in your final
   report — the user's RTL is broken, not the graph.
 - A module that clearly plays the data-path or control-path role maps as in Step 4a even outside the
   contract folders (the folder problem is already a C3 diagnostic); no `inferred` diagnostic for it.
@@ -379,7 +379,7 @@ Do not create folders, RTL or RTLGraph files in this workflow.
 Use when writing **new** RTL (an empty or fresh project). To restructure code that already exists,
 use Workflow C.
 
-1. **Read `.agent/ENVIRONMENT.md`** and pick a simulator (`iverilog`, or Vivado `xvlog`/`xelab`/`xsim`).
+1. **Read `.agent/RTLGRAPH_ENVIRONMENT.md`** and pick a simulator (`iverilog`, or Vivado `xvlog`/`xelab`/`xsim`).
 2. **Read the spec document** if the user names one (`SPEC.md` from Workflow S, or their own): its
    ports, component tree and control tables are the contract. Departing from it needs a reason in your
    final report. Without a document, work from the request itself and say what you assumed.

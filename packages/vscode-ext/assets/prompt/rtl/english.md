@@ -4,7 +4,7 @@ SPEC_DOC = <path to the specification; leave empty and use REQUEST if there is n
 MAIN_COMPONENT = <the main component's name; leave empty if you have not chosen one>
 REQUEST = <only when SPEC_DOC is empty: what to build>
 
-PROJECT_FOLDER/.agent/RTLGRAPH_SPEC.md and PROJECT_FOLDER/.agent/ENVIRONMENT.md
+PROJECT_FOLDER/.agent/RTLGRAPH_SPEC.md and PROJECT_FOLDER/.agent/RTLGRAPH_ENVIRONMENT.md
 are already prepared for you — read both in full. Follow "Workflow B — Spec →
 RTL" specifically and write **the RTL of a new project from scratch**. (To change
 code that already exists, use .prompt/refactor/english.md instead.)
@@ -19,7 +19,7 @@ boxes and the control signal table, then fill in the code. If MAIN_COMPONENT is
 filled in, use that name; if it is empty, choose one and tell me why.
 
 Keep contracts C1–C7 and confirm compile, elaboration and simulation with a
-simulator listed in ENVIRONMENT.md. Put testbenches in tb/, driving inputs on the
+simulator listed in RTLGRAPH_ENVIRONMENT.md. Put testbenches in tb/, driving inputs on the
 falling edge and checking on the rising edge.
 
 Finally build the RTLGraph files with Workflow A: the root <top>.rtlgraph.json,

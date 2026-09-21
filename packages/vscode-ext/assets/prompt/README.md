@@ -103,7 +103,7 @@ Do not point this at an assignment.
 ### `rtl` — specification → new RTL
 
 Writes the modules, the testbenches and the RTLGraph files from a spec document.
-Needs a simulator; `.agent/ENVIRONMENT.md` says which ones this machine has.
+Needs a simulator; `.agent/RTLGRAPH_ENVIRONMENT.md` says which ones this machine has.
 
 ### `spec` — an idea → `SPEC.md`
 
@@ -120,7 +120,7 @@ first — they are where the misunderstandings are — then hand the result to `
 same work; they differ in what language the agent writes `meaning`, labels and its
 report in. Names from the code are never translated either way.
 
-**What is installed.** `.agent/ENVIRONMENT.md` is regenerated every time you run
+**What is installed.** `.agent/RTLGRAPH_ENVIRONMENT.md` is regenerated every time you run
 `RTLGraph: Copy Agent Spec to Workspace`, and the prompts defer to it: which
 simulator to run, and whether to write a NodeGraph verification map (only if that
 extension is installed). If you install a tool later, run the command again so the

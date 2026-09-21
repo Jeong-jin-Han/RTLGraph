@@ -8,7 +8,7 @@ GIVEN_TB = <비워 두거나, 과제와 함께 받은 테스트벤치 경로 —
 변경·재정렬 전부 금지고, 신호·모듈·포트 이름도 하나도 바꾸지 마. 코드를 위한 폴더도
 새로 만들지 마. 네가 쓰는 건 RTLGraph JSON 뿐이고, 코드는 아무것도 건드리지 않아.
 
-PROJECT_FOLDER/.agent/RTLGRAPH_SPEC.md 와 PROJECT_FOLDER/.agent/ENVIRONMENT.md
+PROJECT_FOLDER/.agent/RTLGRAPH_SPEC.md 와 PROJECT_FOLDER/.agent/RTLGRAPH_ENVIRONMENT.md
 는 이미 준비돼 있어 — 둘 다 끝까지 읽어줘. "Workflow A — RTL → RTLGraph" 를 따르되,
 Step 2 의 배치는 "Follow the code" 쪽으로: 컴포넌트의 schematic 은 그 모듈이 있는
 폴더에 두고, source.root 는 보통 ".", 루트에는 layout-follows-code 진단을 남겨.
@@ -107,12 +107,12 @@ GIVEN_TB 가 비어 있으면 `tb/given/` 도 비워 두고, 채점 기준이 �
   아무도 믿지 않아.
 
 입력은 하강 에지에서 넣고 확인은 상승 에지에서 해. 벤치가 설계가 읽는 그 순간에 신호를
-바꾸지 않도록. 전부 `.agent/run-tb.sh` 로 돌리고(`.agent/ENVIRONMENT.md` 에 있는
+바꾸지 않도록. 전부 `.agent/run-tb.sh` 로 돌리고(`.agent/RTLGRAPH_ENVIRONMENT.md` 에 있는
 시뮬레이터를 알아서 써) 무엇이 통과했는지 알려줘.
 
 ## 검증 지도 (NodeGraph 가 설치돼 있을 때만)
 
-`.agent/ENVIRONMENT.md` 의 "Companion extensions" 표에 NodeGraph 행이 있어.
+`.agent/RTLGRAPH_ENVIRONMENT.md` 의 "Companion extensions" 표에 NodeGraph 행이 있어.
 **설치돼 있지 않다고 나오면 이 절은 통째로 건너뛰고**, 보고할 때 그렇게 말해줘.
 없으면 아래는 쓸 이유가 없어.
 

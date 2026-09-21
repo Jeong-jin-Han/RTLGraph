@@ -1,4 +1,4 @@
-// Builds .agent/ENVIRONMENT.md from probed tool versions. Pure — the extension
+// Builds .agent/RTLGRAPH_ENVIRONMENT.md from probed tool versions. Pure — the extension
 // host runs the probes — so the report can be tested with made-up facts.
 import { MAKE_SUBMISSION, RUN_TB } from './files.ts'
 
@@ -49,7 +49,9 @@ export function buildEnvironmentReport(f: EnvironmentFacts): string {
     '# RTLGraph — Agent Environment Report',
     '',
     '> Written by `RTLGraph: Copy Agent Spec to Workspace`. Lists the tools installed on this machine;',
-    '> run the command again to refresh it.',
+    '> run the command again to refresh it. The name carries the extension because a plain',
+    '> `.agent/ENVIRONMENT.md` is a name other tools write too — NodeGraph is one — and the last',
+    '> writer would win.',
     '',
     `Generated: \`${f.generated}\` · Platform: \`${f.platform}\``,
     '',

@@ -3,7 +3,7 @@ PROJECT_FOLDER = PROJECT_ROOT_ABSOLUTE_PATH
 MAIN_COMPONENT = <the main component's name; leave empty if you have not chosen one>
 REQUEST = <what to add or change; "structure only" if nothing new>
 
-PROJECT_FOLDER/.agent/RTLGRAPH_SPEC.md and PROJECT_FOLDER/.agent/ENVIRONMENT.md
+PROJECT_FOLDER/.agent/RTLGRAPH_SPEC.md and PROJECT_FOLDER/.agent/RTLGRAPH_ENVIRONMENT.md
 are already prepared for you — read both in full. Follow "Workflow C — Existing
 RTL → Refactored RTL" specifically. This rebuilds on the code that is already
 there.
@@ -20,7 +20,7 @@ C1–C7 it breaks, and what has to change to fit REQUEST in. Then do the work.
 - If MAIN_COMPONENT is filled in, use that name. If it is empty, choose one and
   tell me why.
 - Keep contracts C1–C7 and confirm compile, elaboration and simulation with a
-  simulator listed in ENVIRONMENT.md.
+  simulator listed in RTLGRAPH_ENVIRONMENT.md.
 
 Finally rebuild the RTLGraph files with Workflow A: the root
 <top>.rtlgraph.json, one <name>.rtlgraph-schematic.json per component, and —

@@ -9,7 +9,7 @@ export const PROMPT_KINDS = ['spec', 'rtl', 'refactor', 'rtlgraph', 'assignment'
 export const PROMPT_LANGUAGES = ['korean', 'english'] as const
 
 export const VALIDATOR_BUNDLE = 'dist/agent/rtlgraph-validate.mjs'
-export const ENVIRONMENT_FILE = '.agent/ENVIRONMENT.md'
+export const ENVIRONMENT_FILE = '.agent/RTLGRAPH_ENVIRONMENT.md'
 export const RUN_TB = '.agent/run-tb.sh'
 export const MAKE_SUBMISSION = '.agent/make-submission.sh'
 

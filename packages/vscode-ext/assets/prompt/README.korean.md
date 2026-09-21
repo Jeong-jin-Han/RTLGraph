@@ -96,7 +96,7 @@ zip 으로 만든다(무엇이 들어가는지 먼저 보려면 `--list`).
 ### `rtl` — 명세 → 새 RTL
 
 명세 문서로 모듈과 테스트벤치와 RTLGraph 파일을 쓴다. 시뮬레이터가 필요하고,
-이 컴퓨터에 뭐가 있는지는 `.agent/ENVIRONMENT.md` 가 말해 준다.
+이 컴퓨터에 뭐가 있는지는 `.agent/RTLGRAPH_ENVIRONMENT.md` 가 말해 준다.
 
 ### `spec` — 아이디어 → `SPEC.md`
 
@@ -112,7 +112,7 @@ zip 으로 만든다(무엇이 들어가는지 먼저 보려면 `--list`).
 `meaning`·라벨·보고를 어느 언어로 쓰는지가 다르다. 코드에서 온 이름은 어느
 쪽이든 번역하지 않는다.
 
-**설치된 것.** `.agent/ENVIRONMENT.md` 는 `RTLGraph: Copy Agent Spec to Workspace`
+**설치된 것.** `.agent/RTLGRAPH_ENVIRONMENT.md` 는 `RTLGraph: Copy Agent Spec to Workspace`
 를 돌릴 때마다 다시 만들어지고, 프롬프트는 그걸 따른다: 어떤 시뮬레이터를 쓸지,
 그리고 NodeGraph 검증 지도를 쓸지 말지(그 확장이 설치돼 있을 때만). 나중에 도구를
 설치했다면 명령을 다시 돌려 보고서를 갱신해라.

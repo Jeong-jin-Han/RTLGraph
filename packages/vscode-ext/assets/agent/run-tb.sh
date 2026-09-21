@@ -162,7 +162,7 @@ if [ -z "$sim" ]; then
     echo "run-tb: no simulator on PATH." >&2
     echo "  iverilog:  sudo apt install iverilog" >&2
     echo "  Vivado:    source /tools/Xilinx/Vivado/<version>/settings64.sh" >&2
-    echo "  .agent/ENVIRONMENT.md lists what this machine has." >&2
+    echo "  .agent/RTLGRAPH_ENVIRONMENT.md lists what this machine has." >&2
     exit 3
   fi
 fi

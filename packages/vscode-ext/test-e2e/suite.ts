@@ -42,6 +42,7 @@ export async function run(): Promise<void> {
   assert.deepEqual([...(written ?? [])].sort(), expected)
   for (const file of expected) assert.ok(existsSync(join(folder, file)), file)
   assert.match(readFileSync(join(folder, ENVIRONMENT_FILE), 'utf8'), /^# RTLGraph — Agent Environment Report/)
+  assert.equal(ENVIRONMENT_FILE, '.agent/RTLGRAPH_ENVIRONMENT.md') // not the plain name NodeGraph also writes
   const prompts = expected.filter(f => /^\.prompt\/[a-z]+\//.test(f)).length
   const guides = expected.filter(f => /^\.prompt\/README/.test(f)).length
   const primitives = expected.filter(f => f.startsWith('.base/') && f.endsWith('.v')).length
@@ -54,6 +55,16 @@ export async function run(): Promise<void> {
     + `${prompts} prompts and ${guides} guides to choosing one, ${primitives} primitives in .base/`)
   const assignment = readFileSync(join(folder, '.prompt/assignment/korean.md'), 'utf8')
   assert.match(assignment, /Follow the code/)
+
+  // The report used to be .agent/ENVIRONMENT.md, which NodeGraph writes too.
+  // A leftover copy of ours is stale and removed; anyone else's is left alone.
+  writeFileSync(join(folder, '.agent/ENVIRONMENT.md'), '# RTLGraph — Agent Environment Report\n\nold\n')
+  await vscode.commands.executeCommand('rtlgraph.copyAgentSpec', vscode.Uri.file(folder))
+  assert.ok(!existsSync(join(folder, '.agent/ENVIRONMENT.md')), 'our superseded report is removed')
+  writeFileSync(join(folder, '.agent/ENVIRONMENT.md'), '# NodeGraph — Agent Environment Report\n')
+  await vscode.commands.executeCommand('rtlgraph.copyAgentSpec', vscode.Uri.file(folder))
+  assert.match(readFileSync(join(folder, '.agent/ENVIRONMENT.md'), 'utf8'), /^# NodeGraph/, "another tool's report is untouched")
+  log('the report moved to .agent/RTLGRAPH_ENVIRONMENT.md; only our own leftover is cleaned up')
 
   // Running the command again must not undo a primitive the project adapted to
   // its own code — the UART assignment's DFF takes BITWIDTH, and overwriting it

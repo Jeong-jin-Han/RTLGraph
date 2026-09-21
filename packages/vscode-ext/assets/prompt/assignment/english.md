@@ -9,7 +9,7 @@ is. Do not modify, move, rename or reformat any .v/.sv file, do not change a
 single signal, module or port name, and do not create folders for the code.
 Everything you write is RTLGraph JSON, and nothing else changes.
 
-PROJECT_FOLDER/.agent/RTLGRAPH_SPEC.md and PROJECT_FOLDER/.agent/ENVIRONMENT.md
+PROJECT_FOLDER/.agent/RTLGRAPH_SPEC.md and PROJECT_FOLDER/.agent/RTLGRAPH_ENVIRONMENT.md
 are already prepared for you — read both in full. Follow "Workflow A — RTL →
 RTLGraph", and in Step 2 use the "Follow the code" placement: a component's
 schematic goes in the same folder as the module it describes, source.root is
@@ -122,12 +122,12 @@ against itself:
 
 Drive inputs on the falling edge and check on the rising one, so the bench never
 changes a signal at the instant the design reads it. Run them all with
-`.agent/run-tb.sh` (it uses the simulator `.agent/ENVIRONMENT.md` lists) and say
+`.agent/run-tb.sh` (it uses the simulator `.agent/RTLGRAPH_ENVIRONMENT.md` lists) and say
 which ones passed.
 
 ## The verification map (only if NodeGraph is installed)
 
-`.agent/ENVIRONMENT.md` has a "Companion extensions" row for NodeGraph. **If it
+`.agent/RTLGRAPH_ENVIRONMENT.md` has a "Companion extensions" row for NodeGraph. **If it
 says NodeGraph is not installed, skip this section entirely** and say so in your
 report; nothing below is worth writing without it.
 

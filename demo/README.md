@@ -189,7 +189,7 @@ a snippet cannot drift from the code, and every `code` link resolves to a line
 that exists. RTLGraph draws what the circuit is; these two say what is known
 about it and why it was built that way. It validates
 against NodeGraph's published schema, and the prompts only ask for such a file
-when `.agent/ENVIRONMENT.md` reports that extension installed.
+when `.agent/RTLGRAPH_ENVIRONMENT.md` reports that extension installed.
 
 It is also where `.base/` earns its keep. `uart_transmitter.v` instantiates
 `DFF #(.BITWIDTH(4))` and the handout ships no `DFF`, so nothing elaborates until

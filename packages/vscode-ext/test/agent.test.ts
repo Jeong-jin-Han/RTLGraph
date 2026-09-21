@@ -44,7 +44,7 @@ test('prompts: every kind in two languages, each pointing at a workflow the spec
         }
       }
       // The spec workflow writes a document, not RTLGraph files, so it runs no validator.
-      const needles = ['.agent/RTLGRAPH_SPEC.md', '.agent/ENVIRONMENT.md', '<PROJECT_ROOT_ABSOLUTE_PATH>']
+      const needles = ['.agent/RTLGRAPH_SPEC.md', '.agent/RTLGRAPH_ENVIRONMENT.md', '<PROJECT_ROOT_ABSOLUTE_PATH>']
       for (const needle of kind === 'spec' ? [...needles, 'SPEC.md'] : [...needles, 'rtlgraph-validate.mjs']) {
         assert.ok(prompt.includes(needle), `${kind}/${language} mentions ${needle}`)
       }

@@ -100,5 +100,23 @@ export async function copyAgentSpec(extensionUri: vscode.Uri, target: vscode.Uri
   }
   await write(ENVIRONMENT_FILE, new TextEncoder().encode(buildEnvironmentReport(collectEnvironment())))
   written.push(ENVIRONMENT_FILE)
+  await removeOurOldReport(target)
   return { written, kept }
+}
+
+// Until 0.1.1 the report was `.agent/ENVIRONMENT.md`, a name NodeGraph writes as
+// well — whoever ran last won, and the prompts could end up reading the other
+// extension's report. The file moved; a copy of ours left behind is stale, so it
+// goes. One written by anything else is left exactly where it is.
+const OLD_REPORT = '.agent/ENVIRONMENT.md'
+const OUR_HEADER = '# RTLGraph — Agent Environment Report'
+
+async function removeOurOldReport(target: vscode.Uri): Promise<void> {
+  const old = vscode.Uri.joinPath(target, OLD_REPORT)
+  try {
+    const text = new TextDecoder().decode(await vscode.workspace.fs.readFile(old))
+    if (text.startsWith(OUR_HEADER)) await vscode.workspace.fs.delete(old)
+  } catch {
+    // not there, or not readable — nothing to tidy
+  }
 }

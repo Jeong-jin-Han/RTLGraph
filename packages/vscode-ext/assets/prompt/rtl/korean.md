@@ -4,7 +4,7 @@ SPEC_DOC = <사양 문서 경로. 없으면 비우고 REQUEST 에 요구사항�
 MAIN_COMPONENT = <main component 이름. 정해두지 않았으면 비워둬>
 REQUEST = <SPEC_DOC 가 없을 때만: 무엇을 만들지>
 
-PROJECT_FOLDER/.agent/RTLGRAPH_SPEC.md 와 PROJECT_FOLDER/.agent/ENVIRONMENT.md
+PROJECT_FOLDER/.agent/RTLGRAPH_SPEC.md 와 PROJECT_FOLDER/.agent/RTLGRAPH_ENVIRONMENT.md
 파일은 이미 준비돼 있어 — 둘 다 끝까지 꼼꼼히 읽어줘. 그 중에서 "Workflow B — Spec →
 RTL" 을 따라서 **새 프로젝트의 RTL 을 처음부터** 만들어줘. (이미 있는 코드를 고치는
 경우라면 이 프롬프트가 아니라 .prompt/refactor/korean.md 를 써야 해.)
@@ -17,7 +17,7 @@ comb/control_path, seq, tb 를 둔 뒤, 데이터패스 상자와 제어 신호 
 채워줘. MAIN_COMPONENT 가 적혀 있으면 그 이름을 그대로 쓰고, 비어 있으면 네가 정하고
 왜 그렇게 정했는지 알려줘.
 
-계약 C1–C7 을 지키고, ENVIRONMENT.md 에 있는 시뮬레이터로 컴파일·엘라보레이션·
+계약 C1–C7 을 지키고, RTLGRAPH_ENVIRONMENT.md 에 있는 시뮬레이터로 컴파일·엘라보레이션·
 시뮬레이션까지 확인해줘. 테스트벤치는 tb/ 에 두고, 하강 에지에서 입력을 넣고 상승
 에지에서 확인하는 방식으로 써줘.
 

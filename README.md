@@ -111,7 +111,7 @@ click rather than a memory test.
 >
 > ```
 > .agent/RTLGRAPH_SPEC.md        how to turn RTL into *.rtlgraph.json (and how to write RTL)
-> .agent/ENVIRONMENT.md          which simulators and tools this machine has
+> .agent/RTLGRAPH_ENVIRONMENT.md          which simulators and tools this machine has
 > .agent/rtlgraph-validate.mjs   the validator the agent runs on what it wrote
 > .agent/run-tb.sh               runs the testbenches and says which passed
 > .agent/make-submission.sh      collects the .v files to hand in, checks them, zips them
@@ -173,7 +173,7 @@ text is written out as `.prompt/rtlgraph/english.md`, so you can hand the agent 
 ```
 PROJECT_FOLDER = <ABSOLUTE PATH TO THE RTL PROJECT>
 
-PROJECT_FOLDER/.agent/RTLGRAPH_SPEC.md and PROJECT_FOLDER/.agent/ENVIRONMENT.md
+PROJECT_FOLDER/.agent/RTLGRAPH_SPEC.md and PROJECT_FOLDER/.agent/RTLGRAPH_ENVIRONMENT.md
 are already prepared for you — read both in full.
 
 Read the RTL without changing it, then write the root <top>.rtlgraph.json and
