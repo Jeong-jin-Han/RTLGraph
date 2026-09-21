@@ -11,6 +11,7 @@ export const PROMPT_LANGUAGES = ['korean', 'english'] as const
 export const VALIDATOR_BUNDLE = 'dist/agent/rtlgraph-validate.mjs'
 export const ENVIRONMENT_FILE = '.agent/ENVIRONMENT.md'
 export const RUN_TB = '.agent/run-tb.sh'
+export const MAKE_SUBMISSION = '.agent/make-submission.sh'
 
 // The primitives the registry has symbols for. They go into the project rather
 // than being referenced from somewhere else: a handed-out skeleton that
@@ -29,6 +30,9 @@ export const AGENT_FILES: readonly BundledFile[] = [
   // One command for "did it pass?", so the bench that decides the mark can be
   // run the minute it arrives: tb/given/ is the handout's, tb/mine/ is ours.
   { from: 'assets/agent/run-tb.sh', to: RUN_TB },
+  // And one for the other end of the day: collect the .v files the handout asks
+  // for, check they still elaborate, and zip them.
+  { from: 'assets/agent/make-submission.sh', to: MAKE_SUBMISSION },
   // For the reader, not the agent: which of the five to reach for, and why.
   ...PROMPT_LANGUAGES.map(language => ({
     from: `assets/prompt/README${language === 'english' ? '' : `.${language}`}.md`,

@@ -114,6 +114,7 @@ click rather than a memory test.
 > .agent/ENVIRONMENT.md          which simulators and tools this machine has
 > .agent/rtlgraph-validate.mjs   the validator the agent runs on what it wrote
 > .agent/run-tb.sh               runs the testbenches and says which passed
+> .agent/make-submission.sh      collects the .v files to hand in, checks them, zips them
 > .prompt/rtlgraph/{korean,english}.md     existing RTL → RTLGraph
 > .prompt/assignment/{korean,english}.md   the same, for a skeleton that may not be touched
 > .prompt/rtl/{korean,english}.md          spec → RTL in the three-layer layout, then RTLGraph
@@ -134,6 +135,12 @@ click rather than a memory test.
 > Running the command again refreshes everything except a primitive the project has adapted:
 > `.base/DFF.v` edited to take `BITWIDTH` stays as it is, and the notification says which files were
 > left alone. Overwriting it would leave a project that no longer elaborates.
+>
+> `.agent/make-submission.sh` closes the same day at the other end: it stages every `.v` in the
+> project that is not a bench — the handout asks for the RTL, nothing else — checks with `iverilog`
+> that what it staged still elaborates, and writes `submission/<name>.zip`. Benches, `.base/`, the
+> RTLGraph JSON and the handout are opt-in (`--with-tb`, `--with-base`, `--with-rtlgraph`,
+> `--with-pdf`, or `--all`), and `--list` shows what would go in without writing anything.
 >
 > `.base/` is copied, not referenced: a handed-out skeleton often instantiates `DFF` without
 > shipping one, and a project that cannot elaborate on its own is not much of a project. Point

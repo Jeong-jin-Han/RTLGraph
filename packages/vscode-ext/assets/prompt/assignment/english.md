@@ -154,6 +154,11 @@ rather than leaving the reader to assume your own benches are the verdict.
 Write meaning, label, note and diagnostic messages in English. Keep net, module,
 instance and pin names exactly as they appear in the code.
 
+When the work is done, leave the handing-in to the user, but say the command:
+`.agent/make-submission.sh` stages the `.v` files the handout asks for, checks
+they still elaborate, and writes `submission/<name>.zip`. Do not run it yourself
+unless asked — what goes in a submission is the user's decision, not yours.
+
 Validate with node PROJECT_FOLDER/.agent/rtlgraph-validate.mjs on the root file
 you wrote — PROJECT_FOLDER/<top>.rtlgraph.json, or the one inside
 RTLGRAPH_FOLDER — until it reports 0 errors. Run end to end without asking me

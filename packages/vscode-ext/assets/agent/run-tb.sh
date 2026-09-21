@@ -124,7 +124,12 @@ bench_names=()
 for f in "${benches[@]}"; do bench_names+=("$(basename -- "$f")"); done
 while IFS= read -r f; do bench_names+=("$(basename -- "$f")"); done < <(list_dir "$project/tb/given"; list_dir "$project/tb/mine")
 
+# Copies of the design live in the tree too — a submission staging folder, a
+# Vivado project, a build directory. Compiling one alongside the original
+# declares every module twice, so they are pruned, and any duplicate that gets
+# through is dropped by module name below.
 sources=()
+seen_modules=" "
 while IFS= read -r f; do
   case "$f" in */tb/*) continue ;; esac
   base=$(basename -- "$f")
@@ -135,9 +140,19 @@ while IFS= read -r f; do
   skip=0
   for known in "${bench_names[@]}"; do [ "$base" = "$known" ] && skip=1; done
   [ "$skip" = 1 ] && continue
+  # The same module from two places: keep the first, which is the shallowest.
+  for module in $(sed -n 's/^[[:space:]]*module[[:space:]]\+\([A-Za-z_][A-Za-z0-9_$]*\).*/\1/p' "$f"); do
+    case "$seen_modules" in
+      *" $module "*) skip=1; echo "note: ${f#"$project"/} skipped — module $module is already defined elsewhere" ;;
+      *) seen_modules="$seen_modules$module " ;;
+    esac
+  done
+  [ "$skip" = 1 ] && continue
   sources+=("$f")
-done < <(find "$project" \( -name .git -o -name node_modules -o -name 'xsim.dir' -o -path "$out" \) -prune -o \
-  \( -name '*.v' -o -name '*.sv' \) -print | sort)
+done < <(find "$project" \( -name .git -o -name node_modules -o -name 'xsim.dir' -o -path "$out" \
+    -o -name submission -o -name build -o -name dist -o -name .Xil \
+    -o -name '*.sim' -o -name '*.cache' -o -name '*.runs' -o -name '*.hw' -o -name '*.ip_user_files' \) -prune -o \
+  \( -name '*.v' -o -name '*.sv' \) -print | sort -t/ -k1 | awk '{print gsub(/\//,"/") "\t" $0}' | sort -n | cut -f2-)
 
 # ── the simulator ─────────────────────────────────────────────────────────────
 if [ -z "$sim" ]; then

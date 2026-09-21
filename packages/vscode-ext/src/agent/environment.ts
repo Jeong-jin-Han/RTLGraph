@@ -1,6 +1,6 @@
 // Builds .agent/ENVIRONMENT.md from probed tool versions. Pure — the extension
 // host runs the probes — so the report can be tested with made-up facts.
-import { RUN_TB } from './files.ts'
+import { MAKE_SUBMISSION, RUN_TB } from './files.ts'
 
 export const PROBES = {
   node: 'node --version',
@@ -59,6 +59,7 @@ export function buildEnvironmentReport(f: EnvironmentFacts): string {
     '|---|---|---|',
     `| Node.js | ${has(f.node)} | \`node .agent/rtlgraph-validate.mjs <file>\` — validate every \`*.rtlgraph.json\` you write |`,
     `| Testbench runner | ✅ \`${RUN_TB}\` | \`${RUN_TB} given\` runs what the assignment handed out, \`mine\` runs ours, no argument runs both |`,
+    `| Submission | ✅ \`${MAKE_SUBMISSION}\` | gathers the \`.v\` files the handout asks for, checks they still elaborate, and zips them |`,
     '',
     '## Verilog tools',
     '',

@@ -74,6 +74,9 @@ cp ~/Downloads/tb_uart.v  <project>/tb/given/
 
 That is the whole ritual. `run-tb.sh` on its own runs both folders, `mine` only
 yours, `--keep` leaves the bench sitting in the project folder for Vivado's GUI.
+When it is time to hand in, `.agent/make-submission.sh` stages the `.v` files the
+handout asks for, checks they still elaborate and zips them (`--list` first if
+you want to see what goes in).
 **If the assignment came with the testbench up front, put its path in
 `GIVEN_TB`** and the agent will run it first, unchanged, quote its output
 verbatim, and treat any disagreement with its own benches as its own mistake. It

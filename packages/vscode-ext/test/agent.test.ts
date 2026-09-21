@@ -3,9 +3,9 @@ import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join, relative } from 'node:path'
+import { basename, join, relative } from 'node:path'
 import { BASE_REGISTRY } from '@rtlgraph/registry'
-import { AGENT_FILES, BASE_MODULES, PROMPT_KINDS, PROMPT_LANGUAGES, RUN_TB, VALIDATOR_BUNDLE } from '../src/agent/files.ts'
+import { AGENT_FILES, BASE_MODULES, MAKE_SUBMISSION, PROMPT_KINDS, PROMPT_LANGUAGES, RUN_TB, VALIDATOR_BUNDLE } from '../src/agent/files.ts'
 import { buildEnvironmentReport } from '../src/agent/environment.ts'
 
 const ROOT = join(import.meta.dirname, '..')
@@ -101,6 +101,63 @@ test('the testbench runner: two folders, the given one marked, the project folde
   assert.equal(quiet.status, 0)
   assert.match(quiet.stdout, /SAID NOTHING/)
   assert.match(quiet.stdout, /no PASS\/FAIL line of its own/)
+})
+
+// A project that has been handed in once holds a second copy of its own design
+// — submission/<name>/*.v — and a Vivado project holds more. Compiling those
+// alongside the originals declares every module twice and nothing runs.
+test('the runner ignores copies of the design that live elsewhere in the tree', t => {
+  const script = join(ROOT, 'assets/agent/run-tb.sh')
+  if (spawnSync('iverilog', ['-V']).status !== 0) return t.skip('iverilog not installed')
+  const dir = mkdtempSync(join(tmpdir(), 'rtlgraph-copies-'))
+  const demo = join(ROOT, '../../demo/hw')
+  for (const file of ['hw_top.v', 'counter.v']) writeFileSync(join(dir, file), readFileSync(join(demo, file)))
+  mkdirSync(join(dir, 'tb/mine'), { recursive: true })
+  writeFileSync(join(dir, 'tb/mine/tb_hw.v'), readFileSync(join(demo, 'tb_hw.v')))
+
+  // what make-submission.sh stages, and what a Vivado project keeps
+  mkdirSync(join(dir, 'submission/hw_submission'), { recursive: true })
+  mkdirSync(join(dir, 'Proj/Proj.sim/sim_1'), { recursive: true })
+  for (const file of ['hw_top.v', 'counter.v']) {
+    writeFileSync(join(dir, 'submission/hw_submission', file), readFileSync(join(demo, file)))
+    writeFileSync(join(dir, 'Proj/Proj.sim/sim_1', file), readFileSync(join(demo, file)))
+  }
+  // and a copy somewhere no prune list would guess
+  mkdirSync(join(dir, 'old'), { recursive: true })
+  writeFileSync(join(dir, 'old/counter.v'), readFileSync(join(demo, 'counter.v')))
+
+  const run = spawnSync('bash', [script, '--project', dir, 'mine'], { encoding: 'utf8' })
+  assert.equal(run.status, 0, run.stdout)
+  assert.match(run.stdout, /PASS\s+tb\/mine\/tb_hw\.v/)
+  assert.match(run.stdout, /old\/counter\.v skipped — module counter is already defined/)
+  assert.match(run.stdout, /with iverilog, 2 design file\(s\)/) // the two originals, nothing else
+})
+
+test('the submission script collects the RTL, checks it elaborates, and zips it', t => {
+  assert.ok(AGENT_FILES.some(f => f.to === MAKE_SUBMISSION), 'make-submission.sh is copied into the workspace')
+  const script = join(ROOT, 'assets/agent/make-submission.sh')
+  if (spawnSync('zip', ['-v']).status !== 0) return t.skip('zip not installed')
+  const dir = mkdtempSync(join(tmpdir(), 'rtlgraph-submit-'))
+  const demo = join(ROOT, '../../demo/hw')
+  mkdirSync(join(dir, '.agent'), { recursive: true })
+  mkdirSync(join(dir, 'tb/mine'), { recursive: true })
+  for (const file of ['hw_top.v', 'counter.v']) writeFileSync(join(dir, file), readFileSync(join(demo, file)))
+  writeFileSync(join(dir, 'tb/mine/tb_hw.v'), readFileSync(join(demo, 'tb_hw.v')))
+  const run = (...args: string[]) => spawnSync('bash', [script, '--project', dir, ...args], { encoding: 'utf8' })
+
+  // the deliverable is the design, not the benches
+  const listed = run('--list')
+  assert.match(listed.stdout, /hw_top\.v/)
+  assert.match(listed.stdout, /counter\.v/)
+  assert.doesNotMatch(listed.stdout, /tb_hw\.v/)
+
+  const made = run()
+  assert.equal(made.status, 0, made.stdout)
+  assert.ok(existsSync(join(dir, 'submission', `${basename(dir)}_submission.zip`)), 'the zip is written')
+  if (spawnSync('iverilog', ['-V']).status === 0) assert.match(made.stdout, /iverilog -g2005: ok/)
+
+  // and asking for the benches puts them in, under their folder
+  assert.match(run('--with-tb', '--list').stdout, /tb_hw\.v/)
 })
 
 test('the spec registry table matches the real registry', () => {
