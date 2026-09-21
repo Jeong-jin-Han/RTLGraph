@@ -164,7 +164,11 @@ sampling on an edge), a ten-bit shift register, and a valid flag that stands
 until the host takes the byte. Checked twice over, on iverilog and on Vivado's
 xsim: the given transmitter looped back into it returns four bytes unchanged, and
 a corner-case bench covers a byte nobody has taken yet, two frames with no gap, a
-dip too short to be a start bit, and a reset mid-frame.
+dip too short to be a start bit, the frame that follows such a dip, and a reset
+mid-frame. The fourth of those was added after a question about what the
+glitch branch throws away: the answer is that it cannot unshift the bit already
+taken on that edge, and the next frame pushes it out — worth a test rather than
+an assumption.
 
 The verification is written down as well, in NodeGraph's format rather than
 RTLGraph's: `verification.nodegraph.json` has one node per thing a bench proves —
