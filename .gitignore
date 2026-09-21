@@ -16,3 +16,4 @@ demo/uart-p01/
 # same document as GitHub's, with its links rewritten to absolute ones.
 packages/vscode-ext/README.md
 packages/vscode-ext/LICENSE
+packages/vscode-ext/CHANGELOG.md
