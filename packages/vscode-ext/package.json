@@ -86,6 +86,14 @@
         "title": "RTLGraph: Copy Prompt Path"
       },
       {
+        "command": "rtlgraph.runTestbenches",
+        "title": "RTLGraph: Run the Testbenches"
+      },
+      {
+        "command": "rtlgraph.makeSubmission",
+        "title": "RTLGraph: Package the Submission"
+      },
+      {
         "command": "rtlgraph.markFiles",
         "title": "RTLGraph: Mark RTLGraph Files in the Explorer"
       },

@@ -13,7 +13,7 @@
 # copied out of it back into the project.
 #
 # Usage:
-#   .agent/make-submission.sh [<name>] [options]
+#   .agent/rtlgraph/make-submission.sh [<name>] [options]
 #
 #   <name>            zip base name (default: <project folder>_submission,
 #                     e.g. P01_submission). With --id it becomes P01_<id>.
@@ -36,7 +36,7 @@
 set -u
 
 here=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
-project=$(cd -- "$here/.." && pwd)
+project=$(cd -- "$here/../.." && pwd)  # .agent/rtlgraph/<script> → the project
 name=""
 id=""
 out=""
@@ -72,7 +72,7 @@ while [ $# -gt 0 ]; do
 done
 
 project=$(cd -- "$project" 2>/dev/null && pwd) || die "no such project folder"
-[ -d "$project/.agent" ] || die "$project does not look like a project (no .agent/)"
+[ -d "$project/.agent/rtlgraph" ] || die "$project does not look like a project (no .agent/rtlgraph/)"
 
 if [ -z "$name" ]; then
     base=$(basename -- "$project")

@@ -13,8 +13,8 @@ on its own, and every root validates with 0 errors and 0 warnings.
 | `pwm/` | root + 4 schematics + **3 FSM files** + **a brief** | The D02-2 PWM controller, written for RTLGraph: three levels of components (`pwm` → `pulse` → `cnt`, with `rdy` beside `pulse`) and a state machine at each of the top two levels plus the handshake. The case for `*.rtlgraph-fsm.json`, and for `spec`: `spec/pwm_brief.pdf` is the one-page brief the design was asked for, written by RTLGraph's own PDF writer (`node demo/pwm/spec/brief.mjs`), and six elements quote the sentence they are there for. Only the top two files name the document; anything deeper inherits it |
 | `hw/` | root + 2 schematics, **all in one flat folder** | An assignment as handed out: `hw_top.v` and `counter.v` side by side, names fixed, an active-low asynchronous reset, logic in `assign` and `always` rather than instances. The case for the "follow the code" placement — no folder is created and every JSON sits beside the module it describes. Its handout, `hw_brief.pdf`, sits in that same flat folder (`node demo/hw/brief.mjs`): right-clicking any box here opens it, and three elements quote the line they are there for |
 | `lab/` | root + 2 schematics, **all in `rtlgraph/`** | The other way to draw code you must not touch: `src/` is left exactly as handed out and every RTLGraph file is kept together in one folder of its own, with `source.root` climbing back out (`../src`) — the field the `source-root` and `source-lib` diagnostics exist for, since leaving it as `"."` after moving the JSON is what breaks this layout. Also the case for logic with no symbol — a concatenation and a reduction `^` |
-| `stopwatch/` | **none, on purpose** | Typical non-conforming student code: flat folder, an FSM in `always` blocks, one positional connection, one counter module used twice, an active-low reset. The input for testing `.prompt/assignment/*.md` in a fresh session — its structure is exactly the kind that must be left alone |
-| `updown/` | root + 1 schematic | Written end to end by a fresh `claude -p` session from `.prompt/rtl/korean.md`: RTL, testbench, root and schematic. Kept in step with the spec since (the form it was produced in is in git) |
+| `stopwatch/` | **none, on purpose** | Typical non-conforming student code: flat folder, an FSM in `always` blocks, one positional connection, one counter module used twice, an active-low reset. The input for testing `.prompt/rtlgraph/assignment/*.md` in a fresh session — its structure is exactly the kind that must be left alone |
+| `updown/` | root + 1 schematic | Written end to end by a fresh `claude -p` session from `.prompt/rtlgraph/rtl/korean.md`: RTL, testbench, root and schematic. Kept in step with the spec since (the form it was produced in is in git) |
 
 ## What each project checks
 
@@ -87,7 +87,7 @@ bash packages/vscode-ext/assets/agent/run-tb.sh --project demo/hw
 ```
 
 That is the script `RTLGraph: Copy Agent Spec to Workspace` writes as
-`.agent/run-tb.sh`. It finds the benches (`tb/given/` for whatever the course
+`.agent/rtlgraph/run-tb.sh`. It finds the benches (`tb/given/` for whatever the course
 handed out, `tb/mine/` for the project's own), swaps one at a time into the
 project folder, compiles it against every other `.v` — `.base/` included — and
 prints a verdict line each. It is the demo projects' `iverilog` lines in one
@@ -189,7 +189,7 @@ a snippet cannot drift from the code, and every `code` link resolves to a line
 that exists. RTLGraph draws what the circuit is; these two say what is known
 about it and why it was built that way. It validates
 against NodeGraph's published schema, and the prompts only ask for such a file
-when `.agent/RTLGRAPH_ENVIRONMENT.md` reports that extension installed.
+when `.agent/rtlgraph/ENVIRONMENT.md` reports that extension installed.
 
 It is also where `.base/` earns its keep. `uart_transmitter.v` instantiates
 `DFF #(.BITWIDTH(4))` and the handout ships no `DFF`, so nothing elaborates until

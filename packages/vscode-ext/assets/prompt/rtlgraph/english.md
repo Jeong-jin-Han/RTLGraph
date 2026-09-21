@@ -2,7 +2,7 @@ PROJECT_ROOT_ABSOLUTE_PATH = <PROJECT_ROOT_ABSOLUTE_PATH>
 PROJECT_FOLDER = PROJECT_ROOT_ABSOLUTE_PATH
 SPEC_DOCUMENT = <leave empty, or the path of the brief this design was asked for, e.g. spec/pwm_brief.pdf>
 
-PROJECT_FOLDER/.agent/RTLGRAPH_SPEC.md and PROJECT_FOLDER/.agent/RTLGRAPH_ENVIRONMENT.md
+PROJECT_FOLDER/.agent/rtlgraph/SPEC.md and PROJECT_FOLDER/.agent/rtlgraph/ENVIRONMENT.md
 are already prepared for you — read both in full. Follow "Workflow A — RTL →
 RTLGraph" specifically. This builds a schematic of existing RTL, so never modify
 any .v/.sv file.
@@ -41,7 +41,7 @@ the top bit index), believe the code: write that parameter, adapt the copy in
 Write meaning, label, note and diagnostic messages in English. Keep net, module,
 instance and pin names exactly as they appear in the code.
 
-Validate the root with node PROJECT_FOLDER/.agent/rtlgraph-validate.mjs
+Validate the root with node PROJECT_FOLDER/.agent/rtlgraph/validate.mjs
 <top>.rtlgraph.json (it also checks every schematic the root reaches) until it
 reports 0 errors. Follow the spec exactly and run end to end without asking me
 anything. When done, tell me the file paths, the validator summary, the contract

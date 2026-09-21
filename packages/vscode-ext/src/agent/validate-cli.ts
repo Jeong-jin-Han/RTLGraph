@@ -7,8 +7,8 @@ import {
 import { checkNodeAgainstRegistry, checkSignalWidths } from '@rtlgraph/registry'
 
 // The validator an agent runs on the RTLGraph files it wrote. Bundled into one
-// dependency-free file and copied to .agent/rtlgraph-validate.mjs.
-//   node .agent/rtlgraph-validate.mjs <top>.rtlgraph.json [...]
+// dependency-free file and copied to .agent/rtlgraph/validate.mjs.
+//   node .agent/rtlgraph/validate.mjs <top>.rtlgraph.json [...]
 // A root or schematic file is checked together with every component schematic it
 // reaches, including that each component box matches the schematic it points at.
 // Exit code 1 when any file has errors.

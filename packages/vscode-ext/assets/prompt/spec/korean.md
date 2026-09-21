@@ -2,7 +2,7 @@ PROJECT_ROOT_ABSOLUTE_PATH = <PROJECT_ROOT_ABSOLUTE_PATH>
 PROJECT_FOLDER = PROJECT_ROOT_ABSOLUTE_PATH
 IDEA_FILE = <아이디어를 적어 둔 파일 경로, 예: PROJECT_FOLDER/idea.txt>
 
-PROJECT_FOLDER/.agent/RTLGRAPH_SPEC.md 와 PROJECT_FOLDER/.agent/RTLGRAPH_ENVIRONMENT.md
+PROJECT_FOLDER/.agent/rtlgraph/SPEC.md 와 PROJECT_FOLDER/.agent/rtlgraph/ENVIRONMENT.md
 파일은 이미 준비돼 있어 — 둘 다 끝까지 꼼꼼히 읽어줘. 그 중에서 "Workflow S — Idea →
 Spec" 을 따라줘.
 
@@ -28,4 +28,4 @@ source.spec 으로 기록되고, 네가 옮겨 적은 문장들이 상자가 인
 있게 해줘. 기술 용어는 처음 등장할 때 영어 표현을 괄호로 병기해.
 
 다 되면 만든 문서 경로, 컴포넌트 구성 요약, 그리고 "Decisions"(정한 것)과 "Open questions"(확인이 필요한 것) 을
-알려줘. 이 문서가 마음에 들면 다음 단계로 .prompt/rtl/korean.md 를 쓸 거야.
+알려줘. 이 문서가 마음에 들면 다음 단계로 .prompt/rtlgraph/rtl/korean.md 를 쓸 거야.

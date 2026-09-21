@@ -14,7 +14,7 @@ RTLGraph: Copy Prompt Path        ← pick a branch; the path lands on the clipb
 then, in your agent (Claude Code, Codex, Cursor…):
 
 ```
-/home/me/work/uart/.prompt/assignment/korean.md 를 읽고 그대로 해줘.
+/home/me/work/uart/.prompt/rtlgraph/assignment/korean.md 를 읽고 그대로 해줘.
 PROJECT_FOLDER = /home/me/work/uart
 ```
 
@@ -63,18 +63,18 @@ your choice:
   and the code is left completely alone.
 
 It leaves two folders behind — `tb/given/` for whatever the course hands out and
-`tb/mine/` for what the agent wrote — and a runner, `.agent/run-tb.sh`, that
+`tb/mine/` for what the agent wrote — and a runner, `.agent/rtlgraph/run-tb.sh`, that
 swaps one bench at a time into the project folder, runs it against the rest of
 the design, and prints a verdict line. So the day the marking bench arrives:
 
 ```
 cp ~/Downloads/tb_uart.v  <project>/tb/given/
-<project>/.agent/run-tb.sh given
+<project>/.agent/rtlgraph/run-tb.sh given
 ```
 
 That is the whole ritual. `run-tb.sh` on its own runs both folders, `mine` only
 yours, `--keep` leaves the bench sitting in the project folder for Vivado's GUI.
-When it is time to hand in, `.agent/make-submission.sh` stages the `.v` files the
+When it is time to hand in, `.agent/rtlgraph/make-submission.sh` stages the `.v` files the
 handout asks for, checks they still elaborate and zips them (`--list` first if
 you want to see what goes in).
 **If the assignment came with the testbench up front, put its path in
@@ -103,7 +103,7 @@ Do not point this at an assignment.
 ### `rtl` — specification → new RTL
 
 Writes the modules, the testbenches and the RTLGraph files from a spec document.
-Needs a simulator; `.agent/RTLGRAPH_ENVIRONMENT.md` says which ones this machine has.
+Needs a simulator; `.agent/rtlgraph/ENVIRONMENT.md` says which ones this machine has.
 
 ### `spec` — an idea → `SPEC.md`
 
@@ -120,7 +120,7 @@ first — they are where the misunderstandings are — then hand the result to `
 same work; they differ in what language the agent writes `meaning`, labels and its
 report in. Names from the code are never translated either way.
 
-**What is installed.** `.agent/RTLGRAPH_ENVIRONMENT.md` is regenerated every time you run
+**What is installed.** `.agent/rtlgraph/ENVIRONMENT.md` is regenerated every time you run
 `RTLGraph: Copy Agent Spec to Workspace`, and the prompts defer to it: which
 simulator to run, and whether to write a NodeGraph verification map (only if that
 extension is installed). If you install a tool later, run the command again so the

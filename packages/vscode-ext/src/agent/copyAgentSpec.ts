@@ -2,7 +2,7 @@ import * as vscode from 'vscode'
 import { execSync } from 'node:child_process'
 import { chmodSync, existsSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
-import { AGENT_FILES, ENVIRONMENT_FILE } from './files.ts'
+import { AGENT_FILES, ENVIRONMENT_FILE, PROMPT_KINDS, PROMPT_LANGUAGES, SUPERSEDED } from './files.ts'
 import { buildEnvironmentReport, PROBES, type Companion, type EnvironmentFacts, type ProbedTool } from './environment.ts'
 
 // First stdout line of a version command, or undefined when the tool is missing.
@@ -54,6 +54,8 @@ export interface CopyResult {
   written: string[]
   /** `.base/` files left as they were, because the project had adapted them. */
   kept: string[]
+  /** Files an earlier layout left at the top of `.agent/` and `.prompt/`. */
+  cleared: string[]
 }
 
 // The prompts tell the agent to adapt a primitive to the code that instantiates
@@ -100,23 +102,38 @@ export async function copyAgentSpec(extensionUri: vscode.Uri, target: vscode.Uri
   }
   await write(ENVIRONMENT_FILE, new TextEncoder().encode(buildEnvironmentReport(collectEnvironment())))
   written.push(ENVIRONMENT_FILE)
-  await removeOurOldReport(target)
-  return { written, kept }
+  const cleared = await clearSupersededLayout(target)
+  return { written, kept, cleared }
 }
 
-// Until 0.1.1 the report was `.agent/ENVIRONMENT.md`, a name NodeGraph writes as
-// well — whoever ran last won, and the prompts could end up reading the other
-// extension's report. The file moved; a copy of ours left behind is stale, so it
-// goes. One written by anything else is left exactly where it is.
-const OLD_REPORT = '.agent/ENVIRONMENT.md'
+// Earlier versions wrote at the top of `.agent/` and `.prompt/`, where another
+// tool's files live too. Ours moved into a folder of their own; the copies left
+// behind are stale, so they go — and only ours. `.agent/ENVIRONMENT.md` is the
+// one that needs proof before deleting, because NodeGraph writes that name as
+// well: it goes only when the header says it is ours.
+const SHARED_REPORT = '.agent/ENVIRONMENT.md'
 const OUR_HEADER = '# RTLGraph — Agent Environment Report'
 
-async function removeOurOldReport(target: vscode.Uri): Promise<void> {
-  const old = vscode.Uri.joinPath(target, OLD_REPORT)
-  try {
-    const text = new TextDecoder().decode(await vscode.workspace.fs.readFile(old))
-    if (text.startsWith(OUR_HEADER)) await vscode.workspace.fs.delete(old)
-  } catch {
-    // not there, or not readable — nothing to tidy
+async function clearSupersededLayout(target: vscode.Uri): Promise<string[]> {
+  const gone: string[] = []
+  const remove = async (path: string) => {
+    try {
+      await vscode.workspace.fs.delete(vscode.Uri.joinPath(target, path), { recursive: false })
+      gone.push(path)
+    } catch {
+      // not there — nothing to tidy
+    }
   }
+  for (const path of SUPERSEDED) await remove(path)
+  for (const kind of PROMPT_KINDS) {
+    for (const language of PROMPT_LANGUAGES) await remove(`.prompt/${kind}/${language}.md`)
+    await remove(`.prompt/${kind}`) // fails while anything else is in there, which is the point
+  }
+  try {
+    const text = new TextDecoder().decode(await vscode.workspace.fs.readFile(vscode.Uri.joinPath(target, SHARED_REPORT)))
+    if (text.startsWith(OUR_HEADER)) await remove(SHARED_REPORT)
+  } catch {
+    // not there, or someone else's — leave it
+  }
+  return gone
 }

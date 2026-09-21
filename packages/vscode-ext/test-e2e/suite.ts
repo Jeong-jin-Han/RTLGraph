@@ -1,11 +1,11 @@
 import * as vscode from 'vscode'
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
-import { existsSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import type { RenderState } from '../src/protocol.ts'
-import { AGENT_FILES, ENVIRONMENT_FILE } from '../src/agent/files.ts'
+import { AGENT_FILES, ENVIRONMENT_FILE, PROMPT_DIR, RUN_TB, VALIDATOR_FILE } from '../src/agent/files.ts'
 
 // Loaded by VS Code via --extensionTestsPath; resolves on success, throws on failure.
 // RTLGRAPH_E2E_FILE is the root file demo/acc/acc_top.rtlgraph.json: one main
@@ -42,9 +42,9 @@ export async function run(): Promise<void> {
   assert.deepEqual([...(written ?? [])].sort(), expected)
   for (const file of expected) assert.ok(existsSync(join(folder, file)), file)
   assert.match(readFileSync(join(folder, ENVIRONMENT_FILE), 'utf8'), /^# RTLGraph — Agent Environment Report/)
-  assert.equal(ENVIRONMENT_FILE, '.agent/RTLGRAPH_ENVIRONMENT.md') // not the plain name NodeGraph also writes
-  const prompts = expected.filter(f => /^\.prompt\/[a-z]+\//.test(f)).length
-  const guides = expected.filter(f => /^\.prompt\/README/.test(f)).length
+  assert.equal(ENVIRONMENT_FILE, '.agent/rtlgraph/ENVIRONMENT.md') // a folder of our own, not a name others also write
+  const prompts = expected.filter(f => /^\.prompt\/rtlgraph\/[a-z]+\//.test(f)).length
+  const guides = expected.filter(f => /^\.prompt\/rtlgraph\/README/.test(f)).length
   const primitives = expected.filter(f => f.startsWith('.base/') && f.endsWith('.v')).length
   // The primitives are copied, not referenced: a project that instantiates DFF
   // has to carry DFF or it will not elaborate anywhere else.
@@ -53,7 +53,7 @@ export async function run(): Promise<void> {
     'the copied library is the one the demos use')
   log(`Copy Agent Spec wrote ${expected.length} files: spec, validator, environment report, `
     + `${prompts} prompts and ${guides} guides to choosing one, ${primitives} primitives in .base/`)
-  const assignment = readFileSync(join(folder, '.prompt/assignment/korean.md'), 'utf8')
+  const assignment = readFileSync(join(folder, '.prompt/rtlgraph/assignment/korean.md'), 'utf8')
   assert.match(assignment, /Follow the code/)
 
   // The report used to be .agent/ENVIRONMENT.md, which NodeGraph writes too.
@@ -62,24 +62,27 @@ export async function run(): Promise<void> {
   await vscode.commands.executeCommand('rtlgraph.copyAgentSpec', vscode.Uri.file(folder))
   assert.ok(!existsSync(join(folder, '.agent/ENVIRONMENT.md')), 'our superseded report is removed')
   writeFileSync(join(folder, '.agent/ENVIRONMENT.md'), '# NodeGraph — Agent Environment Report\n')
+  mkdirSync(join(folder, '.prompt/code'), { recursive: true })
+  writeFileSync(join(folder, '.prompt/code/korean.md'), 'another tool\'s prompt\n')
   await vscode.commands.executeCommand('rtlgraph.copyAgentSpec', vscode.Uri.file(folder))
   assert.match(readFileSync(join(folder, '.agent/ENVIRONMENT.md'), 'utf8'), /^# NodeGraph/, "another tool's report is untouched")
-  log('the report moved to .agent/RTLGRAPH_ENVIRONMENT.md; only our own leftover is cleaned up')
+  assert.ok(existsSync(join(folder, '.prompt/code/korean.md')), "another tool's prompts are untouched")
+  log('everything we write is under .agent/rtlgraph/ and .prompt/rtlgraph/; only our own leftovers are cleaned up')
 
   // Running the command again must not undo a primitive the project adapted to
   // its own code — the UART assignment's DFF takes BITWIDTH, and overwriting it
   // leaves a project that no longer elaborates.
   const adapted = readFileSync(join(folder, '.base/DFF.v'), 'utf8').replace(/\bBW\b/g, 'BITWIDTH')
   writeFileSync(join(folder, '.base/DFF.v'), adapted)
-  writeFileSync(join(folder, '.prompt/assignment/korean.md'), 'edited by hand\n')
+  writeFileSync(join(folder, '.prompt/rtlgraph/assignment/korean.md'), 'edited by hand\n')
   await vscode.commands.executeCommand<string[]>('rtlgraph.copyAgentSpec', vscode.Uri.file(folder))
   assert.equal(readFileSync(join(folder, '.base/DFF.v'), 'utf8'), adapted, '.base/DFF.v kept as the project adapted it')
-  assert.match(readFileSync(join(folder, '.prompt/assignment/korean.md'), 'utf8'), /Follow the code/, 'prompts are refreshed')
+  assert.match(readFileSync(join(folder, '.prompt/rtlgraph/assignment/korean.md'), 'utf8'), /Follow the code/, 'prompts are refreshed')
   log('a second Copy Agent Spec refreshes the prompts and leaves the adapted .base/DFF.v alone')
 
   // The runner ships with them, and it has to be executable to be of any use.
-  assert.ok((statSync(join(folder, '.agent/run-tb.sh')).mode & 0o111) !== 0, 'run-tb.sh is executable')
-  const madeFolders = spawnSync('bash', [join(folder, '.agent/run-tb.sh'), 'given'], { encoding: 'utf8' })
+  assert.ok((statSync(join(folder, RUN_TB)).mode & 0o111) !== 0, 'run-tb.sh is executable')
+  const madeFolders = spawnSync('bash', [join(folder, RUN_TB), 'given'], { encoding: 'utf8' })
   assert.match(madeFolders.stdout, /tb\/given\/ is empty/)
   for (const made of ['tb/given', 'tb/mine']) assert.ok(existsSync(join(folder, made)), `${made} is there, waiting`)
   log('run-tb.sh makes tb/given and tb/mine, and says which one is empty')
@@ -87,11 +90,21 @@ export async function run(): Promise<void> {
   // The prompts are picked by branch and the path goes to the clipboard, which is
   // how they are used: pasted into an agent.
   const copied = await vscode.commands.executeCommand<string>('rtlgraph.copyPromptPath', { kind: 'assignment', folder })
-  assert.equal(copied, join(folder, '.prompt/assignment/english.md'))
+  assert.equal(copied, join(folder, PROMPT_DIR, 'assignment/english.md'))
   assert.equal(await vscode.env.clipboard.readText(), copied)
-  log('Copy Prompt Path puts .prompt/assignment/english.md on the clipboard')
+  log(`Copy Prompt Path puts ${PROMPT_DIR}/assignment/english.md on the clipboard`)
 
-  const validate = spawnSync('node', [join(folder, '.agent/rtlgraph-validate.mjs'), graphFile], { encoding: 'utf8' })
+  // The palette can run the two shipped scripts. The command opens a terminal,
+  // so what it returns is the script it found — that it resolved the namespaced
+  // path at all is the thing worth pinning.
+  const ran = await vscode.commands.executeCommand<string>('rtlgraph.runTestbenches', { which: 'mine', folder })
+  assert.equal(ran, join(folder, RUN_TB))
+  const terminal = vscode.window.terminals.find(t => t.name.includes('run-tb.sh'))
+  assert.ok(terminal, 'a terminal is opened for the run')
+  terminal?.dispose()
+  log('Run the Testbenches finds .agent/rtlgraph/run-tb.sh and runs it in a terminal')
+
+  const validate = spawnSync('node', [join(folder, VALIDATOR_FILE), graphFile], { encoding: 'utf8' })
   assert.equal(validate.status, 0, validate.stdout + validate.stderr)
   log('the copied validator runs on its own: ' + validate.stdout.trim().split('\n').pop()!.trim())
 

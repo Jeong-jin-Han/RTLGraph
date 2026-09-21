@@ -4,10 +4,10 @@ SPEC_DOC = <사양 문서 경로. 없으면 비우고 REQUEST 에 요구사항�
 MAIN_COMPONENT = <main component 이름. 정해두지 않았으면 비워둬>
 REQUEST = <SPEC_DOC 가 없을 때만: 무엇을 만들지>
 
-PROJECT_FOLDER/.agent/RTLGRAPH_SPEC.md 와 PROJECT_FOLDER/.agent/RTLGRAPH_ENVIRONMENT.md
+PROJECT_FOLDER/.agent/rtlgraph/SPEC.md 와 PROJECT_FOLDER/.agent/rtlgraph/ENVIRONMENT.md
 파일은 이미 준비돼 있어 — 둘 다 끝까지 꼼꼼히 읽어줘. 그 중에서 "Workflow B — Spec →
 RTL" 을 따라서 **새 프로젝트의 RTL 을 처음부터** 만들어줘. (이미 있는 코드를 고치는
-경우라면 이 프롬프트가 아니라 .prompt/refactor/korean.md 를 써야 해.)
+경우라면 이 프롬프트가 아니라 .prompt/rtlgraph/refactor/korean.md 를 써야 해.)
 
 SPEC_DOC 이 있으면 그 문서를 먼저 끝까지 읽고, 그 문서가 정한 포트·컴포넌트·제어 신호
 표를 그대로 따라줘. 문서와 다르게 만들어야 할 이유가 생기면 그 이유를 보고에 적어줘.
@@ -30,8 +30,8 @@ comb/control_path, seq, tb 를 둔 뒤, 데이터패스 상자와 제어 신호 
 source.root 는 그 파일에서 자기가 설명하는 코드까지 가는 길이고, 틀리면 source-root
 에러로 무엇이어야 하는지까지 알려줘. SPEC_DOC 이 이 설계가 요구된 문서니까 그것도
 남겨줘 — 루트의 source.spec(아래 파일들이 물려받아)과, 문서가 실제로 말하는 요소에
-spec: { quote, page } 로 그 문장 그대로. 그리고 루트를 node PROJECT_FOLDER/.agent/
-rtlgraph-validate.mjs 로 에러 0개까지 검증해줘. 스펙 그대로 따르고, 중간에 나한테
-아무것도 묻지 말고 끝까지 진행해줘. 다 되면 만든 파일 목록, 시뮬레이션 결과,
+spec: { quote, page } 로 그 문장 그대로. 그리고 루트를
+node PROJECT_FOLDER/.agent/rtlgraph/validate.mjs 로 에러 0개까지 검증해줘.
+스펙 그대로 따르고, 중간에 나한테 아무것도 묻지 말고 끝까지 진행해줘. 다 되면 만든 파일 목록, 시뮬레이션 결과,
 RTLGraph 검증 결과, VS Code 에서 어떤 파일을 열면 회로도가 보이는지, 그리고 요구사항
 으로 연결되는 상자가 어떤 것들인지 알려줘.

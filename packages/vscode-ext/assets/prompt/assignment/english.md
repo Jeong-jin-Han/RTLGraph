@@ -9,7 +9,7 @@ is. Do not modify, move, rename or reformat any .v/.sv file, do not change a
 single signal, module or port name, and do not create folders for the code.
 Everything you write is RTLGraph JSON, and nothing else changes.
 
-PROJECT_FOLDER/.agent/RTLGRAPH_SPEC.md and PROJECT_FOLDER/.agent/RTLGRAPH_ENVIRONMENT.md
+PROJECT_FOLDER/.agent/rtlgraph/SPEC.md and PROJECT_FOLDER/.agent/rtlgraph/ENVIRONMENT.md
 are already prepared for you — read both in full. Follow "Workflow A — RTL →
 RTLGraph", and in Step 2 use the "Follow the code" placement: a component's
 schematic goes in the same folder as the module it describes, source.root is
@@ -70,9 +70,9 @@ Run benches with the script copied beside this prompt, never with hand-written
 `iverilog` lines:
 
 ```
-.agent/run-tb.sh given     # only the handed-out bench
-.agent/run-tb.sh mine      # only yours
-.agent/run-tb.sh           # both
+.agent/rtlgraph/run-tb.sh given     # only the handed-out bench
+.agent/rtlgraph/run-tb.sh mine      # only yours
+.agent/rtlgraph/run-tb.sh           # both
 ```
 
 It swaps the bench it is running into the project folder — where a handout
@@ -122,12 +122,12 @@ against itself:
 
 Drive inputs on the falling edge and check on the rising one, so the bench never
 changes a signal at the instant the design reads it. Run them all with
-`.agent/run-tb.sh` (it uses the simulator `.agent/RTLGRAPH_ENVIRONMENT.md` lists) and say
+`.agent/rtlgraph/run-tb.sh` (it uses the simulator `.agent/rtlgraph/ENVIRONMENT.md` lists) and say
 which ones passed.
 
 ## The verification map (only if NodeGraph is installed)
 
-`.agent/RTLGRAPH_ENVIRONMENT.md` has a "Companion extensions" row for NodeGraph. **If it
+`.agent/rtlgraph/ENVIRONMENT.md` has a "Companion extensions" row for NodeGraph. **If it
 says NodeGraph is not installed, skip this section entirely** and say so in your
 report; nothing below is worth writing without it.
 
@@ -155,11 +155,11 @@ Write meaning, label, note and diagnostic messages in English. Keep net, module,
 instance and pin names exactly as they appear in the code.
 
 When the work is done, leave the handing-in to the user, but say the command:
-`.agent/make-submission.sh` stages the `.v` files the handout asks for, checks
+`.agent/rtlgraph/make-submission.sh` stages the `.v` files the handout asks for, checks
 they still elaborate, and writes `submission/<name>.zip`. Do not run it yourself
 unless asked — what goes in a submission is the user's decision, not yours.
 
-Validate with node PROJECT_FOLDER/.agent/rtlgraph-validate.mjs on the root file
+Validate with node PROJECT_FOLDER/.agent/rtlgraph/validate.mjs on the root file
 you wrote — PROJECT_FOLDER/<top>.rtlgraph.json, or the one inside
 RTLGRAPH_FOLDER — until it reports 0 errors. Run end to end without asking me
 anything. When done, tell me the file paths, the validator summary, **what the

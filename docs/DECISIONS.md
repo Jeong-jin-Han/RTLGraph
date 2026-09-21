@@ -192,7 +192,7 @@
 |---|---|---|
 | A1 | **핵심 사용 사례는 이미 있는 RTL → RTLGraph.** 3층 계약을 따르지 않는 코드도 추출한다: `assign`/`always` 에서 base 심볼(ADD/SUB/INC/MUX2/CMP_EQ/DFF)을 추론하고, 추론한 요소와 계약 위반은 `diagnostics` 로 남긴다 | 사용자 결정(2026-09-14). RTL 작성은 부차적 |
 | A2 | 추론 노드 ID — 조합 논리 `<scope>.op_<구동하는 넷>`, 레지스터 `<scope>.<Q 넷>_reg` | 인스턴스 이름이 없어도 이름 기반을 유지(D1). origin 검사가 그 넷 이름으로 줄을 대조한다 |
-| A3 | `RTLGraph: Copy Agent Spec to Workspace`(명령 팔레트 + 폴더 우클릭)가 `.agent/RTLGRAPH_SPEC.md`, `.agent/RTLGRAPH_ENVIRONMENT.md`, `.agent/rtlgraph-validate.mjs`, `.prompt/{rtlgraph,rtl}/{korean,english}.md` 를 쓴다. **명령으로만** 실행 | NodeGraph 와 같은 흐름. NodeGraph 는 ENVIRONMENT.md 를 활성화마다 워크스페이스에 몰래 썼다 |
+| A3 | `RTLGraph: Copy Agent Spec to Workspace`(명령 팔레트 + 폴더 우클릭)가 `.agent/rtlgraph/SPEC.md`, `.agent/rtlgraph/ENVIRONMENT.md`, `.agent/rtlgraph/validate.mjs`, `.prompt/{rtlgraph,rtl}/{korean,english}.md` 를 쓴다. **명령으로만** 실행 | NodeGraph 와 같은 흐름. NodeGraph 는 ENVIRONMENT.md 를 활성화마다 워크스페이스에 몰래 썼다 |
 | A4 | 프롬프트 2종 — `rtlgraph`(기존 RTL → 회로도, RTL 수정 금지)와 `rtl`(사양 → 3층 RTL, 마지막에 회로도까지) — 각각 한국어·영어 | 사용자 요구 |
 | A5 | **에이전트용 검증기**를 의존성 없는 단일 파일로 번들해 같이 복사: 스키마 + 레지스트리 포트·폭 + 소스 파일 존재 + `origin` 줄 대조. 에러 0 이 될 때까지 돌리게 한다 | NodeGraph 는 체크리스트뿐이라 결과를 사람이 확인했다 |
 | A6 | 스펙은 영어. 사용자에게 보이는 문구(`meaning`, `label`, 진단)의 언어는 프롬프트가 정하고, ID·넷·모듈 이름은 번역하지 않는다 | |
@@ -205,6 +205,9 @@
 | A13 | origin 검사는 **코드가 쓰는 이름이면 엄격히, 추출기가 지어낸 이름이면 느슨히** — 지어낸 이름(소스 어디에도 없는 이름)은 그 요소가 닿는 넷을 언급하는 줄이면 통과, `always` 에서 복원한 것은 그 `always` 줄도 인정 | 비리팩터 코드에는 이름 없는 중간 값(두 번 쓰이는 비교, 레지스터의 enable 조건, 인라인 제어 블록)이 흔한데, 그런 것은 어떤 줄에도 이름이 없다. 그렇다고 전부 느슨하게 하면 지어낸 줄 번호를 못 잡는다 |
 | A14 | 배치는 **세 가지** — 코드 옆 / 한 폴더에 모아서(`RTLGRAPH_FOLDER`) / 계약 구조. 앞의 둘은 코드를 건드리지 않는다 | 사용자 요구: 과제 저장소는 JSON 을 따로 모아 두고 싶을 수 있다. `ref` 와 `source.root` 가 상대 경로라 세 가지 모두 같은 로더로 읽힌다(demo/lab) |
 | A15 | `RTLGraph: Copy Prompt Path` — 갈래를 고르면 그 md 경로가 클립보드로 | 사용자가 프롬프트를 쓰는 방식이 "경로를 복사해 에이전트에 붙여넣기"다. 파일을 열어 주는 것보다 경로를 주는 편이 그 손놀림에 맞는다 |
+| A16 | 쓰는 파일은 전부 **`.agent/rtlgraph/` 와 `.prompt/rtlgraph/`** 안에. `.base/` 만 예외(설계가 컴파일하는 라이브러리이고 `source.lib` 가 경로로 가리킨다) | `.agent/`·`.prompt/` 는 공용 관례라 NodeGraph 도 쓴다. 실제로 `.agent/ENVIRONMENT.md` 를 NodeGraph 가 덮어써서, "시뮬레이터를 그 파일에서 확인하라"는 우리 프롬프트가 PDF 라이브러리 목록을 읽고 있었다. 이름을 늘리는 대신(`RTLGRAPH_ENVIRONMENT.md`) 폴더를 나누면 확장이 몇 개 늘어도 안 부딪힌다 |
+| A17 | 옛 배치에 남은 **우리 파일만** Copy Agent Spec 이 지운다. `.agent/ENVIRONMENT.md` 는 헤더가 `# RTLGraph —` 일 때만 | 남의 도구 파일을 지우는 정리는 정리가 아니다. e2e 가 양쪽(우리 것은 사라지고 NodeGraph 것은 남는다)을 확인한다 |
+| A18 | 셸 스크립트 둘(`run-tb.sh`, `make-submission.sh`)은 팔레트 명령으로도 실행한다 — 터미널에서, 그 프로젝트를 cwd 로 | 판정을 찍는 도구는 출력이 보여야 한다. 알림 상자에 삼키면 시뮬레이터가 한 말이 사라진다 |
 
 ## 계층과 접기 — 루트·schematic 파일 (M6.5 앞당김)
 

@@ -1,4 +1,4 @@
-// Builds .agent/RTLGRAPH_ENVIRONMENT.md from probed tool versions. Pure — the extension
+// Builds .agent/rtlgraph/ENVIRONMENT.md from probed tool versions. Pure — the extension
 // host runs the probes — so the report can be tested with made-up facts.
 import { MAKE_SUBMISSION, RUN_TB } from './files.ts'
 
@@ -59,7 +59,7 @@ export function buildEnvironmentReport(f: EnvironmentFacts): string {
     '',
     '| Tool | Available | Use |',
     '|---|---|---|',
-    `| Node.js | ${has(f.node)} | \`node .agent/rtlgraph-validate.mjs <file>\` — validate every \`*.rtlgraph.json\` you write |`,
+    `| Node.js | ${has(f.node)} | \`node .agent/rtlgraph/validate.mjs <file>\` — validate every \`*.rtlgraph.json\` you write |`,
     `| Testbench runner | ✅ \`${RUN_TB}\` | \`${RUN_TB} given\` runs what the assignment handed out, \`mine\` runs ours, no argument runs both |`,
     `| Submission | ✅ \`${MAKE_SUBMISSION}\` | gathers the \`.v\` files the handout asks for, checks they still elaborate, and zips them |`,
     '',
@@ -90,7 +90,7 @@ export function buildEnvironmentReport(f: EnvironmentFacts): string {
     '## Recommendations',
     '',
     f.node
-      ? '- **Validate** each file with `node .agent/rtlgraph-validate.mjs <file>` until it reports `0 errors`.'
+      ? '- **Validate** each file with `node .agent/rtlgraph/validate.mjs <file>` until it reports `0 errors`.'
       : '- ⚠️ **Node.js not found** — the validator cannot run. Go through the spec checklist by hand and tell the user to install Node.js ≥ 18.',
     simulator
       ? `- **Simulate** with ${simulator} — or let \`${RUN_TB}\` do it: it finds the benches in \`tb/given/\` and \`tb/mine/\`, compiles each against the rest of the design and prints one verdict line per bench.`

@@ -2,7 +2,7 @@ PROJECT_ROOT_ABSOLUTE_PATH = <PROJECT_ROOT_ABSOLUTE_PATH>
 PROJECT_FOLDER = PROJECT_ROOT_ABSOLUTE_PATH
 IDEA_FILE = <path to the file holding the idea, e.g. PROJECT_FOLDER/idea.txt>
 
-PROJECT_FOLDER/.agent/RTLGRAPH_SPEC.md and PROJECT_FOLDER/.agent/RTLGRAPH_ENVIRONMENT.md
+PROJECT_FOLDER/.agent/rtlgraph/SPEC.md and PROJECT_FOLDER/.agent/rtlgraph/ENVIRONMENT.md
 are already prepared for you — read both in full. Follow "Workflow S — Idea →
 Spec" specifically.
 
@@ -32,4 +32,4 @@ identifiers that the code can use as they are.
 
 When done, tell me the document path, a summary of the component structure, and
 what is in "Decisions" and "Open questions". If the document looks right, the
-next step is .prompt/rtl/english.md.
+next step is .prompt/rtlgraph/rtl/english.md.

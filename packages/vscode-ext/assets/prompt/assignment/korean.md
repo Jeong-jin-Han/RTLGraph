@@ -8,7 +8,7 @@ GIVEN_TB = <비워 두거나, 과제와 함께 받은 테스트벤치 경로 —
 변경·재정렬 전부 금지고, 신호·모듈·포트 이름도 하나도 바꾸지 마. 코드를 위한 폴더도
 새로 만들지 마. 네가 쓰는 건 RTLGraph JSON 뿐이고, 코드는 아무것도 건드리지 않아.
 
-PROJECT_FOLDER/.agent/RTLGRAPH_SPEC.md 와 PROJECT_FOLDER/.agent/RTLGRAPH_ENVIRONMENT.md
+PROJECT_FOLDER/.agent/rtlgraph/SPEC.md 와 PROJECT_FOLDER/.agent/rtlgraph/ENVIRONMENT.md
 는 이미 준비돼 있어 — 둘 다 끝까지 읽어줘. "Workflow A — RTL → RTLGraph" 를 따르되,
 Step 2 의 배치는 "Follow the code" 쪽으로: 컴포넌트의 schematic 은 그 모듈이 있는
 폴더에 두고, source.root 는 보통 ".", 루트에는 layout-follows-code 진단을 남겨.
@@ -63,9 +63,9 @@ tb/mine/    네가 쓴 것. 추가 근거.
 돌리는 건 이 프롬프트와 같이 복사된 스크립트로. `iverilog` 명령을 손으로 쓰지 말고:
 
 ```
-.agent/run-tb.sh given     # 받은 벤치만
-.agent/run-tb.sh mine      # 네 것만
-.agent/run-tb.sh           # 둘 다
+.agent/rtlgraph/run-tb.sh given     # 받은 벤치만
+.agent/rtlgraph/run-tb.sh mine      # 네 것만
+.agent/rtlgraph/run-tb.sh           # 둘 다
 ```
 
 돌릴 벤치를 프로젝트 폴더 안으로 바꿔 넣고(핸드아웃이 테스트벤치를 두는 자리이고,
@@ -107,12 +107,12 @@ GIVEN_TB 가 비어 있으면 `tb/given/` 도 비워 두고, 채점 기준이 �
   아무도 믿지 않아.
 
 입력은 하강 에지에서 넣고 확인은 상승 에지에서 해. 벤치가 설계가 읽는 그 순간에 신호를
-바꾸지 않도록. 전부 `.agent/run-tb.sh` 로 돌리고(`.agent/RTLGRAPH_ENVIRONMENT.md` 에 있는
+바꾸지 않도록. 전부 `.agent/rtlgraph/run-tb.sh` 로 돌리고(`.agent/rtlgraph/ENVIRONMENT.md` 에 있는
 시뮬레이터를 알아서 써) 무엇이 통과했는지 알려줘.
 
 ## 검증 지도 (NodeGraph 가 설치돼 있을 때만)
 
-`.agent/RTLGRAPH_ENVIRONMENT.md` 의 "Companion extensions" 표에 NodeGraph 행이 있어.
+`.agent/rtlgraph/ENVIRONMENT.md` 의 "Companion extensions" 표에 NodeGraph 행이 있어.
 **설치돼 있지 않다고 나오면 이 절은 통째로 건너뛰고**, 보고할 때 그렇게 말해줘.
 없으면 아래는 쓸 이유가 없어.
 
@@ -138,12 +138,12 @@ GIVEN_TB 가 비어 있으면 `tb/given/` 도 비워 두고, 채점 기준이 �
 meaning, label, note, 진단 메시지는 한국어로 쓰되, 신호·모듈·인스턴스·핀 이름은 코드
 그대로 쓰고, 기술 용어는 처음 등장할 때 영어를 괄호로 병기해(예: "계수기(counter)").
 
-작업이 끝나면 제출 자체는 사용자 몫으로 두되, 명령은 알려줘: `.agent/make-submission.sh`
+작업이 끝나면 제출 자체는 사용자 몫으로 두되, 명령은 알려줘: `.agent/rtlgraph/make-submission.sh`
 가 핸드아웃이 요구하는 `.v` 파일을 모으고, elaborate 되는지 확인하고,
 `submission/<이름>.zip` 을 만든다. 시키지 않으면 네가 직접 돌리지는 마 — 무엇을
 제출할지는 사용자가 정할 일이야.
 
-node PROJECT_FOLDER/.agent/rtlgraph-validate.mjs 로 네가 쓴 루트 파일을 —
+node PROJECT_FOLDER/.agent/rtlgraph/validate.mjs 로 네가 쓴 루트 파일을 —
 PROJECT_FOLDER/<top>.rtlgraph.json, 또는 RTLGRAPH_FOLDER 안의 그 파일을 — 에러가
 0개가 될 때까지 검증해줘. 중간에 나한테 묻지 말고 끝까지 진행해. 다 되면 만든 파일
 경로, 검증기 결과, **받은 테스트벤치가 뭐라고 찍었는지**(없었으면 없었다고), 네 벤치가

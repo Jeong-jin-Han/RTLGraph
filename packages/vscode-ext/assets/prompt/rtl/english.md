@@ -4,10 +4,10 @@ SPEC_DOC = <path to the specification; leave empty and use REQUEST if there is n
 MAIN_COMPONENT = <the main component's name; leave empty if you have not chosen one>
 REQUEST = <only when SPEC_DOC is empty: what to build>
 
-PROJECT_FOLDER/.agent/RTLGRAPH_SPEC.md and PROJECT_FOLDER/.agent/RTLGRAPH_ENVIRONMENT.md
+PROJECT_FOLDER/.agent/rtlgraph/SPEC.md and PROJECT_FOLDER/.agent/rtlgraph/ENVIRONMENT.md
 are already prepared for you — read both in full. Follow "Workflow B — Spec →
 RTL" specifically and write **the RTL of a new project from scratch**. (To change
-code that already exists, use .prompt/refactor/english.md instead.)
+code that already exists, use .prompt/rtlgraph/refactor/english.md instead.)
 
 If SPEC_DOC is given, read it in full first and follow the ports, components and
 control signal table it settles. If you have to depart from it, say why in your
@@ -30,7 +30,7 @@ describes; a wrong one is reported as source-root, an error, naming the value it
 should have. SPEC_DOC is the document this design was asked for, so record it:
 source.spec in the root (inherited by every file below) and, on the elements the
 document really talks about, spec: { quote, page } — the sentence verbatim.
-Validate the root with node PROJECT_FOLDER/.agent/rtlgraph-validate.mjs until it
+Validate the root with node PROJECT_FOLDER/.agent/rtlgraph/validate.mjs until it
 reports 0 errors. Follow
 the spec exactly and run end to end without asking me anything. When done, tell me
 which files you created, the simulation results, the RTLGraph validator summary,

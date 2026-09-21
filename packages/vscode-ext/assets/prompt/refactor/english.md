@@ -3,7 +3,7 @@ PROJECT_FOLDER = PROJECT_ROOT_ABSOLUTE_PATH
 MAIN_COMPONENT = <the main component's name; leave empty if you have not chosen one>
 REQUEST = <what to add or change; "structure only" if nothing new>
 
-PROJECT_FOLDER/.agent/RTLGRAPH_SPEC.md and PROJECT_FOLDER/.agent/RTLGRAPH_ENVIRONMENT.md
+PROJECT_FOLDER/.agent/rtlgraph/SPEC.md and PROJECT_FOLDER/.agent/rtlgraph/ENVIRONMENT.md
 are already prepared for you — read both in full. Follow "Workflow C — Existing
 RTL → Refactored RTL" specifically. This rebuilds on the code that is already
 there.
@@ -30,7 +30,7 @@ every source.root afterwards: it is the path from each JSON file to the code it
 now describes, and a wrong one is reported as source-root, an error, naming the
 value it should have (source.lib likewise). Carry any spec quotes across to
 wherever their element ended up. Validate the root with
-node PROJECT_FOLDER/.agent/rtlgraph-validate.mjs until it reports 0 errors.
+node PROJECT_FOLDER/.agent/rtlgraph/validate.mjs until it reports 0 errors.
 Follow the spec exactly and run end to end without asking me anything. When done,
 tell me which files changed, the baseline diff from the restructuring step, the
 simulation results after the new behaviour, the RTLGraph validator summary, and

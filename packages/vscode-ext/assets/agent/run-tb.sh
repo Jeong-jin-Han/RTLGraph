@@ -5,7 +5,7 @@
 # arrives, and you want its verdict before you have finished reading the mail.
 # Drop the file into tb/given/ and run
 #
-#     .agent/run-tb.sh given
+#     .agent/rtlgraph/run-tb.sh given
 #
 # The two folders are the whole convention:
 #
@@ -18,7 +18,7 @@
 # --keep to leave the last one there (for Vivado's GUI, or to hand it in).
 #
 # Usage:
-#   .agent/run-tb.sh [given|mine|all|<file.v> ...] [options]
+#   .agent/rtlgraph/run-tb.sh [given|mine|all|<file.v> ...] [options]
 #
 #   --project DIR   the project root (default: the folder holding .agent)
 #   --sim NAME      iverilog | vivado  (default: whichever is installed)
@@ -34,7 +34,7 @@
 set -u
 
 here=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
-project=$(cd -- "$here/.." && pwd)
+project=$(cd -- "$here/../.." && pwd)  # .agent/rtlgraph/<script> → the project
 sim=""
 out=""
 top=""
@@ -58,7 +58,7 @@ while [ $# -gt 0 ]; do
   esac
 done
 [ ${#want[@]} -eq 0 ] && want=(all)
-[ -n "$out" ] || out="$project/.agent/tb-build"
+[ -n "$out" ] || out="$project/.agent/rtlgraph/tb-build"
 
 # ── the two folders ───────────────────────────────────────────────────────────
 # Made on every run, not only when they are missing: the point of the split is
@@ -67,12 +67,12 @@ mkdir -p "$project/tb/given" "$project/tb/mine"
 [ -f "$project/tb/given/README.md" ] || cat > "$project/tb/given/README.md" <<'EOF'
 The testbench that came with the assignment goes here, exactly as it arrived.
 Nothing in this folder is ever edited: it is what the work is marked with, so a
-change here is a change to the ruler. `.agent/run-tb.sh given` swaps it into the
+change here is a change to the ruler. `.agent/rtlgraph/run-tb.sh given` swaps it into the
 project folder, runs it, and takes it back out.
 EOF
 [ -f "$project/tb/mine/README.md" ] || cat > "$project/tb/mine/README.md" <<'EOF'
 The testbenches written for this project. Each one opens with a comment saying
-what it is there to catch. `.agent/run-tb.sh mine` runs them.
+what it is there to catch. `.agent/rtlgraph/run-tb.sh mine` runs them.
 EOF
 
 # ── what to run ───────────────────────────────────────────────────────────────
@@ -112,7 +112,7 @@ if [ ${#benches[@]} -eq 0 ]; then
   esac
   for other in given mine; do
     n=$(list_dir "$project/tb/$other" | wc -l)
-    [ "$n" -gt 0 ] && echo "        tb/$other/ has $n — run: .agent/run-tb.sh $other"
+    [ "$n" -gt 0 ] && echo "        tb/$other/ has $n — run: .agent/rtlgraph/run-tb.sh $other"
   done
   exit 0
 fi
@@ -162,7 +162,7 @@ if [ -z "$sim" ]; then
     echo "run-tb: no simulator on PATH." >&2
     echo "  iverilog:  sudo apt install iverilog" >&2
     echo "  Vivado:    source /tools/Xilinx/Vivado/<version>/settings64.sh" >&2
-    echo "  .agent/RTLGRAPH_ENVIRONMENT.md lists what this machine has." >&2
+    echo "  .agent/rtlgraph/ENVIRONMENT.md lists what this machine has." >&2
     exit 3
   fi
 fi

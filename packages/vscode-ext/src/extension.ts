@@ -3,6 +3,7 @@ import { FILTER_PRESETS, type FilterPreset } from '@rtlgraph/ir'
 import { RtlGraphEditorProvider } from './editorProvider.ts'
 import { PRESET_LABELS } from './webview/state.ts'
 import { copyAgentSpec } from './agent/copyAgentSpec.ts'
+import { AGENT_DIR, MAKE_SUBMISSION, PROMPT_DIR, RUN_TB } from './agent/files.ts'
 import { exportSchematic } from './export.ts'
 import { EXPORT_FORMATS, viewName, type ExportFormat } from './exportFiles.ts'
 import { collectHierarchyFiles } from './hierarchyFiles.ts'
@@ -35,7 +36,7 @@ const PROMPT_ABOUT: Record<string, string> = {
 }
 
 async function promptsIn(folder: vscode.Uri): Promise<{ label: string; description: string; uri: vscode.Uri }[]> {
-  const root = vscode.Uri.joinPath(folder, '.prompt')
+  const root = vscode.Uri.joinPath(folder, PROMPT_DIR)
   let kinds: [string, vscode.FileType][] = []
   try {
     kinds = await vscode.workspace.fs.readDirectory(root)
@@ -164,6 +165,48 @@ async function foldCommand(action: FoldAction, args: unknown): Promise<FoldScope
   return scope
 }
 
+// A command may be called with nothing (ask), a string (the arguments to pass),
+// a folder Uri (the Explorer's right-click), or both in an object.
+function scriptArgs(args: unknown): { which?: string; folder?: vscode.Uri } {
+  if (typeof args === 'string') return { which: args }
+  if (args instanceof vscode.Uri) return { folder: args }
+  if (typeof args === 'object' && args !== null) {
+    const given = args as { which?: unknown; folder?: unknown }
+    return {
+      ...(typeof given.which === 'string' ? { which: given.which } : {}),
+      ...(given.folder instanceof vscode.Uri
+        ? { folder: given.folder }
+        : typeof given.folder === 'string'
+          ? { folder: vscode.Uri.file(given.folder) }
+          : {}),
+    }
+  }
+  return {}
+}
+
+// The two shipped scripts, run where the user can watch them: a terminal, in the
+// project that holds them. Anything that prints a verdict belongs on screen —
+// swallowing it into a notification would hide the simulator's own words, which
+// are the point.
+async function runShippedScript(script: string, args: string, where?: vscode.Uri): Promise<string | undefined> {
+  const folders = where ? [where] : (vscode.workspace.workspaceFolders ?? []).map(f => f.uri)
+  for (const folder of folders) {
+    const path = vscode.Uri.joinPath(folder, script)
+    try {
+      await vscode.workspace.fs.stat(path)
+    } catch {
+      continue
+    }
+    const terminal = vscode.window.createTerminal({ name: `RTLGraph: ${script.split('/').pop()}`, cwd: folder })
+    terminal.show()
+    terminal.sendText(`"${path.fsPath}"${args ? ` ${args}` : ''}`)
+    return path.fsPath
+  }
+  void vscode.window.showWarningMessage(
+    `RTLGraph: no ${script} here yet — run "Copy Agent Spec to Workspace" first.`)
+  return undefined
+}
+
 // Only this package imports `vscode`; everything else lives in @rtlgraph/*.
 export function activate(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
@@ -176,13 +219,14 @@ export function activate(context: vscode.ExtensionContext): void {
         return undefined
       }
       try {
-        const { written, kept } = await vscode.window.withProgress(
+        const { written, kept, cleared } = await vscode.window.withProgress(
           { location: vscode.ProgressLocation.Notification, title: 'RTLGraph: writing agent files…' },
           () => copyAgentSpec(context.extensionUri, target),
         )
         void vscode.window.showInformationMessage(
-          `RTLGraph: wrote .agent/ and .prompt/{spec,rtl,refactor,rtlgraph}/{korean,english}.md in ${target.fsPath}. ` +
-            'Paste .prompt/rtlgraph/korean.md (or english.md) into your agent to build a schematic of this RTL.' +
+          `RTLGraph: wrote ${AGENT_DIR}/ and ${PROMPT_DIR}/{spec,rtl,refactor,rtlgraph,assignment}/{korean,english}.md in ${target.fsPath}. ` +
+            `Paste ${PROMPT_DIR}/rtlgraph/korean.md (or english.md) into your agent to build a schematic of this RTL.` +
+            (cleared.length > 0 ? ` Cleared from the older layout: ${cleared.join(', ')}.` : '') +
             // A primitive this project adapted to its own code is the project's, not ours.
             (kept.length > 0 ? ` Left as they were: ${kept.join(', ')} — this project had adapted them.` : ''),
         )
@@ -191,6 +235,38 @@ export function activate(context: vscode.ExtensionContext): void {
         void vscode.window.showErrorMessage(`RTLGraph: could not write the agent files — ${(err as Error).message}`)
         return undefined
       }
+    }),
+
+    // Run the benches: no argument runs both folders, "given" only the one the
+    // work is marked with.
+    vscode.commands.registerCommand('rtlgraph.runTestbenches', async (args?: unknown) => {
+      const { which, folder } = scriptArgs(args)
+      const picked = which ?? (await vscode.window.showQuickPick(
+        [
+          { label: 'both', description: 'tb/given/ and tb/mine/', value: '' },
+          { label: 'given', description: 'only the bench the work is marked with', value: 'given' },
+          { label: 'mine', description: 'only the benches written for this project', value: 'mine' },
+        ],
+        { placeHolder: 'Which testbenches?' },
+      ))?.value
+      if (picked === undefined) return undefined
+      return runShippedScript(RUN_TB, picked, folder)
+    }),
+
+    // Collect what is handed in, check it still elaborates, zip it.
+    vscode.commands.registerCommand('rtlgraph.makeSubmission', async (args?: unknown) => {
+      const { which, folder } = scriptArgs(args)
+      const picked = which !== undefined ? { value: which } : await vscode.window.showQuickPick(
+        [
+          { label: 'list only', description: 'print what would go in, write nothing', value: '--list' },
+          { label: 'the RTL', description: 'what the handout asks for', value: '' },
+          { label: 'the RTL and the benches', description: 'adds tb/mine/', value: '--with-tb' },
+          { label: 'everything', description: 'benches, .base/, RTLGraph JSON, the handout', value: '--all' },
+        ],
+        { placeHolder: 'What goes in the zip?' },
+      )
+      if (!picked) return undefined
+      return runShippedScript(MAKE_SUBMISSION, picked.value, folder)
     }),
 
     // Optional argument: the formats to write, e.g. ['svg', 'pdf']; without it, ask.
@@ -391,7 +467,7 @@ export function activate(context: vscode.ExtensionContext): void {
           : (vscode.workspace.workspaceFolders ?? []).map(f => f.uri)
       const found = (await Promise.all(where.map(promptsIn))).flat()
       if (found.length === 0) {
-        void vscode.window.showWarningMessage('RTLGraph: no .prompt folder here yet — run "Copy Agent Spec to Workspace" first.')
+        void vscode.window.showWarningMessage(`RTLGraph: no ${PROMPT_DIR} folder here yet — run "Copy Agent Spec to Workspace" first.`)
         return undefined
       }
       const wanted = kind !== undefined ? found.find(p => p.label.startsWith(`${kind}/`)) : undefined

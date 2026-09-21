@@ -17,9 +17,14 @@ const spec = read('assets/agent/RTLGRAPH_SPEC.md')
 test('every file the command copies exists in the extension', () => {
   for (const { from } of AGENT_FILES) assert.ok(existsSync(join(ROOT, from)), from)
   // a prompt per kind per language, plus the guide that says which to reach for
-  assert.equal(AGENT_FILES.filter(f => /^\.prompt\/[a-z]+\//.test(f.to)).length, PROMPT_KINDS.length * PROMPT_LANGUAGES.length)
-  assert.deepEqual(AGENT_FILES.filter(f => /^\.prompt\/README/.test(f.to)).map(f => f.to).sort(),
-    ['.prompt/README.korean.md', '.prompt/README.md'])
+  assert.equal(AGENT_FILES.filter(f => /^\.prompt\/rtlgraph\/[a-z]+\//.test(f.to)).length, PROMPT_KINDS.length * PROMPT_LANGUAGES.length)
+  assert.deepEqual(AGENT_FILES.filter(f => /README/.test(f.to) && f.to.startsWith('.prompt/')).map(f => f.to).sort(),
+    ['.prompt/rtlgraph/README.korean.md', '.prompt/rtlgraph/README.md'])
+  // Everything this extension writes is under its own name: nothing of ours
+  // lands where another tool's files live.
+  for (const { to } of AGENT_FILES) {
+    assert.ok(/^\.(agent|prompt)\/rtlgraph\/|^\.base\//.test(to), `${to} is namespaced`)
+  }
 })
 
 test('prompts: every kind in two languages, each pointing at a workflow the spec defines', () => {
@@ -44,8 +49,8 @@ test('prompts: every kind in two languages, each pointing at a workflow the spec
         }
       }
       // The spec workflow writes a document, not RTLGraph files, so it runs no validator.
-      const needles = ['.agent/RTLGRAPH_SPEC.md', '.agent/RTLGRAPH_ENVIRONMENT.md', '<PROJECT_ROOT_ABSOLUTE_PATH>']
-      for (const needle of kind === 'spec' ? [...needles, 'SPEC.md'] : [...needles, 'rtlgraph-validate.mjs']) {
+      const needles = ['.agent/rtlgraph/SPEC.md', '.agent/rtlgraph/ENVIRONMENT.md', '<PROJECT_ROOT_ABSOLUTE_PATH>']
+      for (const needle of kind === 'spec' ? [...needles, 'SPEC.md'] : [...needles, 'rtlgraph/validate.mjs']) {
         assert.ok(prompt.includes(needle), `${kind}/${language} mentions ${needle}`)
       }
     }
@@ -83,7 +88,7 @@ test('the testbench runner: two folders, the given one marked, the project folde
   // Asking for the one that has not arrived says so, and points at the other folder.
   const none = run('given')
   assert.match(none.stdout, /tb\/given\/ is empty — nothing has been handed out/)
-  assert.match(none.stdout, /tb\/mine\/ has 1 — run: \.agent\/run-tb\.sh mine/)
+  assert.match(none.stdout, /tb\/mine\/ has 1 — run: \.agent\/rtlgraph\/run-tb\.sh mine/)
 
   writeFileSync(join(dir, 'tb/given/tb_hw.v'), readFileSync(join(demo, 'tb_hw.v')))
   assert.match(run('given').stdout, /PASS\s+tb\/given\/tb_hw\.v\s+← the one it is marked with/)
@@ -139,7 +144,7 @@ test('the submission script collects the RTL, checks it elaborates, and zips it'
   if (spawnSync('zip', ['-v']).status !== 0) return t.skip('zip not installed')
   const dir = mkdtempSync(join(tmpdir(), 'rtlgraph-submit-'))
   const demo = join(ROOT, '../../demo/hw')
-  mkdirSync(join(dir, '.agent'), { recursive: true })
+  mkdirSync(join(dir, '.agent/rtlgraph'), { recursive: true })
   mkdirSync(join(dir, 'tb/mine'), { recursive: true })
   for (const file of ['hw_top.v', 'counter.v']) writeFileSync(join(dir, file), readFileSync(join(demo, file)))
   writeFileSync(join(dir, 'tb/mine/tb_hw.v'), readFileSync(join(demo, 'tb_hw.v')))

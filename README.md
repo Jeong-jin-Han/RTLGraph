@@ -30,7 +30,7 @@ from. Prefer to draw it yourself? Write the JSON by hand and use the same canvas
 **Getting there takes four steps:**
 1. Build the extension and press **F5** (see [Installation](#installation) — it is not on the Marketplace yet)
 2. Right-click your RTL folder and run `RTLGraph: Copy Agent Spec to Workspace`
-3. Paste the generated `.prompt/rtlgraph/english.md` (or `korean.md`) into your agent, filling in the project path
+3. Paste the generated `.prompt/rtlgraph/rtlgraph/english.md` (or `korean.md`) into your agent, filling in the project path
 4. Open the finished `<top>.rtlgraph.json`
 
 ---
@@ -99,7 +99,7 @@ click rather than a memory test.
 | **Export** | SVG / PNG / PDF of exactly what is on screen, and XLSX of the tables behind it — all written without a dependency |
 | **Validator** | Schema, widths, ports, unreachable nets, missing `meaning`, and every `origin` checked against the Verilog itself. A `source.root` pointing at the wrong folder is reported once, with the value it should have, instead of once per element |
 | **Its own file icon** | RTLGraph marks the tabs it owns — the schematic, the state diagram, the requirement reader — whichever icon theme you use. In the Explorer the icon belongs to your theme; `RTLGraph: Mark RTLGraph Files in the Explorer` teaches Material Icon Theme about them |
-| **Agent-friendly** | `.agent/RTLGRAPH_SPEC.md` plus five ready-to-paste prompts, one per kind of job |
+| **Agent-friendly** | `.agent/rtlgraph/SPEC.md` plus five ready-to-paste prompts, one per kind of job |
 
 ---
 
@@ -107,36 +107,40 @@ click rather than a memory test.
 
 > **Before pointing an agent at a project, run `RTLGraph: Copy Agent Spec to Workspace` once** —
 > right-click the folder in the Explorer (or run it from the Command Palette). It writes, into that
-> folder and nowhere else:
+> folder and nowhere else — everything under its own name, so nothing collides with what another
+> tool writes into `.agent/` or `.prompt/`:
 >
 > ```
-> .agent/RTLGRAPH_SPEC.md        how to turn RTL into *.rtlgraph.json (and how to write RTL)
-> .agent/RTLGRAPH_ENVIRONMENT.md          which simulators and tools this machine has
-> .agent/rtlgraph-validate.mjs   the validator the agent runs on what it wrote
-> .agent/run-tb.sh               runs the testbenches and says which passed
-> .agent/make-submission.sh      collects the .v files to hand in, checks them, zips them
-> .prompt/rtlgraph/{korean,english}.md     existing RTL → RTLGraph
-> .prompt/assignment/{korean,english}.md   the same, for a skeleton that may not be touched
-> .prompt/rtl/{korean,english}.md          spec → RTL in the three-layer layout, then RTLGraph
-> .prompt/refactor/{korean,english}.md     existing RTL → restructured RTL, then RTLGraph
-> .prompt/spec/{korean,english}.md         an idea → SPEC.md
-> .prompt/README.md, README.korean.md     which of the five to reach for — for you, not the agent
-> .base/{DFF,INC,ADD,SUB,MUX2,CMP_EQ}.v    the primitives RTLGraph draws with symbols, plus a note
+> .agent/rtlgraph/SPEC.md              how to turn RTL into *.rtlgraph.json (and how to write RTL)
+> .agent/rtlgraph/ENVIRONMENT.md       which simulators and tools this machine has
+> .agent/rtlgraph/validate.mjs         the validator the agent runs on what it wrote
+> .agent/rtlgraph/run-tb.sh            runs the testbenches and says which passed
+> .agent/rtlgraph/make-submission.sh   collects the .v files to hand in, checks them, zips them
+> .prompt/rtlgraph/rtlgraph/{korean,english}.md    existing RTL → RTLGraph
+> .prompt/rtlgraph/assignment/{korean,english}.md  the same, for a skeleton that may not be touched
+> .prompt/rtlgraph/rtl/{korean,english}.md         spec → RTL in the three-layer layout, then RTLGraph
+> .prompt/rtlgraph/refactor/{korean,english}.md    existing RTL → restructured RTL, then RTLGraph
+> .prompt/rtlgraph/spec/{korean,english}.md        an idea → SPEC.md
+> .prompt/rtlgraph/README.md, README.korean.md     which of the five to reach for — for you, not the agent
+> .base/{DFF,INC,ADD,SUB,MUX2,CMP_EQ}.v            the primitives RTLGraph draws with symbols, plus a note
 > ```
 >
-> `.agent/run-tb.sh` is there for one moment in particular. Coursework is marked with a testbench
+> `.base/` is the one thing not under `rtlgraph/`: it is a library the design compiles against and
+> `source.lib` points at it by path, so it belongs to the project rather than to this extension.
+>
+> `.agent/rtlgraph/run-tb.sh` is there for one moment in particular. Coursework is marked with a testbench
 > that arrives after the work is done, so the benches are kept apart by who wrote them —
 > `tb/given/` for the handout's, `tb/mine/` for yours — and the script swaps one at a time into the
 > project folder, where a handout expects a bench to sit, runs it against the rest of the design,
 > takes it back out, and prints a verdict line per bench. The day it arrives:
-> `cp tb_uart.v <project>/tb/given/ && .agent/run-tb.sh given`. `--keep` leaves the last bench in
+> `cp tb_uart.v <project>/tb/given/ && .agent/rtlgraph/run-tb.sh given`. `--keep` leaves the last bench in
 > the project folder for Vivado's GUI.
 >
 > Running the command again refreshes everything except a primitive the project has adapted:
 > `.base/DFF.v` edited to take `BITWIDTH` stays as it is, and the notification says which files were
 > left alone. Overwriting it would leave a project that no longer elaborates.
 >
-> `.agent/make-submission.sh` closes the same day at the other end: it stages every `.v` in the
+> `.agent/rtlgraph/make-submission.sh` closes the same day at the other end: it stages every `.v` in the
 > project that is not a bench — the handout asks for the RTL, nothing else — checks with `iverilog`
 > that what it staged still elaborates, and writes `submission/<name>.zip`. Benches, `.base/`, the
 > RTLGraph JSON and the handout are opt-in (`--with-tb`, `--with-base`, `--with-rtlgraph`,
@@ -148,7 +152,7 @@ click rather than a memory test.
 > `DFF` takes `BITWIDTH`, the width, where ours takes `BW`, the top bit index — adapt the copy and
 > say so; RTLGraph still draws it as a register and reads its width from the nets.
 >
-> **Which prompt.** `.prompt/README.md` answers that in one table and a page per branch — it is
+> **Which prompt.** `.prompt/rtlgraph/README.md` answers that in one table and a page per branch — it is
 > written for a person deciding, not for an agent. In short: `rtlgraph` and `assignment` both leave
 > the code exactly as it is; they differ in where the JSON goes. `rtlgraph` builds the contract layout (a folder per component) — use it on your
 > own projects. `assignment` creates no folder: each JSON sits beside the module it describes
@@ -168,19 +172,19 @@ Key rules the spec holds the agent to:
 ### Example prompt
 
 After running `RTLGraph: Copy Agent Spec to Workspace` on your project folder, paste this in — the same
-text is written out as `.prompt/rtlgraph/english.md`, so you can hand the agent that path instead.
+text is written out as `.prompt/rtlgraph/rtlgraph/english.md`, so you can hand the agent that path instead.
 
 ```
 PROJECT_FOLDER = <ABSOLUTE PATH TO THE RTL PROJECT>
 
-PROJECT_FOLDER/.agent/RTLGRAPH_SPEC.md and PROJECT_FOLDER/.agent/RTLGRAPH_ENVIRONMENT.md
+PROJECT_FOLDER/.agent/rtlgraph/SPEC.md and PROJECT_FOLDER/.agent/rtlgraph/ENVIRONMENT.md
 are already prepared for you — read both in full.
 
 Read the RTL without changing it, then write the root <top>.rtlgraph.json and
 one *.rtlgraph-schematic.json per component, following the spec exactly.
 Every node and net must carry the file and line it came from.
 
-Run PROJECT_FOLDER/.agent/rtlgraph-validate.mjs on the result and fix what it
+Run PROJECT_FOLDER/.agent/rtlgraph/validate.mjs on the result and fix what it
 reports, until it is clean. Tell me when done.
 ```
 
@@ -305,7 +309,7 @@ The shape of a schematic file:
 }
 ```
 
-See `.agent/RTLGRAPH_SPEC.md` (or `packages/vscode-ext/assets/agent/RTLGRAPH_SPEC.md`) for the whole
+See `.agent/rtlgraph/SPEC.md` (or `packages/vscode-ext/assets/agent/RTLGRAPH_SPEC.md`) for the whole
 schema, and `docs/DECISIONS.md` for why each part is the way it is.
 
 ---
@@ -352,7 +356,9 @@ node packages/vscode-ext/dist/agent/rtlgraph-validate.mjs <graph>
 | Command | What it does |
 |---|---|
 | `RTLGraph: Copy Agent Spec to Workspace` | Writes the agent files into a folder (also on folder right-click in the Explorer) |
-| `RTLGraph: Copy Prompt Path` | Pick a branch of work; its `.prompt/…md` path goes to the clipboard |
+| `RTLGraph: Copy Prompt Path` | Pick a branch of work; its `.prompt/rtlgraph/…md` path goes to the clipboard |
+| `RTLGraph: Run the Testbenches` | Runs `.agent/rtlgraph/run-tb.sh` in a terminal — both folders, or only `given` / `mine` |
+| `RTLGraph: Package the Submission` | Runs `.agent/rtlgraph/make-submission.sh` — list first, or write the zip |
 | `RTLGraph: Mark RTLGraph Files in the Explorer` | Teaches Material Icon Theme about `*.rtlgraph.json` (asks before touching your settings) |
 | `RTLGraph: Export Schematic (SVG / PNG / PDF)` | Exports the current view (also the **Export…** toolbar button) |
 | `RTLGraph: Fold Components` / `Unfold Components` | The selected component — on its own (what is inside goes back to folded) or with everything inside — else the whole hierarchy |

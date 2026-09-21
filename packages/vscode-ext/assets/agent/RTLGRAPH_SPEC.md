@@ -2,8 +2,8 @@
 
 > **If you are an AI agent creating or editing RTLGraph files (`*.rtlgraph.json`,
 > `*.rtlgraph-schematic.json`), or writing RTL for an RTLGraph project, read this whole document
-> first.** Also read `.agent/RTLGRAPH_ENVIRONMENT.md` (which simulators and tools exist on this machine).
-> Validate what you write with `node .agent/rtlgraph-validate.mjs <top>.rtlgraph.json`.
+> first.** Also read `.agent/rtlgraph/ENVIRONMENT.md` (which simulators and tools exist on this machine).
+> Validate what you write with `node .agent/rtlgraph/validate.mjs <top>.rtlgraph.json`.
 >
 > Beside this file, the same command wrote `.prompt/` (a ready-made prompt per kind of job, with a
 > `README.md` for the person choosing between them — not for you) and
@@ -11,7 +11,7 @@
 > note of their own). `.base/` is there so a project that instantiates them can be simulated and
 > elaborated on its own; see "Primitive definitions" below.
 >
-> **What else is installed matters.** `.agent/RTLGRAPH_ENVIRONMENT.md` has a "Companion extensions" table.
+> **What else is installed matters.** `.agent/rtlgraph/ENVIRONMENT.md` has a "Companion extensions" table.
 > When it says **NodeGraph** is there, a second kind of file is worth writing beside this one:
 > RTLGraph draws what the circuit *is*, NodeGraph records what is *known* about it — why each part
 > exists, what a testbench proves, which lines it exercises — with `"type": "code"` links that jump
@@ -52,7 +52,7 @@ cannot be recovered with confidence, record a diagnostic instead of guessing.
 ## Workflow A — RTL → RTLGraph
 
 ### Step 0 — Setup
-1. Read `.agent/RTLGRAPH_ENVIRONMENT.md`.
+1. Read `.agent/rtlgraph/ENVIRONMENT.md`.
 2. `PROJECT_FOLDER` is the folder the user named. **Do not modify any `.v`/`.sv` file.**
 3. If RTLGraph files already exist for this project, read them first (see Step 9).
 
@@ -297,7 +297,7 @@ requirements page — record where each piece comes from:
 
 ### Step 8 — Validate
 ```bash
-node .agent/rtlgraph-validate.mjs <top>.rtlgraph.json
+node .agent/rtlgraph/validate.mjs <top>.rtlgraph.json
 ```
 Run it on the root: it checks every schematic the root reaches, and that each `component` box has
 exactly the ports (and directions) of the schematic it points at (`hierarchy-ports`). Fix every
@@ -379,7 +379,7 @@ Do not create folders, RTL or RTLGraph files in this workflow.
 Use when writing **new** RTL (an empty or fresh project). To restructure code that already exists,
 use Workflow C.
 
-1. **Read `.agent/RTLGRAPH_ENVIRONMENT.md`** and pick a simulator (`iverilog`, or Vivado `xvlog`/`xelab`/`xsim`).
+1. **Read `.agent/rtlgraph/ENVIRONMENT.md`** and pick a simulator (`iverilog`, or Vivado `xvlog`/`xelab`/`xsim`).
 2. **Read the spec document** if the user names one (`SPEC.md` from Workflow S, or their own): its
    ports, component tree and control tables are the contract. Departing from it needs a reason in your
    final report. Without a document, work from the request itself and say what you assumed.
@@ -667,7 +667,7 @@ Never use line numbers or counters in ids — the user's layout is matched by id
 - [ ] A component with a state machine has `<name>.rtlgraph-fsm.json`, and its state register carries `fsm` and `flow: "control"`
 - [ ] Existing `layout`, `view`, `created` preserved; `modified` updated
 - [ ] Every file's `source.root` points at the code it describes (no `source-root` / `source-lib`)
-- [ ] `node .agent/rtlgraph-validate.mjs <top>.rtlgraph.json` reports `0 errors`
+- [ ] `node .agent/rtlgraph/validate.mjs <top>.rtlgraph.json` reports `0 errors`
 
 ---
 

@@ -13,7 +13,7 @@ RTLGraph: Copy Prompt Path        ← 갈래를 고르면 경로가 클립보드
 그 다음 에이전트(Claude Code, Codex, Cursor…)에:
 
 ```
-/home/me/work/uart/.prompt/assignment/korean.md 를 읽고 그대로 해줘.
+/home/me/work/uart/.prompt/rtlgraph/assignment/korean.md 를 읽고 그대로 해줘.
 PROJECT_FOLDER = /home/me/work/uart
 ```
 
@@ -60,18 +60,18 @@ PROJECT_FOLDER = /home/me/work/uart
   모이고, 코드 쪽은 완전히 그대로 남는다.
 
 끝나고 나면 폴더 두 개가 남는다 — 조교가 준 것을 넣을 `tb/given/`, 에이전트가 쓴
-것이 들어 있는 `tb/mine/` — 그리고 실행기 `.agent/run-tb.sh`. 벤치 하나를 프로젝트
+것이 들어 있는 `tb/mine/` — 그리고 실행기 `.agent/rtlgraph/run-tb.sh`. 벤치 하나를 프로젝트
 폴더 안으로 바꿔 넣고, 나머지 설계와 함께 돌리고, 판정 한 줄을 찍는다. 그래서 채점
 벤치가 오는 날 할 일은 이것뿐이다:
 
 ```
 cp ~/Downloads/tb_uart.v  <프로젝트>/tb/given/
-<프로젝트>/.agent/run-tb.sh given
+<프로젝트>/.agent/rtlgraph/run-tb.sh given
 ```
 
 인자 없이 돌리면 둘 다, `mine` 이면 네 것만, `--keep` 을 주면 마지막 벤치를 프로젝트
 폴더에 그대로 남긴다(Vivado GUI 로 이어서 볼 때). 제출할 때가 되면
-`.agent/make-submission.sh` 가 핸드아웃이 요구하는 `.v` 만 모아서 elaborate 를 확인하고
+`.agent/rtlgraph/make-submission.sh` 가 핸드아웃이 요구하는 `.v` 만 모아서 elaborate 를 확인하고
 zip 으로 만든다(무엇이 들어가는지 먼저 보려면 `--list`).
 **처음부터 테스트벤치를 같이 받았다면 그 경로를 `GIVEN_TB` 에 적어라.** 에이전트가
 그걸 받은 그대로 먼저 돌리고, 출력을 그대로 옮기고, 자기 벤치와 결과가 다르면 자기
@@ -96,7 +96,7 @@ zip 으로 만든다(무엇이 들어가는지 먼저 보려면 `--list`).
 ### `rtl` — 명세 → 새 RTL
 
 명세 문서로 모듈과 테스트벤치와 RTLGraph 파일을 쓴다. 시뮬레이터가 필요하고,
-이 컴퓨터에 뭐가 있는지는 `.agent/RTLGRAPH_ENVIRONMENT.md` 가 말해 준다.
+이 컴퓨터에 뭐가 있는지는 `.agent/rtlgraph/ENVIRONMENT.md` 가 말해 준다.
 
 ### `spec` — 아이디어 → `SPEC.md`
 
@@ -112,7 +112,7 @@ zip 으로 만든다(무엇이 들어가는지 먼저 보려면 `--list`).
 `meaning`·라벨·보고를 어느 언어로 쓰는지가 다르다. 코드에서 온 이름은 어느
 쪽이든 번역하지 않는다.
 
-**설치된 것.** `.agent/RTLGRAPH_ENVIRONMENT.md` 는 `RTLGraph: Copy Agent Spec to Workspace`
+**설치된 것.** `.agent/rtlgraph/ENVIRONMENT.md` 는 `RTLGraph: Copy Agent Spec to Workspace`
 를 돌릴 때마다 다시 만들어지고, 프롬프트는 그걸 따른다: 어떤 시뮬레이터를 쓸지,
 그리고 NodeGraph 검증 지도를 쓸지 말지(그 확장이 설치돼 있을 때만). 나중에 도구를
 설치했다면 명령을 다시 돌려 보고서를 갱신해라.
