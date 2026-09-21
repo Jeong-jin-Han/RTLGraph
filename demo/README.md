@@ -173,7 +173,17 @@ handout sentence behind it and carrying `code` links to both the check and the
 logic it exercises (`tb/mine/tb_uart_corner.v:73-79` → `uart_receiver.v:79-88`). The
 course's own testbench, which is what the mark comes from and was not in the zip,
 is a `gap` node, so what has *not* been shown is visible too — and `tb/given/` is
-empty and waiting for it, beside the two benches in `tb/mine/`. It validates
+empty and waiting for it, beside the two benches in `tb/mine/`.
+
+A second graph, `uart_receiver.nodegraph.json`, is the design read the other way
+round: 24 nodes over the receiver's own code, following NodeGraph's codebase
+workflow (five backbone nodes, `syntax`/`semantic` pairs for the four registers
+that hold state, `decision` nodes for the choices that look arbitrary — why two
+counters, why `bit_counter == 0` means idle rather than a bit, why the sample
+lands mid-symbol). Every `original.text` in it is sliced out of the `.v` file, so
+a snippet cannot drift from the code, and every `code` link resolves to a line
+that exists. RTLGraph draws what the circuit is; these two say what is known
+about it and why it was built that way. It validates
 against NodeGraph's published schema, and the prompts only ask for such a file
 when `.agent/ENVIRONMENT.md` reports that extension installed.
 
