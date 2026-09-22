@@ -24,7 +24,8 @@
 #   --sim NAME      iverilog | vivado  (default: whichever is installed)
 #   --out DIR       where build scratch goes (default: <project>/.rtlgraph-build)
 #   --top NAME      the bench's top module, when the file holds more than one
-#   --wave          also dump a waveform and write what it says (waveform.md)
+#   --wave          also dump a waveform and write what it says (waveform/…md)
+#                   RTLGRAPH_LANG=ko writes that report in Korean
 #   --keep          leave the last bench swapped into the project folder
 #   --in-place      do not swap anything; compile the benches where they lie
 #   --quiet         only the verdict lines, no simulator output
@@ -286,7 +287,8 @@ for bench in "${benches[@]}"; do
     mv -f "$work/wave.vcd" "$waves/$(basename -- "${bench%.*}").vcd"
     reader="$here/wave.mjs"
     if [ -f "$reader" ] && command -v node >/dev/null 2>&1; then
-      node "$reader" "$waves/$(basename -- "${bench%.*}").vcd" --log "$log" | sed 's/^/   /'
+      node "$reader" "$waves/$(basename -- "${bench%.*}").vcd" --log "$log" --bench "$bench" \
+        --project "$project" ${RTLGRAPH_LANG:+--lang "$RTLGRAPH_LANG"} | sed 's/^/   /'
     else
       echo "   (dump written to waveform/$(basename -- "${bench%.*}").vcd; wave.mjs or node missing, so nothing read it)"
     fi

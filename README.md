@@ -140,8 +140,11 @@ click rather than a memory test.
 > to take every number from the dump and cite `file.v:line` for every claim.
 >
 > And a `*.waveform.json` opens as a **drawing**, not as JSON: the places worth going to down the left —
-> how the design came up, then one per check the bench printed, each with what was measured there —
-> and the traces on the right. Click a place, or walk them with ← and →; hover for the value of
+> how the design came up, then one per check the bench printed, each with what was measured there,
+> the instants worth looking at as buttons, and the **line of the testbench that printed it** — and
+> the traces on the right, where **each signal's name opens the line of RTL that drives it**.
+> Matching every instant of a waveform to code is hopeless; matching a check and a signal is not,
+> and those two jumps are what a reader actually asks for. Click a place, or walk them with ← and →; hover for the value of
 > every signal at that instant. One row per net (a port either side of a boundary is one wire, not
 > two), the clock left out because at any useful zoom it is a grey blur, and a signal that is `x`
 > drawn in red so an undefined stretch is visible rather than merely absent.
@@ -384,6 +387,7 @@ node packages/vscode-ext/dist/agent/rtlgraph-validate.mjs <graph>
 | `RTLGraph: Copy Prompt Path` | Pick a branch of work; its `.prompt/rtlgraph/…md` path goes to the clipboard |
 | `RTLGraph: Run the Testbenches` | Runs `.agent/rtlgraph/run-tb.sh` in a terminal — both folders, or only `given` / `mine` |
 | `RTLGraph: Package the Submission` | Runs `.agent/rtlgraph/make-submission.sh` — list first, or write the zip |
+| `rtlgraph.language` (setting) | `auto`, `english` or `korean` — RTLGraph's own wording in the waveform view and in what `--wave` writes. Names from the code are never translated |
 | `RTLGraph: Mark RTLGraph Files in the Explorer` | Teaches Material Icon Theme about `*.rtlgraph.json` and `*.waveform.json` (asks before touching your settings) |
 | `RTLGraph: Export Schematic (SVG / PNG / PDF)` | Exports the current view (also the **Export…** toolbar button) |
 | `RTLGraph: Fold Components` / `Unfold Components` | The selected component — on its own (what is inside goes back to folded) or with everything inside — else the whole hierarchy |

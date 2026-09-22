@@ -8,6 +8,7 @@
 // that guesses is a measurement nobody can check.
 
 import { edgesOf, levelAt, levelBefore, seriesOf, type WaveChange, type Waveform } from './vcd.ts'
+import { wordsIn, type Lang } from './words.ts'
 
 export interface ClockFacts {
   path: string
@@ -75,6 +76,10 @@ export interface WindowFacts {
   label: string
   from: number
   to: number
+  /** Where in the testbench that line was printed, when it could be found. */
+  source?: { file: string; line: number; text: string }
+  /** The instants worth looking at, and why — a transfer, a reset, an edge. */
+  focus: readonly { at: number; what: string; signal?: string }[]
   /** Handshake transfers that completed inside it. */
   transfers: readonly { valid: string; raised: number; taken?: number; waited?: number }[]
   /** What moved, busiest first — the signals worth looking at for this check. */
@@ -269,7 +274,7 @@ function windowFacts(wave: Waveform, bench: readonly BenchLine[], facts: {
   handshakes: readonly HandshakeFacts[]
   reset?: { path: string }
   clockPeriod?: number
-}): WindowFacts[] {
+}, lang: Lang = 'en'): WindowFacts[] {
   const stamped = bench.filter(b => b.time !== undefined) as { time: number; text: string }[]
   if (stamped.length === 0) return []
   const reset = facts.reset ? seriesOf(wave, facts.reset.path) : []
@@ -291,6 +296,7 @@ function windowFacts(wave: Waveform, bench: readonly BenchLine[], facts: {
       label: line.text,
       from,
       to,
+      focus: focusOf(wave, { from, to }, facts.handshakes, facts.reset, lang),
       transfers,
       moved: [...moved].map(([path, changes]) => ({ path, changes })).sort((a, b) => b.changes - a.changes).slice(0, 8),
       reset: reset.some(c => c.time >= from && c.time <= to && c.value === '1'),
@@ -300,7 +306,29 @@ function windowFacts(wave: Waveform, bench: readonly BenchLine[], facts: {
   return windows
 }
 
-export function readFacts(wave: Waveform, bench: readonly BenchLine[] = []): WaveFacts {
+/** Where a reader's eye should go inside a stretch, and what it will find. */
+function focusOf(wave: Waveform, window: { from: number; to: number },
+                 handshakes: readonly HandshakeFacts[], reset: { path: string } | undefined,
+                 lang: Lang = 'en') {
+  const w = wordsIn(lang)
+  const focus: { at: number; what: string; signal?: string }[] = []
+  for (const h of handshakes) {
+    for (const t of h.transfers) {
+      if (t.raised < window.from || t.raised > window.to) continue
+      focus.push({ at: t.raised, what: w.focusValidRose, signal: h.valid })
+      if (t.taken !== undefined) focus.push({ at: t.taken, what: w.focusTaken(t.waited ?? 0), signal: h.ready })
+    }
+  }
+  if (reset) {
+    for (const change of seriesOf(wave, reset.path)) {
+      if (change.time < window.from || change.time > window.to) continue
+      focus.push({ at: change.time, what: change.value === '1' ? w.focusResetAsserted : w.focusResetReleased, signal: reset.path })
+    }
+  }
+  return focus.sort((a, b) => a.at - b.at).slice(0, 6)
+}
+
+export function readFacts(wave: Waveform, bench: readonly BenchLine[] = [], lang: Lang = 'en'): WaveFacts {
   const clock = clockFacts(wave)
   const reset = resetFacts(wave)
   // Parameters do not move and task locals are not hardware: neither belongs
@@ -319,7 +347,7 @@ export function readFacts(wave: Waveform, bench: readonly BenchLine[] = []): Wav
     init: initFacts(wave, all, reset?.releasedAt),
     drives: driveFacts(wave, clock),
     handshakes,
-    windows: windowFacts(wave, bench, { handshakes, ...(reset ? { reset } : {}), ...(clock?.period !== undefined ? { clockPeriod: clock.period } : {}) }),
+    windows: windowFacts(wave, bench, { handshakes, ...(reset ? { reset } : {}), ...(clock?.period !== undefined ? { clockPeriod: clock.period } : {}) }, lang),
     idle: all.filter(s => s.changes <= 1).map(s => s.path),
     unknown: all.filter(s => s.unknownAt !== undefined),
     busiest: [...all].sort((a, b) => b.changes - a.changes).slice(0, 8),

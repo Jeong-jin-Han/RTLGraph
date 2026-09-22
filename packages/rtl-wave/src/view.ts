@@ -8,6 +8,7 @@
 
 import { seriesOf, type Waveform } from './vcd.ts'
 import type { WaveFacts } from './facts.ts'
+import { wordsIn, type Lang } from './words.ts'
 
 export interface Trace {
   path: string
@@ -18,6 +19,8 @@ export interface Trace {
   bench: boolean
   /** `[time, value]`, in order, starting with the value at time 0. */
   points: readonly (readonly [number, string])[]
+  /** The line of RTL that drives it, when one was found. */
+  source?: { file: string; line: number; text: string }
 }
 
 /** A place worth jumping to: how the design came up, or a check that passed. */
@@ -29,6 +32,12 @@ export interface Marker {
   kind: 'init' | 'check'
   /** A line or two of what was measured here, already worded. */
   notes: readonly string[]
+  /** The testbench line that printed this, relative to the report. */
+  source?: { file: string; line: number; text: string }
+  /** Instants worth looking at inside the stretch. */
+  focus: readonly { at: number; what: string; signal?: string }[]
+  /** Signals that moved here — what this check is actually about. */
+  watch: readonly string[]
 }
 
 export interface WaveView {
@@ -99,7 +108,8 @@ function chooseTraces(wave: Waveform, facts: WaveFacts, limit: number): { traces
 }
 
 /** How the design came up, and then one marker per check the bench printed. */
-function markersFor(facts: WaveFacts): Marker[] {
+function markersFor(facts: WaveFacts, lang: Lang): Marker[] {
+  const w = wordsIn(lang)
   const at = facts.reset?.releasedAt
   const settled = facts.init.settledAt
   // Coming up ends when the last thing that was going to be defined is defined:
@@ -107,13 +117,21 @@ function markersFor(facts: WaveFacts): Marker[] {
   const defined = facts.init.unknownAfterReset.map(u => u.until).filter((t): t is number => t !== undefined)
   const initTo = Math.max(settled ?? 0, at ?? 0, ...defined) || Math.round(facts.end / 20)
   const notes: string[] = []
-  notes.push(at !== undefined ? `reset released at ${at}` : 'no reset found in this dump')
+  if (at !== undefined) notes.push(w.resetReleased(facts.reset?.path ?? '', String(at)).replace(/[`*]/g, ''))
   notes.push(facts.init.unknownAfterReset.length === 0
-    ? 'nothing left undefined once it was released'
-    : `${facts.init.unknownAfterReset.length} signal(s) still undefined after it`)
-  if (settled !== undefined && at !== undefined && settled > at) notes.push(`everything defined by ${settled}`)
+    ? w.nothingLeftUndefined
+    : w.stillUndefined + ` ${facts.init.unknownAfterReset.map(u => u.path.split('/').pop()).join(', ')}`)
 
-  const markers: Marker[] = [{ id: 'init', label: 'Coming up', from: 0, to: initTo, kind: 'init', notes }]
+  const markers: Marker[] = [{
+    id: 'init',
+    label: w.comingUp,
+    from: 0,
+    to: initTo,
+    kind: 'init',
+    notes,
+    focus: at !== undefined ? [{ at, what: w.focusResetReleased }] : [],
+    watch: facts.init.unknownAfterReset.map(u => u.path),
+  }]
   for (const [i, window] of facts.windows.entries()) {
     const taken = window.transfers.filter(t => t.taken !== undefined)
     markers.push({
@@ -123,23 +141,25 @@ function markersFor(facts: WaveFacts): Marker[] {
       to: window.to,
       kind: 'check',
       notes: [
-        ...(taken.length > 0 ? [`${taken.length} transfer(s) taken, waiting ${taken.map(t => t.waited).join(', ')} clock(s)`] : []),
-        ...(window.reset ? ['reset asserted in this stretch'] : []),
-        ...(window.moved.length > 0 ? [`busiest: ${window.moved.slice(0, 3).map(m => m.path.split('/').pop()).join(', ')}`] : []),
+        ...(taken.length > 0 ? [w.transfersTaken(taken.length, taken.map(t => t.waited).join(', '))] : []),
+        ...(window.reset ? [w.reset_in_stretch] : []),
       ],
+      ...(window.source ? { source: window.source } : {}),
+      focus: window.focus,
+      watch: window.moved.slice(0, 6).map(m => m.path),
     })
   }
   return markers
 }
 
-export function buildView(wave: Waveform, facts: WaveFacts, limit = 20): WaveView {
+export function buildView(wave: Waveform, facts: WaveFacts, limit = 20, lang: Lang = 'en'): WaveView {
   const { traces, omitted } = chooseTraces(wave, facts, limit)
   return {
     tick: wave.tick,
     timescale: wave.timescale,
     end: wave.end,
     traces,
-    markers: markersFor(facts),
+    markers: markersFor(facts, lang),
     omitted,
   }
 }

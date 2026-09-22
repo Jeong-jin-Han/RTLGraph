@@ -98,6 +98,11 @@ export async function run(): Promise<void> {
   // places worth going to — how it came up, then a marker per check.
   const waveReport = join(dirname(dirname(graphFile)), 'uart-p01/waveform/tb_uart_corner.waveform.json')
   if (existsSync(waveReport)) {
+    // RTLGRAPH_SHOT_LANG lets a screenshot show the other language without
+    // restarting VS Code in a different locale.
+    if (process.env.RTLGRAPH_SHOT_LANG) {
+      await vscode.workspace.getConfiguration('rtlgraph').update('language', process.env.RTLGRAPH_SHOT_LANG, true)
+    }
     const waveDoc = await vscode.workspace.openTextDocument(vscode.Uri.file(waveReport))
     await vscode.commands.executeCommand('vscode.openWith', waveDoc.uri, 'rtlgraph.waveform')
     await sleep(1500)

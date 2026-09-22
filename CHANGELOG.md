@@ -56,6 +56,17 @@ extension, so each line is something that broke once.
   a schematic: places to go down the left (how it came up, then a check at a time,
   each with its measurements), traces on the right, ← and → to walk them, hover
   for values at an instant. One row per net, no clock, `x` in red.
+- **Two ways back into the code**, because matching every instant of a waveform
+  to a line is hopeless but matching these two is not: each check carries the
+  testbench line that printed it (found by the wording it printed, not by
+  parsing Verilog), and each signal's name opens the line of RTL that drives it
+  — a clocked assignment before a continuous one before a declaration, and the
+  design before the bench that merely declares the same name.
+- **`rtlgraph.language`**: `auto` (VS Code's own), `english` or `korean`. It
+  changes RTLGraph's wording in the waveform view and in what `--wave` writes
+  (`RTLGRAPH_LANG=ko` for the script on its own). Signal names, times, file
+  names and whatever the testbench printed are never translated — a report that
+  translates the simulator cannot be checked against it.
 - Our own benches now print `[%0t]` before each line, which is what lets a check
   and a stretch of waveform be put beside each other.
 

@@ -4,7 +4,7 @@ import { execFileSync } from 'node:child_process'
 import { existsSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { buildView, edgesOf, levelAt, levelBefore, parseVcd, readBenchLog, readFacts, reportMarkdown, seriesOf } from '../src/index.ts'
+import { buildView, edgesOf, locateCheck, locateSignal, wordsIn, levelAt, levelBefore, parseVcd, readBenchLog, readFacts, reportMarkdown, seriesOf } from '../src/index.ts'
 
 // A dump written by hand, so every fact below has a known answer. Two clock
 // periods of 10 ns, a reset released at 15 ns, a handshake whose valid clears
@@ -240,4 +240,73 @@ test('the view picks what a screen can hold, and what a check is about', () => {
   // a trace carries its values, starting from what it held at time 0
   const valid = view.traces.find(t => t.path === 'tb/data_out_valid')!
   assert.deepEqual(valid.points, [[0, '0'], [30, '1'], [40, '0']])
+})
+
+// A check reaches the report as words; the reader's next question is where they
+// were printed. The answer is findable without parsing Verilog.
+test('a printed check is traced back to the line that printed it', () => {
+  const bench = [
+    'module tb;',
+    '    task check(input [7:0] wanted, input [255:0] what);',
+    '        $display("[%0t]   ok: %0s (%h)", $time, what, data_out);',
+    '    endtask',
+    '    initial begin',
+    '        check(8\'h3C, "held while data_out_ready is low");',
+    '        $display("[%0t]   ok: cleared once taken", $time);',
+    '        $display("%0d", errors);',
+    '    end',
+    'endmodule',
+  ].join('\n')
+
+  // printed by a task: the caller's wording wins over the task's format string
+  assert.deepEqual(locateCheck(bench, '[1450000]   ok: held while data_out_ready is low (3c)'),
+    { line: 6, text: 'check(8\'h3C, "held while data_out_ready is low");' })
+
+  // printed in place, brackets and all — the time and the specifiers are stripped
+  assert.equal(locateCheck(bench, '[1480000]   ok: cleared once taken')?.line, 7)
+
+  // nothing to go on: no line rather than a plausible one
+  assert.equal(locateCheck(bench, '[10] 42'), undefined)
+  assert.equal(locateCheck(bench, 'ok: something this bench never says'), undefined)
+})
+
+// Matching every instant of a waveform to code is hopeless; matching a signal
+// to the line that drives it is not, and that is the jump a reader wants.
+test('a signal is traced to the line that drives it, not merely declares it', () => {
+  const rtl = [
+    'module rx (input clk, output [7:0] data_out, output data_out_valid);',
+    '    reg has_byte;',
+    '    reg [9:0] rx_shift;',
+    '    assign data_out_valid = has_byte;',
+    '    always @(posedge clk) begin',
+    '        rx_shift <= {serial_in, rx_shift[9:1]};',
+    '    end',
+    'endmodule',
+  ].join('\n')
+
+  assert.deepEqual(locateSignal(rtl, 'data_out_valid'),
+    { line: 4, text: 'assign data_out_valid = has_byte;', kind: 'continuous' })
+  // the clocked assignment beats the declaration two lines above it
+  assert.deepEqual(locateSignal(rtl, 'rx_shift')?.kind, 'clocked')
+  assert.equal(locateSignal(rtl, 'rx_shift')?.line, 6)
+  // only a declaration to offer, and it says so
+  assert.deepEqual(locateSignal(rtl, 'has_byte'), { line: 2, text: 'reg has_byte;', kind: 'declaration' })
+  // a name the file never mentions gets nothing
+  assert.equal(locateSignal(rtl, 'nowhere'), undefined)
+  // and a name inside another word is not a match
+  assert.equal(locateSignal('reg has_byte_next;\n', 'has_byte'), undefined)
+})
+
+test('the report can be written in Korean without translating what the code says', () => {
+  const bench = readBenchLog('[30] ok: a byte arrived\n')
+  const facts = readFacts(parseVcd(VCD), bench)
+  const ko = reportMarkdown({ facts, bench, source: { vcd: 'x.vcd' } }, 'ko')
+  assert.match(ko, /^# 파형이 말하는 것/)
+  assert.match(ko, /## 깨어나는 과정/)
+  assert.match(ko, /## 체크별로/)
+  // names, times and what the bench printed stay exactly as they were
+  assert.match(ko, /`tb\/data_out_valid`/)
+  assert.match(ko, /30\.000 ns/)
+  assert.match(ko, /ok: a byte arrived/)
+  assert.equal(wordsIn('en').comingUp, 'Coming up')
 })

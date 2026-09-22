@@ -184,6 +184,16 @@
           "type": "string",
           "default": ".out-${name}",
           "markdownDescription": "Folder next to the graph file that exports are written to. `${name}` is the graph file name without `.rtlgraph.json`. The default is hidden, like NodeGraph's `.<name>-imgs`; use `out-${name}` for a visible folder."
+        },
+        "rtlgraph.language": {
+          "type": "string",
+          "enum": [
+            "auto",
+            "english",
+            "korean"
+          ],
+          "default": "auto",
+          "markdownDescription": "Language for RTLGraph's own wording — the waveform view and what `--wave` writes. `auto` follows VS Code's display language. Names from the code are never translated."
         }
       }
     }

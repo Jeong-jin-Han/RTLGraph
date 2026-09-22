@@ -3,7 +3,8 @@
 // Bundled the same way the validator is: one dependency-free file the agent can
 // run without installing anything.
 //
-//   node .agent/rtlgraph/wave.mjs <dump.vcd> [--log <bench output>] [--out <folder>]
+//   node .agent/rtlgraph/wave.mjs <dump.vcd> [--log <output>] [--bench <tb.v>]
+//                                  [--project <dir>] [--lang en|ko] [--out <folder>]
 //
 // Writes <bench>.waveform.md (for a person) and <bench>.waveform.json (for an
 // agent, and for the viewer) beside the dump, or in --out. The name comes from
@@ -13,9 +14,9 @@
 // It measures; it never explains. The explanation is the job of
 // .prompt/rtlgraph/waveform/*.md, which reads the .waveform.json and the code.
 
-import { readFileSync, writeFileSync, mkdirSync } from 'node:fs'
+import { readdirSync, readFileSync, statSync, writeFileSync, mkdirSync } from 'node:fs'
 import { basename, dirname, extname, join, relative, resolve } from 'node:path'
-import { parseVcd, readFacts, readBenchLog, reportMarkdown, reportJson } from '@rtlgraph/wave'
+import { langOf, locateCheck, locateSignal, parseVcd, readFacts, readBenchLog, reportMarkdown, reportJson } from '@rtlgraph/wave'
 
 const args = process.argv.slice(2)
 const flag = (name: string) => {
@@ -42,9 +43,64 @@ try {
 }
 
 const bench = logPath ? readBenchLog(readFileSync(resolve(logPath), 'utf8')) : []
+const benchPath = flag('--bench')
+
+const lang = langOf(flag('--lang'))
+const facts = readFacts(wave, bench, lang)
+
+// Where each printed line came from, so the reader can go from a check to the
+// line that made it. Paths are relative to the report: the pair travels together.
+if (benchPath) {
+  const source = readFileSync(resolve(benchPath), 'utf8')
+  const file = relative(outDir, resolve(benchPath))
+  for (const window of facts.windows) {
+    const found = locateCheck(source, window.label)
+    if (found) Object.assign(window, { source: { file, ...found } })
+  }
+}
+
+// Where each signal is driven, so a trace can be clicked back to the line that
+// makes it. Matching every instant to code is hopeless; matching a signal is not.
+const SKIP = new Set(['.git', 'node_modules', '.rtlgraph-build', 'waveform', 'submission', 'build', 'dist'])
+function designFiles(dir: string, depth = 0): string[] {
+  if (depth > 6) return []
+  const out: string[] = []
+  for (const entry of readdirSync(dir)) {
+    if (SKIP.has(entry) || entry.endsWith('.sim') || entry.endsWith('.cache') || entry.endsWith('.runs')) continue
+    const path = join(dir, entry)
+    if (statSync(path).isDirectory()) out.push(...designFiles(path, depth + 1))
+    else if (/\.(v|sv)$/.test(entry)) out.push(path)
+  }
+  return out
+}
+
+const projectDir = flag('--project')
+const signals: Record<string, { file: string; line: number; text: string }> = {}
+// The best answer is the line that *drives* the signal in the design. A
+// testbench declares the same names to wire the design up, and answering with
+// that teaches the reader nothing, so design files and driving statements win.
+const STRENGTH = { clocked: 0, continuous: 1, blocking: 2, declaration: 3 } as const
+const isBench = (path: string) => /(^|\/)(tb|TB)_|_tb\.(s?v)$|\/tb\//.test(path)
+if (projectDir) {
+  const files = designFiles(resolve(projectDir)).map(path => ({ path, text: readFileSync(path, 'utf8') }))
+  const names = new Set(wave.signals.filter(s => s.hardware).map(s => s.name))
+  for (const name of names) {
+    let best: { score: number; file: string; line: number; text: string } | undefined
+    for (const file of files) {
+      const found = locateSignal(file.text, name)
+      if (!found) continue
+      const score = (isBench(file.path) ? 10 : 0) + STRENGTH[found.kind ?? 'declaration']
+      if (!best || score < best.score) {
+        best = { score, file: relative(outDir, file.path), line: found.line, text: found.text }
+      }
+    }
+    if (best) signals[name] = { file: best.file, line: best.line, text: best.text }
+  }
+}
 
 const report = {
-  facts: readFacts(wave, bench),
+  facts,
+  signals,
   bench,
   // Relative to the report, because that is how the viewer finds the dump again.
   source: { vcd: relative(outDir, vcdPath) || basename(vcdPath), ...(logPath ? { log: basename(logPath) } : {}) },
@@ -54,10 +110,9 @@ mkdirSync(outDir, { recursive: true })
 const stem = basename(vcdPath, extname(vcdPath))
 const md = join(outDir, `${stem}.waveform.md`)
 const json = join(outDir, `${stem}.waveform.json`)
-writeFileSync(md, reportMarkdown(report))
+writeFileSync(md, reportMarkdown(report, lang))
 writeFileSync(json, reportJson(report))
 
-const { facts } = report
 const races = facts.drives.filter(d => d.onEdge > 0).length
 console.log(`${basename(vcdPath)}: ${facts.changes} changes, ${facts.signals} signals, to ${facts.end} ticks`)
 if (facts.clock?.period) console.log(`  clock   ${facts.clock.path} every ${facts.clock.period} ticks (${(facts.clock.hertz! / 1e6).toFixed(3)} MHz)`)

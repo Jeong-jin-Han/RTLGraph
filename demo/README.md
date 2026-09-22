@@ -92,7 +92,10 @@ it back into `waveform/<bench>.waveform.md` — measurements only: clock, reset,
 what was undefined after it, every handshake, one stretch per check. The
 `<bench>.waveform.json` beside it opens as a waveform view: open
 `demo/uart-p01/waveform/tb_uart_corner.waveform.json` from the Explorer and the
-run is there to walk, check by check. Reports live with the project; only the
+run is there to walk, check by check — each check linking to the testbench line
+that printed it, each signal name to the RTL line that drives it. The demo's
+reports are written in Korean (`RTLGRAPH_LANG=ko`), which is also what the
+`rtlgraph.language` setting does for the view. Reports live with the project; only the
 compiler's scratch goes to `.rtlgraph-build/`. It finds the benches (`tb/given/` for whatever the course
 handed out, `tb/mine/` for the project's own), swaps one at a time into the
 project folder, compiles it against every other `.v` — `.base/` included — and

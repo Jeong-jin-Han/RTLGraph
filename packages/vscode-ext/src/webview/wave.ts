@@ -4,7 +4,7 @@
 //
 // The host does the reading; this file only draws and navigates.
 
-import type { Marker, Trace, WaveView } from '@rtlgraph/wave'
+import type { Marker, Trace, WaveView, Words } from '@rtlgraph/wave'
 
 declare function acquireVsCodeApi(): { postMessage(message: unknown): void }
 const vscode = acquireVsCodeApi()
@@ -14,6 +14,11 @@ const LABELS = 190
 const AXIS = 22
 
 let view: WaveView | undefined
+let words: Words | undefined
+const say = <K extends keyof Words>(key: K, fallback: string): string => {
+  const said = words?.[key]
+  return typeof said === 'string' ? said : fallback
+}
 let from = 0
 let to = 1
 let active = 'init'
@@ -28,19 +33,22 @@ const spacer = document.createElement('span')
 spacer.className = 'spacer'
 const buttons = document.createElement('span')
 buttons.className = 'group'
-for (const [label, hint, run] of [
-  ['⟨', 'the place before this one (←)', () => step(-1)],
-  ['⟩', 'the next place (→)', () => step(1)],
-  ['−', 'zoom out', () => zoom(1.6)],
-  ['+', 'zoom in', () => zoom(1 / 1.6)],
-  ['all', 'the whole run', () => { from = 0; to = view?.end ?? 1; draw() }],
-] as const) {
+const bar: { label: string; hint: keyof Words; fallback: string; run: () => void }[] = [
+  { label: '⟨', hint: 'previousPlace', fallback: 'the place before this one (←)', run: () => step(-1) },
+  { label: '⟩', hint: 'nextPlace', fallback: 'the next place (→)', run: () => step(1) },
+  { label: '−', hint: 'zoomOut', fallback: 'zoom out', run: () => zoom(1.6) },
+  { label: '+', hint: 'zoomIn', fallback: 'zoom in', run: () => zoom(1 / 1.6) },
+  { label: '⇔', hint: 'wholeRun', fallback: 'the whole run', run: () => { from = 0; to = view?.end ?? 1; draw() } },
+]
+const barButtons = bar.map(item => {
   const button = document.createElement('button')
-  button.textContent = label
-  button.title = hint
-  button.addEventListener('click', run)
+  button.textContent = item.label
+  button.addEventListener('click', item.run)
   buttons.append(button)
-}
+  return button
+})
+const retitleBar = () => barButtons.forEach((button, i) => { button.title = say(bar[i].hint, bar[i].fallback) })
+retitleBar()
 toolbar.append(title, spacer, buttons)
 
 const middle = document.createElement('div')
@@ -95,7 +103,10 @@ function draw(): void {
   const x = (time: number) => ((time - from) / span) * width
 
   title.textContent = `${atTime(from)} → ${atTime(to)}` +
-    (view.omitted > 0 ? `  ·  ${view.traces.length} of ${view.traces.length + view.omitted} signals` : '')
+    (view.omitted > 0
+      ? `  ·  ${words ? words.ofSignals(view.traces.length, view.traces.length + view.omitted)
+        : `${view.traces.length} of ${view.traces.length + view.omitted} signals`}`
+      : '')
 
   // the rail: where to go
   rail.replaceChildren(...view.markers.map(marker => {
@@ -114,18 +125,57 @@ function draw(): void {
       line.textContent = note
       item.append(line)
     }
+    // Where to look, inside the stretch: each instant is a button that puts the
+    // cursor on it, because "the transfer" is a moment, not a paragraph.
+    if (marker.focus.length > 0) {
+      const moments = document.createElement('div')
+      moments.className = 'moments'
+      for (const moment of marker.focus) {
+        const button = document.createElement('button')
+        button.className = 'moment'
+        button.textContent = `${atTime(moment.at)} · ${moment.what}`
+        button.title = moment.signal ?? ''
+        button.addEventListener('click', event => {
+          event.stopPropagation()
+          look(marker, moment.at)
+        })
+        moments.append(button)
+      }
+      item.append(moments)
+    }
+    // And where it came from: the line of the testbench that printed it.
+    if (marker.source) {
+      const code = document.createElement('button')
+      code.className = 'source'
+      code.textContent = `${marker.source.file.split('/').pop()}:${marker.source.line}`
+      code.title = marker.source.text
+      code.addEventListener('click', event => {
+        event.stopPropagation()
+        vscode.postMessage({ type: 'openCode', file: marker.source!.file, line: marker.source!.line })
+      })
+      item.append(code)
+    }
     item.addEventListener('click', () => show(marker))
     return item
   }))
 
   // the labels, with the value under the cursor when there is one
+  const watched = new Set(view.markers.find(m => m.id === active)?.watch ?? [])
   labels.replaceChildren(...[axisLabel(), ...view.traces.map(trace => {
     const row = document.createElement('div')
-    row.className = `wave-label${trace.bench ? ' bench' : ''}`
-    const name = document.createElement('span')
-    name.className = 'name'
+    row.className = `wave-label${trace.bench ? ' bench' : ''}` +
+      (watched.size > 0 && !watched.has(trace.path) ? ' aside' : '')
+    // The trace's own way back to the code: not every instant, but the line
+    // that drives this signal, which is the jump a reader actually wants.
+    const name = document.createElement(trace.source ? 'button' : 'span')
+    name.className = trace.source ? 'name to-code' : 'name'
     name.textContent = trace.name
-    name.title = trace.path
+    name.title = trace.source ? `${trace.source.file}:${trace.source.line}  ${trace.source.text}` : trace.path
+    if (trace.source) {
+      name.addEventListener('click', () => vscode.postMessage({
+        type: 'openCode', file: trace.source!.file, line: trace.source!.line,
+      }))
+    }
     row.append(name)
     if (cursor !== undefined) {
       const value = document.createElement('span')
@@ -196,6 +246,19 @@ function draw(): void {
     segment(previous, x(startedAt), width)
   })
 
+  // The stretch this place covers, and the instants inside it worth a look.
+  const place = view.markers.find(m => m.id === active)
+  if (place) {
+    if (place.from > from || place.to < to) {
+      add('rect', { x: x(place.from), y: AXIS, width: Math.max(x(place.to) - x(place.from), 1), height: height - AXIS, class: 'wave-window' })
+    }
+    for (const moment of place.focus) {
+      if (moment.at < from || moment.at > to) continue
+      add('line', { x1: x(moment.at), y1: AXIS, x2: x(moment.at), y2: height, class: 'wave-moment' })
+      add('text', { x: x(moment.at) + 3, y: AXIS + 11, class: 'wave-moment-label' }, moment.what)
+    }
+  }
+
   if (cursor !== undefined && cursor >= from && cursor <= to) {
     add('line', { x1: x(cursor), y1: 0, x2: x(cursor), y2: height, class: 'wave-cursor' })
   }
@@ -205,7 +268,7 @@ function draw(): void {
 function axisLabel(): HTMLElement {
   const row = document.createElement('div')
   row.className = 'wave-label axis'
-  row.textContent = cursor === undefined ? 'hover for values' : atTime(cursor)
+  row.textContent = cursor === undefined ? say('hoverForValues', 'hover for values') : atTime(cursor)
   return row
 }
 
@@ -222,6 +285,13 @@ function show(marker: Marker): void {
   to = Math.min(marker.to + pad, view?.end ?? marker.to + pad)
   if (to <= from) to = from + 1
   active = marker.id
+  draw()
+}
+
+/** The same stretch, with the cursor parked on one instant inside it. */
+function look(marker: Marker, at: number): void {
+  show(marker)
+  cursor = at
   draw()
 }
 
@@ -272,9 +342,11 @@ window.addEventListener('keydown', event => {
 window.addEventListener('resize', () => draw())
 
 window.addEventListener('message', event => {
-  const message = event.data as { type?: string; view?: WaveView; message?: string }
+  const message = event.data as { type?: string; view?: WaveView; words?: Words; message?: string }
   if (message?.type === 'wave' && message.view) {
     view = message.view
+    words = message.words
+    retitleBar()
     notice.hidden = true
     const first = view.markers[0]
     if (first) show(first)

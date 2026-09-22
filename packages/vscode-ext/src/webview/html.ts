@@ -111,13 +111,23 @@ body.editing #stage g.wire { cursor: pointer; }
 #wave-rail .what { font-weight: 600; color: #111827; }
 #wave-rail .when { font-family: ui-monospace, monospace; color: #6b7280; }
 #wave-rail .note { color: #6b7280; }
+#wave-rail .moments { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 3px; }
+#wave-rail .moment { font: 11px ui-monospace, monospace; padding: 1px 6px; border: 1px solid #e5e7eb; border-radius: 10px; background: #ffffff; color: #b45309; cursor: pointer; }
+#wave-rail .moment:hover { border-color: #f59e0b; background: #fffbeb; }
+#wave-rail .source { margin-top: 4px; font: 11px ui-monospace, monospace; padding: 1px 6px; border: 1px solid #dbeafe; border-radius: 4px; background: #eff6ff; color: #1d4ed8; cursor: pointer; }
+#wave-rail .source:hover { border-color: #93c5fd; }
 #wave-canvas { flex: 1; display: flex; min-width: 0; overflow: auto; }
 #wave-labels { width: 190px; flex: none; border-right: 1px solid #e5e7eb; background: #ffffff; }
 #wave-labels .wave-label { height: 26px; display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 0 8px; border-bottom: 1px solid #f3f4f6; font-family: ui-monospace, monospace; color: #374151; overflow: hidden; }
 #wave-labels .wave-label.axis { height: 22px; font-family: system-ui, sans-serif; color: #6b7280; border-bottom: 1px solid #e5e7eb; }
 #wave-labels .wave-label.bench .name { color: #1d4ed8; }
 #wave-labels .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* A name that knows its line of RTL is a way in, so it looks like one. */
+#wave-labels button.name { font: inherit; padding: 0; border: 0; background: none; color: #1d4ed8; cursor: pointer; text-align: left; text-decoration: underline dotted #93c5fd; text-underline-offset: 2px; }
+#wave-labels button.name:hover { color: #1e40af; text-decoration-style: solid; }
 #wave-labels .value { color: #b45309; }
+/* Signals that did not move in the chosen stretch: still drawn, but out of the way. */
+#wave-labels .wave-label.aside { opacity: 0.45; }
 #wave-plot { flex: 1; min-width: 0; cursor: crosshair; }
 #wave-plot .wave-line { stroke: #2563eb; stroke-width: 1.5; fill: none; }
 #wave-plot .wave-bus { stroke: #2563eb; stroke-width: 1.2; fill: #eff6ff; }
@@ -127,6 +137,9 @@ body.editing #stage g.wire { cursor: pointer; }
 #wave-plot .wave-grid { stroke: #eef2f7; stroke-width: 1; }
 #wave-plot .wave-tick { fill: #6b7280; font: 10px system-ui, sans-serif; }
 #wave-plot .wave-cursor { stroke: #f59e0b; stroke-width: 1; }
+#wave-plot .wave-window { fill: #eff6ff; opacity: 0.6; }
+#wave-plot .wave-moment { stroke: #f59e0b; stroke-width: 1; stroke-dasharray: 3 3; }
+#wave-plot .wave-moment-label { fill: #b45309; font: 10px system-ui, sans-serif; }
 [hidden] { display: none !important; }
 `
 
