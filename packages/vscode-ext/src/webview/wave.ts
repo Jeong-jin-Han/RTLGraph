@@ -303,13 +303,9 @@ function draw(): void {
         })
         node.addEventListener('mouseleave', () => { hot = undefined; hotTrace = undefined; draw() })
       }
-      // Only the one under the hand says what it is, and it says it where there
-      // is room: to the right unless that would run off the edge.
-      if (!lit) continue
-      const wide = textWidth(moment.what) + 10
-      const left = badgeX + size + 4 + wide > width ? Math.max(badgeX - 4 - wide, 0) : badgeX + size + 4
-      add('rect', { x: left, y, width: wide, height: size, rx: 3, class: 'wave-moment-box hot' })
-      add('text', { x: left + 5, y: y + 11, class: 'wave-moment-label hot' }, moment.what)
+      // No words here, ever. Text that appears under the hand moves the eye to
+      // the wrong place and covers the very trace being pointed at; the wording
+      // lives in the rail, where the matching entry lights up instead.
     }
   }
 
@@ -322,13 +318,6 @@ function draw(): void {
 /** A place's instants in time order — the order their badges are numbered in. */
 function numbered(place: Marker): Marker['focus'] {
   return [...place.focus].sort((a, b) => a.at - b.at)
-}
-
-/** Roughly how wide a label draws — Hangul is about twice a Latin letter. */
-function textWidth(text: string): number {
-  let width = 0
-  for (const ch of text) width += ch.codePointAt(0)! > 0x1100 ? 10 : 5.4
-  return width
 }
 
 function axisLabel(): HTMLElement {

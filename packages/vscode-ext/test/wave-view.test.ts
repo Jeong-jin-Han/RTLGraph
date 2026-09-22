@@ -106,8 +106,8 @@ test('the badges that mark instants never sit on top of one another', { skip: !e
   const badges = plot.findAll(node => node.attributes.get('class')?.startsWith('wave-badge') === true && node.tag === 'rect')
   assert.ok(badges.length >= 2, 'the check has several instants worth marking')
 
-  // the plot carries numbers, not sentences: the words appear on hover only
-  assert.equal(plot.findAll(n => n.attributes.get('class')?.includes('wave-moment-box') === true).length, 0)
+  // the plot carries numbers and nothing else: the wording lives in the rail
+  assert.equal(plot.findAll(n => n.attributes.get('class')?.includes('wave-moment-label') === true).length, 0)
   const numbers = plot.findAll(n => n.attributes.get('class')?.startsWith('wave-badge-number') === true)
   assert.deepEqual(numbers.map(n => n.textContent), badges.map((_, i) => String(i + 1)), 'numbered in time order')
 
@@ -122,10 +122,15 @@ test('the badges that mark instants never sit on top of one another', { skip: !e
     }
   }
 
-  // pointing at a badge is the other way in: the words appear beside it
+  // pointing at a badge is the other way in: the plot stays wordless and the
+  // entry that names it lights up in the rail
   badges[0].dispatch('mouseenter', {})
-  assert.equal(plot.findAll(n => n.attributes.get('class') === 'wave-moment-label hot').length, 1,
-    'the badge under the hand spells itself out')
+  const after = view.byId('wave-plot')!
+  assert.equal(after.findAll(n => n.attributes.get('class')?.includes('wave-moment-label') === true).length, 0,
+    'no words appear over the traces')
+  assert.equal(after.findAll(n => n.attributes.get('class') === 'wave-badge hot').length, 1, 'the badge itself lights')
+  assert.ok(view.byId('wave-rail')!.findAll(n => n.attributes.get('class') === 'moment hot').length === 1,
+    'and so does the line that spells it out')
 })
 
 // Pointing at something should say which line it means, without moving the view

@@ -144,13 +144,10 @@ body.editing #stage g.wire { cursor: pointer; }
 #wave-plot .wave-window { fill: #eff6ff; opacity: 0.6; }
 #wave-plot .wave-moment { stroke: #f59e0b; stroke-width: 1; stroke-dasharray: 3 3; opacity: 0.55; }
 #wave-plot .wave-moment.hot { stroke-width: 2; stroke-dasharray: none; opacity: 1; }
-#wave-plot .wave-moment-box.hot { fill: #fffbeb; stroke: #f59e0b; stroke-width: 1; }
 #wave-plot .wave-badge { fill: #fef3c7; stroke: #f59e0b; stroke-width: 1; cursor: pointer; }
 #wave-plot .wave-badge.hot { fill: #f59e0b; }
 #wave-plot .wave-badge-number { fill: #92400e; font: 600 10px system-ui, sans-serif; text-anchor: middle; cursor: pointer; pointer-events: none; }
 #wave-plot .wave-badge-number.hot { fill: #ffffff; }
-#wave-plot .wave-moment-label { fill: #b45309; font: 10px system-ui, sans-serif; }
-#wave-plot .wave-moment-label.hot { fill: #92400e; font-weight: 600; }
 /* The row the hand is over, in the plot and in the labels beside it. */
 #wave-plot .wave-row-hot { fill: #fef3c7; opacity: 0.45; }
 #wave-plot .wave-line.hot { stroke: #b45309; stroke-width: 2.2; }
