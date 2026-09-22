@@ -96,7 +96,8 @@ export async function run(): Promise<void> {
 
   // The waveform view: a report opens as a drawing, and the drawing knows the
   // places worth going to — how it came up, then a marker per check.
-  const waveReport = join(dirname(dirname(graphFile)), 'uart-p01/waveform/tb_uart_corner.waveform.json')
+  const waveReport = join(dirname(dirname(graphFile)),
+    `uart-p01/waveform/${process.env.RTLGRAPH_SHOT_BENCH ?? 'tb_uart_corner'}.waveform.json`)
   if (existsSync(waveReport)) {
     // RTLGRAPH_SHOT_LANG lets a screenshot show the other language without
     // restarting VS Code in a different locale.
@@ -106,7 +107,7 @@ export async function run(): Promise<void> {
     const waveDoc = await vscode.workspace.openTextDocument(vscode.Uri.file(waveReport))
     await vscode.commands.executeCommand('vscode.openWith', waveDoc.uri, 'rtlgraph.waveform')
     await sleep(1500)
-    const tab = vscode.window.tabGroups.all.flatMap(g => g.tabs).find(t => t.label === 'tb_uart_corner.waveform.json')
+    const tab = vscode.window.tabGroups.all.flatMap(g => g.tabs).find(t => t.label.endsWith('.waveform.json'))
     assert.ok(tab, 'the report opens in a tab of its own name')
     assert.equal((tab?.input as { viewType?: string })?.viewType?.endsWith('rtlgraph.waveform'), true,
       'and it opens as the waveform view rather than as JSON')

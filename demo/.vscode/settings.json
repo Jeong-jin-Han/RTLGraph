@@ -1,0 +1,6 @@
+{
+  // The demo projects are read in Korean: the waveform view and what
+  // `run-tb.sh --wave` writes. Names from the code are never translated.
+  // Set `rtlgraph.language` to "english" or "auto" to see the other side.
+  "rtlgraph.language": "korean"
+}

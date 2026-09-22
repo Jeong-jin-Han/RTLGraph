@@ -6,6 +6,9 @@
 
 import type { Marker, Trace, WaveView, Words } from '@rtlgraph/wave'
 
+/** Only the phrases that are plain strings reach a webview — see waveView.ts. */
+type Said = Partial<Record<keyof Words, string>>
+
 declare function acquireVsCodeApi(): { postMessage(message: unknown): void }
 const vscode = acquireVsCodeApi()
 
@@ -14,11 +17,8 @@ const LABELS = 190
 const AXIS = 22
 
 let view: WaveView | undefined
-let words: Words | undefined
-const say = <K extends keyof Words>(key: K, fallback: string): string => {
-  const said = words?.[key]
-  return typeof said === 'string' ? said : fallback
-}
+let words: Said | undefined
+const say = (key: keyof Words, fallback: string): string => words?.[key] ?? fallback
 let from = 0
 let to = 1
 let active = 'init'
@@ -103,10 +103,7 @@ function draw(): void {
   const x = (time: number) => ((time - from) / span) * width
 
   title.textContent = `${atTime(from)} → ${atTime(to)}` +
-    (view.omitted > 0
-      ? `  ·  ${words ? words.ofSignals(view.traces.length, view.traces.length + view.omitted)
-        : `${view.traces.length} of ${view.traces.length + view.omitted} signals`}`
-      : '')
+    (view.omitted > 0 ? `  ·  ${view.traces.length} / ${view.traces.length + view.omitted}` : '')
 
   // the rail: where to go
   rail.replaceChildren(...view.markers.map(marker => {
@@ -342,7 +339,7 @@ window.addEventListener('keydown', event => {
 window.addEventListener('resize', () => draw())
 
 window.addEventListener('message', event => {
-  const message = event.data as { type?: string; view?: WaveView; words?: Words; message?: string }
+  const message = event.data as { type?: string; view?: WaveView; words?: Said; message?: string }
   if (message?.type === 'wave' && message.view) {
     view = message.view
     words = message.words

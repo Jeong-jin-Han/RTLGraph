@@ -104,18 +104,37 @@ function chooseTraces(wave: Waveform, facts: WaveFacts, limit: number): { traces
     })
   }
   const distinct = [...drawn.values()]
-  return { traces: distinct.slice(0, limit), omitted: Math.max(distinct.length - limit, 0) }
+  // A design can hold two `bit_counter`s — one per module — and two rows with
+  // the same label are two rows nobody can tell apart. Whoever shares a name
+  // wears the scope that distinguishes it.
+  const times = new Map<string, number>()
+  for (const trace of distinct) times.set(trace.name, (times.get(trace.name) ?? 0) + 1)
+  const labelled = distinct.map(trace => times.get(trace.name)! > 1
+    ? { ...trace, name: trace.path.split('/').slice(-2).join('/') }
+    : trace)
+  return { traces: labelled.slice(0, limit), omitted: Math.max(labelled.length - limit, 0) }
 }
 
 /** How the design came up, and then one marker per check the bench printed. */
-function markersFor(facts: WaveFacts, lang: Lang): Marker[] {
+function markersFor(facts: WaveFacts, traces: readonly Trace[], lang: Lang): Marker[] {
   const w = wordsIn(lang)
   const at = facts.reset?.releasedAt
   const settled = facts.init.settledAt
   // Coming up ends when the last thing that was going to be defined is defined:
   // the reset release on its own is too early to see the design do anything.
   const defined = facts.init.unknownAfterReset.map(u => u.until).filter((t): t is number => t !== undefined)
-  const initTo = Math.max(settled ?? 0, at ?? 0, ...defined) || Math.round(facts.end / 20)
+  // …and then far enough to see the design do the first thing it does. Ending at
+  // the reset release frames a flat 40 ns of a 4 µs run, which reads as a broken
+  // view rather than as an uneventful one.
+  const after = at ?? 0
+  const firstMove = Math.min(...traces
+    .map(t => t.points.find(([time]) => time > after + 1)?.[0] ?? Infinity))
+  const settledBy = Math.max(settled ?? 0, after, ...defined)
+  const initTo = Math.max(
+    settledBy,
+    Number.isFinite(firstMove) ? firstMove : 0,
+    Math.round(facts.end / 20),
+  ) || Math.round(facts.end / 20)
   const notes: string[] = []
   if (at !== undefined) notes.push(w.resetReleased(facts.reset?.path ?? '', String(at)).replace(/[`*]/g, ''))
   notes.push(facts.init.unknownAfterReset.length === 0
@@ -159,7 +178,7 @@ export function buildView(wave: Waveform, facts: WaveFacts, limit = 20, lang: La
     timescale: wave.timescale,
     end: wave.end,
     traces,
-    markers: markersFor(facts, lang),
+    markers: markersFor(facts, traces, lang),
     omitted,
   }
 }

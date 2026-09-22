@@ -62,6 +62,12 @@ extension, so each line is something that broke once.
   parsing Verilog), and each signal's name opens the line of RTL that drives it
   — a clocked assignment before a continuous one before a declaration, and the
   design before the bench that merely declares the same name.
+- The view opens on something that moves: a report whose reset releases at 40 ns
+  used to frame those 40 ns of a 4 µs run and read as broken. Two signals of the
+  same name (a `bit_counter` per module) now wear the scope that tells them
+  apart, and a webview test drives both demo reports through the real bundle,
+  because a view that comes up blank looks identical to one that has nothing to
+  say.
 - **`rtlgraph.language`**: `auto` (VS Code's own), `english` or `korean`. It
   changes RTLGraph's wording in the waveform view and in what `--wave` writes
   (`RTLGRAPH_LANG=ko` for the script on its own). Signal names, times, file

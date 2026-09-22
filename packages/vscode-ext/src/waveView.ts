@@ -26,6 +26,18 @@ interface StoredReport {
   source?: { vcd?: string }
 }
 
+/**
+ * The wording a webview can be given. Some phrases are functions — they take a
+ * count, a path, a time — and a function cannot cross into a webview: the whole
+ * message is dropped, and the view comes up blank with nothing in any log. Only
+ * the plain ones travel; the rest are used here, where they can still be called.
+ */
+function sayable(lang: Lang): Record<string, string> {
+  return Object.fromEntries(
+    Object.entries(wordsIn(lang)).filter((pair): pair is [string, string] => typeof pair[1] === 'string'),
+  )
+}
+
 export class WaveViewProvider implements vscode.CustomTextEditorProvider {
   static readonly viewType = 'rtlgraph.waveform'
 
@@ -66,9 +78,20 @@ export class WaveViewProvider implements vscode.CustomTextEditorProvider {
         ? 'en'
         : vscode.env.language)
     const send = async () => {
-      const view = await this.read(document, lang)
+      let view: WaveView | undefined
+      try {
+        view = await this.read(document, lang)
+      } catch (err) {
+        // A dump that cannot be read is worth saying out loud; the view would
+        // otherwise come up blank with nothing anywhere to explain it.
+        void vscode.window.showErrorMessage(`RTLGraph: could not read this waveform — ${(err as Error).message}`)
+        return
+      }
+      // Never awaited. The promise settles when the webview answers, and
+      // awaiting it here means resolveCustomTextEditor never returns if it does
+      // not — the editor then hangs half-open, which is how this was found.
       void panel.webview.postMessage(view
-        ? { type: 'wave', view, words: wordsIn(lang) }
+        ? { type: 'wave', view, words: sayable(lang) }
         : { type: 'waveError', message: wordsIn(lang).noDump(document.uri.path.split('/').pop() ?? '') })
     }
     const watcher = vscode.workspace.onDidSaveTextDocument(saved => {
