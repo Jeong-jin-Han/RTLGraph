@@ -147,7 +147,12 @@ body.editing #stage g.wire { cursor: pointer; }
 /* Signals that did not move in the chosen stretch: still drawn, but out of the way. */
 #wave-labels .wave-label.aside { opacity: 0.45; }
 #wave-labels .wave-label.hot { background: #fffbeb; opacity: 1; }
-#wave-plot { flex: 1; min-width: 0; cursor: crosshair; }
+/* Dragging pans the view; without this the browser treats it as a text
+   selection and sweeps up every value and tick label on the way. The rail keeps
+   its selection — the writing there is meant to be copied. */
+#wave-plot { flex: 1; min-width: 0; cursor: crosshair; user-select: none; -webkit-user-select: none; touch-action: none; }
+#wave-plot.panning { cursor: grabbing; }
+#wave-labels { user-select: none; -webkit-user-select: none; }
 #wave-plot .wave-line { stroke: #2563eb; stroke-width: 1.5; fill: none; }
 #wave-plot .wave-bus { stroke: #2563eb; stroke-width: 1.2; fill: #eff6ff; }
 #wave-plot .wave-unknown { fill: #fee2e2; stroke: #f87171; stroke-width: 1; }

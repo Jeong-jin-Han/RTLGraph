@@ -500,8 +500,17 @@ plot.addEventListener('wheel', event => {
 }, { passive: false })
 
 let dragging: { x: number; from: number; to: number } | undefined
-plot.addEventListener('mousedown', event => { dragging = { x: event.clientX, from, to } })
-window.addEventListener('mouseup', () => { dragging = undefined })
+plot.addEventListener('mousedown', event => {
+  // Stop the browser starting a text selection: a pan would otherwise drag every
+  // tick and bus value along with it, highlighted.
+  event.preventDefault()
+  dragging = { x: event.clientX, from, to }
+  plot.classList.add('panning')
+})
+window.addEventListener('mouseup', () => {
+  dragging = undefined
+  plot.classList.remove('panning')
+})
 window.addEventListener('mousemove', event => {
   if (!dragging || !view) return
   const box = plot.getBoundingClientRect()

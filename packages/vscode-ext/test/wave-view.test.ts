@@ -253,3 +253,16 @@ test('a card says how the stretch was driven, not only what came of it', { skip:
   const steps = rail.findAll(n => n.attributes.get('class') === 'step').map(n => n.textContent)
   assert.ok(steps.some(step => step.includes('frame(')), `the driving statements are there — got ${steps.slice(0, 4).join(' | ')}`)
 })
+
+// Dragging pans. If the browser is allowed to treat it as a text selection, the
+// whole plot lights up blue and the values come along for the ride.
+test('dragging the plot pans it rather than selecting the writing on it', { skip: !existsSync(BUNDLE) && 'run `npm run build -w rtlgraph`' }, async t => {
+  if (!existsSync(join(DEMO, 'tb_uart_corner.waveform.json'))) return t.skip('demo/uart-p01 is not here')
+  const view = await webview()
+  view.send(payload('tb_uart_corner'))
+  const plot = view.byId('wave-plot')!
+
+  const down = plot.dispatch('mousedown', { clientX: 200 })
+  assert.equal(down.defaultPrevented, true, 'the selection never starts')
+  assert.ok(plot.attributes.get('class')?.includes('panning'), 'and the hand says it is panning')
+})
