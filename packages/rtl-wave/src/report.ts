@@ -1,5 +1,6 @@
-// The measurements, written out twice: once for a person (`waveform.md`) and
-// once for an agent (`waveform.json`). Neither says why anything happened —
+// The measurements, written out twice: once for a person
+// (`<bench>.waveform.md`) and once for an agent and the viewer
+// (`<bench>.waveform.json`). Neither says why anything happened —
 // that is what `.prompt/rtlgraph/waveform/*.md` asks an agent to add, against
 // the code, with line numbers.
 

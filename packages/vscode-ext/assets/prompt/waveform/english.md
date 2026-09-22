@@ -1,6 +1,6 @@
 PROJECT_ROOT_ABSOLUTE_PATH = <PROJECT_ROOT_ABSOLUTE_PATH>
 PROJECT_FOLDER = PROJECT_ROOT_ABSOLUTE_PATH
-WAVEFORM = <leave empty to use every waveform.json under .agent/rtlgraph/tb-build/, or name one>
+WAVEFORM = <leave empty to read every waveform/*.waveform.json in the project, or name one>
 SPEC_DOCUMENT = <leave empty, or the path of the brief this design was asked for>
 
 A simulation has run and something measured it. Your job is the half a machine
@@ -10,14 +10,14 @@ PROJECT_FOLDER/.agent/rtlgraph/SPEC.md and
 PROJECT_FOLDER/.agent/rtlgraph/ENVIRONMENT.md are already prepared for you —
 read both, and follow "Workflow W — Waveform → why it passed".
 
-If no waveform.json exists yet, make one: `.agent/rtlgraph/run-tb.sh --wave`
-runs the benches, dumps a waveform without editing any testbench, and writes
-`waveform.md` and `waveform.json` beside the build artefacts. Do not edit a
+If no report exists yet, make one: `.agent/rtlgraph/run-tb.sh --wave` runs the
+benches, dumps a waveform without editing any testbench, and writes
+`waveform/<bench>.waveform.md` and `waveform/<bench>.waveform.json`. Do not edit a
 testbench to make it dump — the runner adds a module that does it.
 
 ## What you are given, and what you must not do with it
 
-`waveform.json` holds **measurements**: the clock's period, when the reset was
+A `.waveform.json` holds **measurements**: the clock's period, when the reset was
 released, which signals were still `x` afterwards, when each handshake was
 taken and how long it waited, and the run cut into stretches — one per line the
 testbench printed with a time.
@@ -33,7 +33,7 @@ testbench printed with a time.
   appears to say, write that down. The dump is what happened; your reading of
   the code is what you thought would happen.
 
-## Write `waveform-analysis.md` beside the report you read
+## Write `waveform/<bench>.waveform-analysis.md`, beside the report you read
 
 **1. How it comes up.** Start here, because a testbench that only checks outputs
 will pass while a register spends the opening microsecond undefined. From the

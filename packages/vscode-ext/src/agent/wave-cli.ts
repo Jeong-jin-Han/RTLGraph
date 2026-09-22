@@ -5,12 +5,16 @@
 //
 //   node .agent/rtlgraph/wave.mjs <dump.vcd> [--log <bench output>] [--out <folder>]
 //
-// Writes waveform.md (for a person) and waveform.json (for an agent) beside the
-// dump, or in --out. It measures; it never explains. The explanation is the job
-// of .prompt/rtlgraph/waveform/*.md, which reads waveform.json and the code.
+// Writes <bench>.waveform.md (for a person) and <bench>.waveform.json (for an
+// agent, and for the viewer) beside the dump, or in --out. The name comes from
+// the dump's, so a project with several benches gets one report each and the
+// editor tabs say which is which — the same habit as *.rtlgraph.json.
+//
+// It measures; it never explains. The explanation is the job of
+// .prompt/rtlgraph/waveform/*.md, which reads the .waveform.json and the code.
 
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs'
-import { basename, dirname, join, resolve } from 'node:path'
+import { basename, dirname, extname, join, relative, resolve } from 'node:path'
 import { parseVcd, readFacts, readBenchLog, reportMarkdown, reportJson } from '@rtlgraph/wave'
 
 const args = process.argv.slice(2)
@@ -42,12 +46,14 @@ const bench = logPath ? readBenchLog(readFileSync(resolve(logPath), 'utf8')) : [
 const report = {
   facts: readFacts(wave, bench),
   bench,
-  source: { vcd: basename(vcdPath), ...(logPath ? { log: basename(logPath) } : {}) },
+  // Relative to the report, because that is how the viewer finds the dump again.
+  source: { vcd: relative(outDir, vcdPath) || basename(vcdPath), ...(logPath ? { log: basename(logPath) } : {}) },
 }
 
 mkdirSync(outDir, { recursive: true })
-const md = join(outDir, 'waveform.md')
-const json = join(outDir, 'waveform.json')
+const stem = basename(vcdPath, extname(vcdPath))
+const md = join(outDir, `${stem}.waveform.md`)
+const json = join(outDir, `${stem}.waveform.json`)
 writeFileSync(md, reportMarkdown(report))
 writeFileSync(json, reportJson(report))
 

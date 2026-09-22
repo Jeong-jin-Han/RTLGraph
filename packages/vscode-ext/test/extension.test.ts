@@ -46,8 +46,9 @@ test('custom editor view types are consistent across manifest and providers', ()
     { filenamePattern: '*.rtlgraph-schematic.json' },
     { filenamePattern: '*.rtlgraph-fsm.json' },
   ])
-  // The waveform report a run writes, and nothing else — it is our own filename.
-  assert.deepEqual(manifest.contributes.customEditors[1].selector, [{ filenamePattern: '**/waveform.json' }])
+  // Named after the bench, with an extension of our own, so it lives with the
+  // project like every other RTLGraph file rather than inside .agent/.
+  assert.deepEqual(manifest.contributes.customEditors[1].selector, [{ filenamePattern: '*.waveform.json' }])
 })
 
 test('webview html locks scripts and styles to a nonce', () => {

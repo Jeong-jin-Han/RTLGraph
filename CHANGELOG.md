@@ -41,8 +41,9 @@ extension, so each line is something that broke once.
 - **`.agent/rtlgraph/run-tb.sh --wave`** dumps a waveform while the benches run.
   No testbench is edited to make it happen — a module beside it calls
   `$dumpvars` — which is what makes it usable on the bench you are marked with.
-- **`.agent/rtlgraph/wave.mjs`** reads the dump and writes `waveform.md` (for a
-  person) and `waveform.json` (for an agent): clock period and whether it
+- **`.agent/rtlgraph/wave.mjs`** reads the dump and writes
+  `waveform/<bench>.waveform.md` (for a person) and `<bench>.waveform.json` (for
+  an agent, and for the viewer) — with the project, not among the tools: clock period and whether it
   wobbles, when the reset let go and **what was still undefined afterwards**,
   every valid/ready transfer with what it waited and how long it was held, the
   signals that never moved, and the run cut into one stretch per check the bench
@@ -51,8 +52,8 @@ extension, so each line is something that broke once.
   other half: it asks an agent to explain *why* each check passed, against the
   code. Every number must come from the dump and every claim must cite
   `file.v:line`, so the analysis can be checked rather than believed.
-- **`waveform.json` opens as a waveform**, the way `*.rtlgraph.json` opens as a
-  schematic: places to go down the left (how it came up, then a check at a time,
+- **`*.waveform.json` opens as a waveform**, the way `*.rtlgraph.json` opens as
+  a schematic: places to go down the left (how it came up, then a check at a time,
   each with its measurements), traces on the right, ← and → to walk them, hover
   for values at an instant. One row per net, no clock, `x` in red.
 - Our own benches now print `[%0t]` before each line, which is what lets a check

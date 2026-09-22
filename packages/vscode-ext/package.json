@@ -81,7 +81,7 @@
         "displayName": "RTLGraph Waveform",
         "selector": [
           {
-            "filenamePattern": "**/waveform.json"
+            "filenamePattern": "*.waveform.json"
           }
         ],
         "priority": "default"

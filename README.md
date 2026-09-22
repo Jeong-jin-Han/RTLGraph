@@ -117,6 +117,10 @@ click rather than a memory test.
 > .agent/rtlgraph/run-tb.sh            runs the testbenches and says which passed
 > .agent/rtlgraph/make-submission.sh   collects the .v files to hand in, checks them, zips them
 > .agent/rtlgraph/wave.mjs             reads a simulation's dump and says what it measured
+>
+> Those are the tools. What a run produces belongs to the project, not to them:
+> `waveform/<bench>.waveform.json` (opens as a waveform), `.waveform.md` and the `.vcd` beside it,
+> with the compiler's scratch in `.rtlgraph-build/`.
 > .prompt/rtlgraph/rtlgraph/{korean,english}.md    existing RTL → RTLGraph
 > .prompt/rtlgraph/assignment/{korean,english}.md  the same, for a skeleton that may not be touched
 > .prompt/rtlgraph/rtl/{korean,english}.md         spec → RTL in the three-layer layout, then RTLGraph
@@ -129,13 +133,13 @@ click rather than a memory test.
 >
 > `.agent/rtlgraph/run-tb.sh --wave` closes the loop the other way. It dumps a waveform — adding a
 > module that calls `$dumpvars`, so no testbench is edited, the handed-out one included — and
-> `wave.mjs` turns the dump into `waveform.md`: clock period and whether it wobbles, when the reset
+> `wave.mjs` turns the dump into `waveform/<bench>.waveform.md`: clock period and whether it wobbles, when the reset
 > let go and what was **still undefined afterwards**, when each valid/ready transfer was taken and
 > how long it waited, and the run cut into one stretch per check the bench printed. Measurements
 > only. The reading of *why* is a separate job, for `.prompt/rtlgraph/waveform/*.md`, which is told
 > to take every number from the dump and cite `file.v:line` for every claim.
 >
-> And `waveform.json` opens as a **drawing**, not as JSON: the places worth going to down the left —
+> And a `*.waveform.json` opens as a **drawing**, not as JSON: the places worth going to down the left —
 > how the design came up, then one per check the bench printed, each with what was measured there —
 > and the traces on the right. Click a place, or walk them with ← and →; hover for the value of
 > every signal at that instant. One row per net (a port either side of a boundary is one wire, not

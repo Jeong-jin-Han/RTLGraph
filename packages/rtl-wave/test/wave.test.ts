@@ -203,12 +203,13 @@ test('a real dump, from iverilog, through the shipped reader', t => {
   writeFileSync(join(dir, 'bench.log'), printed)
 
   execFileSync(process.execPath, [cli, join(dir, 'wave.vcd'), '--log', join(dir, 'bench.log'), '--out', dir], { encoding: 'utf8' })
-  const report = JSON.parse(readFileSync(join(dir, 'waveform.json'), 'utf8'))
+  // named after the dump, so several benches do not overwrite one another
+  const report = JSON.parse(readFileSync(join(dir, 'wave.waveform.json'), 'utf8'))
   assert.ok(report.facts.clock.period > 0, 'a clock was found and measured')
   assert.equal(report.facts.clock.periods.length, 1, 'and it does not jitter')
   assert.ok(report.facts.changes > 100)
   assert.ok(report.bench.some((line: { text: string }) => line.text.includes('PASS')), 'the bench log came along')
-  assert.match(readFileSync(join(dir, 'waveform.md'), 'utf8'), /^# What the waveform says/)
+  assert.match(readFileSync(join(dir, 'wave.waveform.md'), 'utf8'), /^# What the waveform says/)
 })
 
 test('the view picks what a screen can hold, and what a check is about', () => {

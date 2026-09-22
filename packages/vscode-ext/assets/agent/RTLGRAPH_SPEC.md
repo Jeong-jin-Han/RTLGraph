@@ -449,8 +449,10 @@ rule is that **restructuring and new behaviour never happen in the same step**.
 ## Workflow W — Waveform → why it passed
 
 Use when a simulation has run and someone wants to know *why* it behaved as it did — most often
-after `.agent/rtlgraph/run-tb.sh --wave`, which writes `waveform.md` (for a person) and
-`waveform.json` (for you) beside the build artefacts.
+after `.agent/rtlgraph/run-tb.sh --wave`, which writes
+`<project>/waveform/<bench>.waveform.md` (for a person) and `<bench>.waveform.json` (for you, and
+for the viewer). They sit with the project, like every other RTLGraph file — never inside
+`.agent/`, which holds only what the copy command put there.
 
 The division of labour is the whole point of this workflow:
 
@@ -461,7 +463,7 @@ The division of labour is the whole point of this workflow:
 
 Rules that keep the two apart:
 
-1. **Every number you state comes from `waveform.json`.** Never round, never re-derive from the
+1. **Every number you state comes from the `.waveform.json`.** Never round, never re-derive from the
    design's parameters, never write a time the dump does not contain. If a number you expected is
    missing from the measurements, say it is missing.
 2. **Every claim about behaviour cites code**, as `file.v:line` or `file.v:line-line`. "The byte is
@@ -470,14 +472,14 @@ Rules that keep the two apart:
 3. **Initialization comes first.** A testbench that only checks outputs will pass while a register
    spends the opening microsecond undefined. Say what the reset actually defines, which signals the
    measurements list as still `x` afterwards, and — from the code — whether that matters.
-4. **One section per check.** `waveform.json` cuts the run into stretches, one per timestamped line
+4. **One section per check.** The `.waveform.json` cuts the run into stretches, one per timestamped line
    the bench printed. For each: what the bench claimed, what the wires did in that stretch, and the
    path through the code that connects them. Name the lines that would have to be wrong for the
    check to fail — that is what makes the analysis worth reading twice.
 5. **Disagreements are findings.** If the dump does not match what the code appears to say, write
    that down rather than smoothing it over. The dump is what happened.
 
-Write `waveform-analysis.md` beside the report you read. Where NodeGraph is installed (see
+Write `<bench>.waveform-analysis.md` beside the report you read, in `waveform/`. Where NodeGraph is installed (see
 `.agent/rtlgraph/ENVIRONMENT.md`), the same content can carry `code` links per check.
 
 ---

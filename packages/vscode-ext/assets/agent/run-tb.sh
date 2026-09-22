@@ -22,7 +22,7 @@
 #
 #   --project DIR   the project root (default: the folder holding .agent)
 #   --sim NAME      iverilog | vivado  (default: whichever is installed)
-#   --out DIR       where build artefacts go (default: <project>/.agent/tb-build)
+#   --out DIR       where build scratch goes (default: <project>/.rtlgraph-build)
 #   --top NAME      the bench's top module, when the file holds more than one
 #   --wave          also dump a waveform and write what it says (waveform.md)
 #   --keep          leave the last bench swapped into the project folder
@@ -32,7 +32,8 @@
 #
 # With --wave the bench is never edited to make it dump: a small module beside
 # it calls $dumpvars, and .agent/rtlgraph/wave.mjs turns the dump into
-# waveform.md — measurements only. The "why did this pass?" reading is a
+# <project>/waveform/<bench>.waveform.{json,md} — measurements only, kept with
+# the project rather than among the tools. The "why did this pass?" reading is a
 # separate job, for .prompt/rtlgraph/waveform/*.md.
 #
 # Exit status is 0 only when every bench that ran reported PASS.
@@ -66,7 +67,7 @@ while [ $# -gt 0 ]; do
   esac
 done
 [ ${#want[@]} -eq 0 ] && want=(all)
-[ -n "$out" ] || out="$project/.agent/rtlgraph/tb-build"
+[ -n "$out" ] || out="$project/.rtlgraph-build"
 
 # ── the two folders ───────────────────────────────────────────────────────────
 # Made on every run, not only when they are missing: the point of the split is
@@ -158,7 +159,7 @@ while IFS= read -r f; do
   [ "$skip" = 1 ] && continue
   sources+=("$f")
 done < <(find "$project" \( -name .git -o -name node_modules -o -name 'xsim.dir' -o -path "$out" \
-    -o -name submission -o -name build -o -name dist -o -name .Xil \
+    -o -name submission -o -name build -o -name dist -o -name .Xil -o -name '.rtlgraph-build' \
     -o -name '*.sim' -o -name '*.cache' -o -name '*.runs' -o -name '*.hw' -o -name '*.ip_user_files' \) -prune -o \
   \( -name '*.v' -o -name '*.sv' \) -print | sort -t/ -k1 | awk '{print gsub(/\//,"/") "\t" $0}' | sort -n | cut -f2-)
 
@@ -278,11 +279,16 @@ for bench in "${benches[@]}"; do
     *) failed=$((failed + 1)) ;;               # bench often has no PASS line at all
   esac
   if [ "$wave" = 1 ] && [ -f "$work/wave.vcd" ]; then
+    # The dump and what was read off it belong to the project, beside the code,
+    # not inside the folder the tools were copied into.
+    waves="$project/waveform"
+    mkdir -p "$waves"
+    mv -f "$work/wave.vcd" "$waves/$(basename -- "${bench%.*}").vcd"
     reader="$here/wave.mjs"
     if [ -f "$reader" ] && command -v node >/dev/null 2>&1; then
-      node "$reader" "$work/wave.vcd" --log "$log" --out "$work" | sed 's/^/   /'
+      node "$reader" "$waves/$(basename -- "${bench%.*}").vcd" --log "$log" | sed 's/^/   /'
     else
-      echo "   (dump written to ${work#"$project"/}/wave.vcd; wave.mjs or node missing, so nothing read it)"
+      echo "   (dump written to waveform/$(basename -- "${bench%.*}").vcd; wave.mjs or node missing, so nothing read it)"
     fi
   fi
 

@@ -1,5 +1,7 @@
-// The waveform viewer: a `waveform.json` opens as a drawing rather than as
-// JSON, the way a `*.rtlgraph.json` does.
+// The waveform viewer: a `*.waveform.json` opens as a drawing rather than as
+// JSON, the way a `*.rtlgraph.json` does. Both are the project's own files and
+// live with the project — never inside `.agent/`, which holds what the Copy
+// Agent Spec command wrote and nothing else.
 //
 // The measurements live in the JSON; the shapes live in the dump beside it. The
 // host reads both and hands the webview one payload, because a webview cannot
@@ -52,7 +54,7 @@ export class WaveViewProvider implements vscode.CustomTextEditorProvider {
       const view = await this.read(document)
       void panel.webview.postMessage(view
         ? { type: 'wave', view }
-        : { type: 'waveError', message: `No dump beside ${document.uri.path.split('/').pop()} — run \`.agent/rtlgraph/run-tb.sh --wave\` again.` })
+        : { type: 'waveError', message: `No dump for ${document.uri.path.split('/').pop()} — run \`.agent/rtlgraph/run-tb.sh --wave\` again.` })
     }
     const watcher = vscode.workspace.onDidSaveTextDocument(saved => {
       if (saved.uri.toString() === document.uri.toString()) void send()

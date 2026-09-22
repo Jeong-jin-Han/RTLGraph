@@ -1,6 +1,6 @@
 PROJECT_ROOT_ABSOLUTE_PATH = <PROJECT_ROOT_ABSOLUTE_PATH>
 PROJECT_FOLDER = PROJECT_ROOT_ABSOLUTE_PATH
-WAVEFORM = <비워 두면 .agent/rtlgraph/tb-build/ 아래의 waveform.json 을 전부, 아니면 하나만 지정>
+WAVEFORM = <비워 두면 프로젝트의 waveform/*.waveform.json 전부, 아니면 하나만 지정>
 SPEC_DOCUMENT = <비워 두거나, 이 설계가 요구된 명세 문서 경로>
 
 시뮬레이션이 돌았고 누군가 그걸 측정해 뒀어. 네가 할 일은 기계가 못 하는 쪽이야 —
@@ -10,14 +10,14 @@ PROJECT_FOLDER/.agent/rtlgraph/SPEC.md 와
 PROJECT_FOLDER/.agent/rtlgraph/ENVIRONMENT.md 는 이미 준비돼 있어 — 둘 다 읽고,
 "Workflow W — Waveform → why it passed" 를 따라줘.
 
-아직 waveform.json 이 없으면 먼저 만들어: `.agent/rtlgraph/run-tb.sh --wave` 가
-벤치를 돌리고, **어떤 테스트벤치도 고치지 않고** 파형을 덤프하고, 빌드 산출물 옆에
-`waveform.md` 와 `waveform.json` 을 쓴다. 덤프를 위해 벤치를 고치지 마 — 실행기가
+아직 보고서가 없으면 먼저 만들어: `.agent/rtlgraph/run-tb.sh --wave` 가 벤치를 돌리고,
+**어떤 테스트벤치도 고치지 않고** 파형을 덤프해서 `waveform/<벤치>.waveform.md` 와
+`waveform/<벤치>.waveform.json` 을 쓴다. 덤프를 위해 벤치를 고치지 마 — 실행기가
 덤프 전용 모듈을 따로 붙인다.
 
 ## 무엇을 받았고, 그걸로 무엇을 하면 안 되는가
 
-`waveform.json` 에는 **측정값**이 들어 있어: 클럭 주기, 리셋이 풀린 시각, 그 뒤에도
+`.waveform.json` 에는 **측정값**이 들어 있어: 클럭 주기, 리셋이 풀린 시각, 그 뒤에도
 `x` 였던 신호, 핸드셰이크가 언제 성립했고 얼마나 기다렸는지, 그리고 벤치가 시각과
 함께 찍은 줄 하나당 구간 하나로 자른 실행 전체.
 
@@ -31,7 +31,7 @@ PROJECT_FOLDER/.agent/rtlgraph/ENVIRONMENT.md 는 이미 준비돼 있어 — �
 - **어긋나면 그게 발견이야.** 덤프가 코드에서 읽히는 것과 다르면 매끄럽게 넘기지 말고
   적어. 덤프는 실제로 일어난 일이고, 네 코드 독해는 일어날 거라고 생각한 일이야.
 
-## 읽은 보고서 옆에 `waveform-analysis.md` 를 써
+## 읽은 보고서 옆, `waveform/<벤치>.waveform-analysis.md` 를 써
 
 **1. 어떻게 깨어나는가(initialization).** 여기서 시작해 — 출력만 보는 벤치는 레지스터가
 첫 마이크로초를 미정의로 보내도 통과하니까. 측정에서: 0시에 `x` 였던 것, 리셋이 풀린
