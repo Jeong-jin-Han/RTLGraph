@@ -1,6 +1,10 @@
 # Changelog
 
-## 0.1.2
+## 0.1.3
+
+The version number skips 0.1.2: a build with that number was installed
+locally while this work was still moving, so the release that goes out
+carries a number nothing else has worn.
 
 Everything in this release came from driving a real assignment through the
 extension, so each line is something that broke once.
