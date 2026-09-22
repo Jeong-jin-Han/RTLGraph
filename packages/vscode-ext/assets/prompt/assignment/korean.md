@@ -138,10 +138,12 @@ GIVEN_TB 가 비어 있으면 `tb/given/` 도 비워 두고, 채점 기준이 �
 meaning, label, note, 진단 메시지는 한국어로 쓰되, 신호·모듈·인스턴스·핀 이름은 코드
 그대로 쓰고, 기술 용어는 처음 등장할 때 영어를 괄호로 병기해(예: "계수기(counter)").
 
-작업이 끝나면 제출 자체는 사용자 몫으로 두되, 명령은 알려줘: `.agent/rtlgraph/make-submission.sh`
-가 핸드아웃이 요구하는 `.v` 파일을 모으고, elaborate 되는지 확인하고,
-`submission/<이름>.zip` 을 만든다. 시키지 않으면 네가 직접 돌리지는 마 — 무엇을
-제출할지는 사용자가 정할 일이야.
+작업이 끝나면 제출 자체는 사용자 몫으로 두되, 명령은 알려줘:
+`.agent/rtlgraph/make-submission.sh` 가 핸드아웃이 요구하는 `.v` 에 더해 **그것이
+elaborate 되는 데 필요한 파일까지** 모은다 — 스켈레톤이 인스턴스화하지만 주지 않는
+`.base/` 의 기본 소자가 여기 포함되고, 무엇을 왜 넣었는지 보고에 찍힌다 — 컴파일을
+확인하고 `submission/<이름>.zip` 을 만든다. 시키지 않으면 네가 직접 돌리지는 마:
+무엇을 제출할지는 사용자가 정할 일이야.
 
 node PROJECT_FOLDER/.agent/rtlgraph/validate.mjs 로 네가 쓴 루트 파일을 —
 PROJECT_FOLDER/<top>.rtlgraph.json, 또는 RTLGRAPH_FOLDER 안의 그 파일을 — 에러가

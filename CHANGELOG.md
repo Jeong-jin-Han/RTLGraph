@@ -22,9 +22,13 @@ extension, so each line is something that broke once.
     project) are pruned, and any file whose module is already defined by a
     shallower file is skipped with a note.
 - **`.agent/rtlgraph/make-submission.sh`** for the other end of the day: stages
-  every `.v` that is not a bench, checks with `iverilog` that what it staged
-  still elaborates, writes `submission/<name>.zip`. Benches, `.base/`, the
-  RTLGraph JSON and the handout are opt-in; `--list` shows what would go in.
+  every `.v` that is not a bench **plus whatever those files need to
+  elaborate** — a skeleton that instantiates `DFF` without shipping one would
+  otherwise be handed in uncompilable, so the script asks the compiler what is
+  missing, finds who defines it in the project, and adds exactly that under
+  `base/`, naming what it added. `--no-deps` hands in the project's own files
+  alone. Benches, all of `.base/`, the RTLGraph JSON and the handout stay
+  opt-in; `--list` shows what would go in.
 - Two palette commands run them where their output can be read, in a terminal:
   **RTLGraph: Run the Testbenches** and **RTLGraph: Package the Submission**.
 

@@ -141,10 +141,14 @@ click rather than a memory test.
 > left alone. Overwriting it would leave a project that no longer elaborates.
 >
 > `.agent/rtlgraph/make-submission.sh` closes the same day at the other end: it stages every `.v` in the
-> project that is not a bench — the handout asks for the RTL, nothing else — checks with `iverilog`
-> that what it staged still elaborates, and writes `submission/<name>.zip`. Benches, `.base/`, the
-> RTLGraph JSON and the handout are opt-in (`--with-tb`, `--with-base`, `--with-rtlgraph`,
-> `--with-pdf`, or `--all`), and `--list` shows what would go in without writing anything.
+> project that is not a bench — the handout asks for the RTL, nothing else — **plus whatever those
+> files need in order to elaborate**. A handed-out skeleton often instantiates a primitive it does
+> not ship (`DFF` is the usual one), and a zip that cannot be compiled is not a submission, so the
+> script asks the compiler what is missing, finds who defines it in the project, and adds exactly
+> that under `base/` — saying which files it added and why. `--no-deps` hands in the project's own
+> files alone, for a marking project that supplies its own copy. Benches, all of `.base/`, the RTLGraph
+> JSON and the handout stay opt-in (`--with-tb`, `--with-base`, `--with-rtlgraph`, `--with-pdf`, or
+> `--all`), and `--list` shows what would go in without writing anything.
 >
 > `.base/` is copied, not referenced: a handed-out skeleton often instantiates `DFF` without
 > shipping one, and a project that cannot elaborate on its own is not much of a project. Point

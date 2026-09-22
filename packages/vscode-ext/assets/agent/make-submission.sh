@@ -1,12 +1,16 @@
 #!/usr/bin/env bash
 # RTLGraph — gather what is handed in, and zip it.
 #
-# The handout (PDF_P01_UART_Controller.pdf) asks for one thing: the RTL of the
-# UART receiver, in the skeleton's own files, under the skeleton's own names.
-# So that is the default: every .v in the project folder that is not a bench.
-# Everything else — your benches, the RTLGraph JSON, the base library, the
-# handout itself — is opt-in, because a marker who did not ask for it reads it
-# as noise.
+# The handout asks for one thing: the RTL, in the skeleton's own files, under
+# the skeleton's own names. So that is the default: every .v in the project
+# folder that is not a bench — **plus whatever those files need in order to
+# elaborate**. A handed-out skeleton often instantiates a primitive it does not
+# ship (a DFF, say); leaving it out hands in something that cannot be compiled,
+# so it is pulled in from .base/ (or wherever the project defines it) and the
+# report says which files were added and why.
+#
+# Everything else — your benches, the RTLGraph JSON, the handout itself — stays
+# opt-in, because a marker who did not ask for it reads it as noise.
 #
 # The staging folder is rebuilt from scratch on every run, so what you see in
 # submission/<name>/ is exactly what is in submission/<name>.zip. Nothing is
@@ -20,7 +24,8 @@
 #   --id ID           student id, folded into the default name
 #   --with-tb         also include tb/mine/ (additional benches)
 #   --with-given      also include tb/given/ (the bench you are marked with)
-#   --with-base       also include .base/ (primitive library)
+#   --with-base       include all of .base/, not only what the design needs
+#   --no-deps         do not add anything: hand in exactly the project's own .v
 #   --with-rtlgraph   also include rtlgraph/ (RTLGraph JSON)
 #   --with-pdf        also include the handout PDF
 #   --all             everything above
@@ -48,6 +53,7 @@ with_given=0
 with_base=0
 with_rtlgraph=0
 with_pdf=0
+deps=1
 
 die() { printf '%s\n' "make-submission: $*" >&2; exit 1; }
 
@@ -61,6 +67,7 @@ while [ $# -gt 0 ]; do
         --with-base)     with_base=1; shift ;;
         --with-rtlgraph) with_rtlgraph=1; shift ;;
         --with-pdf)      with_pdf=1; shift ;;
+        --no-deps)       deps=0; shift ;;
         --all)           with_tb=1; with_given=1; with_base=1; with_rtlgraph=1; with_pdf=1; shift ;;
         --keep-tree)     flat=0; shift ;;
         --no-check)      check=0; shift ;;
@@ -132,9 +139,51 @@ if [ "$flat" = 1 ]; then
     entries=("${flattened[@]}")
 fi
 
+# ── what the design needs to elaborate ───────────────────────────────────
+# The handout's own files may instantiate a module the handout does not ship.
+# Ask the compiler which ones are missing, find who defines them in this
+# project, and add exactly those — repeating, since a primitive can need
+# another one.
+added=()
+if [ "$deps" = 1 ] && command -v iverilog >/dev/null 2>&1; then
+    provider() {  # provider <module> — the project file that declares it, .base/ first
+        local module=$1 f
+        for f in "$project/.base"/*.v "$project/.base"/*.sv; do
+            [ -f "$f" ] || continue
+            grep -qE "^[[:space:]]*module[[:space:]]+$module([[:space:]]|#|\(|$)" "$f" && { printf '%s' "$f"; return 0; }
+        done
+        while IFS= read -r f; do
+            case "$(basename -- "$f")" in tb_*|TB_*|*_tb.v|*_tb.sv) continue ;; esac
+            grep -qE "^[[:space:]]*module[[:space:]]+$module([[:space:]]|#|\(|$)" "$f" && { printf '%s' "$f"; return 0; }
+        done < <(find "$project" \( -name .git -o -name node_modules -o -name submission -o -name build \
+                     -o -name '*.sim' -o -name '*.cache' -o -name '*.runs' -o -name '*.hw' -o -name '*.ip_user_files' \) -prune -o \
+                 \( -name '*.v' -o -name '*.sv' \) -print | sort)
+        return 1
+    }
+    log=$(mktemp)
+    for _round in 1 2 3 4 5 6 7 8; do
+        sources=()
+        for e in "${entries[@]}"; do sources+=("${e%%|*}"); done
+        iverilog -g2005 -o /dev/null "${sources[@]}" >"$log" 2>&1 && break
+        missing=$(sed -n 's/.*Unknown module type: \([A-Za-z_][A-Za-z0-9_$]*\).*/\1/p' "$log" | sort -u)
+        [ -n "$missing" ] || break        # a real error, not a missing module: the check below reports it
+        grew=0
+        for module in $missing; do
+            src=$(provider "$module") || continue
+            case " ${entries[*]} " in *" $src|"*) continue ;; esac
+            add_file "$src" "base/$(basename -- "$src")"
+            added+=("$module ($(basename -- "$src"))")
+            grew=1
+        done
+        [ "$grew" = 1 ] || break
+    done
+    rm -f -- "$log"
+fi
+
 if [ "$list_only" = 1 ]; then
     printf 'would collect into %s.zip:\n' "$name"
     for e in "${entries[@]}"; do printf '  %s\n' "${e#*|}"; done
+    [ ${#added[@]} -eq 0 ] || printf 'added because the design does not elaborate without it: %s\n' "${added[*]}"
     exit 0
 fi
 
@@ -154,10 +203,9 @@ for e in "${entries[@]}"; do
 done
 
 # ── check ───────────────────────────────────────────────────────────────
-# A zip that does not elaborate is the one mistake worth catching here. The
-# usual cause is a primitive the skeleton instantiates but does not ship (a
-# DFF, say), which lives in .base/ — that is not an error in itself, since the
-# marker's project supplies it, but you want to know it before you hand in.
+# A zip that does not elaborate is the one mistake worth catching here. After
+# the pass above there should be nothing missing; if there still is, say so
+# loudly rather than writing a quiet, broken submission.
 status=0
 if [ "$check" = 1 ] && command -v iverilog >/dev/null 2>&1; then
     log=$(mktemp)
@@ -166,23 +214,17 @@ if [ "$check" = 1 ] && command -v iverilog >/dev/null 2>&1; then
         < <(find "$stage" -type f \( -name '*.v' -o -name '*.sv' \) | sort)
     if iverilog -g2005 -o /dev/null "${staged[@]}" >"$log" 2>&1; then
         printf 'elaboration    iverilog -g2005: ok\n'
+        if [ ${#added[@]} -gt 0 ]; then
+            printf 'added          %s\n' "${added[*]}"
+            printf '               the handout instantiates these but does not ship them, so the zip\n'
+            printf '               carries them. If the marking project has its own copy, hand in\n'
+            printf '               without them: --no-deps.\n'
+        fi
     else
-        base_v=()
-        if [ "$with_base" = 0 ] && [ -d "$project/.base" ]; then
-            while IFS= read -r f; do base_v+=("$f"); done \
-                < <(find "$project/.base" -type f \( -name '*.v' -o -name '*.sv' \) | sort)
-        fi
-        if [ ${#base_v[@]} -gt 0 ] && iverilog -g2005 -o /dev/null "${staged[@]}" "${base_v[@]}" >"$log" 2>&1; then
-            printf 'elaboration    iverilog -g2005: ok, but only with .base/ alongside\n'
-            printf '               the design instantiates a primitive it does not ship.\n'
-            printf '               Fine if the marking project supplies it; otherwise\n'
-            printf '               rerun with --with-base.\n'
-        else
-            printf 'elaboration    iverilog -g2005: FAILED\n'
-            sed 's/^/  /' "$log"
-            printf '               (the zip was still written)\n'
-            status=1
-        fi
+        printf 'elaboration    iverilog -g2005: FAILED\n'
+        sed 's/^/  /' "$log"
+        printf '               (the zip was still written)\n'
+        status=1
     fi
     rm -f -- "$log"
 elif [ "$check" = 1 ]; then

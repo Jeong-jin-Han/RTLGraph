@@ -165,6 +165,37 @@ test('the submission script collects the RTL, checks it elaborates, and zips it'
   assert.match(run('--with-tb', '--list').stdout, /tb_hw\.v/)
 })
 
+// A handed-out skeleton often instantiates a primitive it does not ship. Handing
+// in only the handout's files then hands in something nobody can compile.
+test('the submission carries what the design needs to elaborate', t => {
+  const script = join(ROOT, 'assets/agent/make-submission.sh')
+  if (spawnSync('iverilog', ['-V']).status !== 0) return t.skip('iverilog not installed')
+  const dir = mkdtempSync(join(tmpdir(), 'rtlgraph-deps-'))
+  mkdirSync(join(dir, '.agent/rtlgraph'), { recursive: true })
+  mkdirSync(join(dir, '.base'), { recursive: true })
+  writeFileSync(join(dir, '.base/DFF.v'), readFileSync(join(ROOT, 'assets/base/DFF.v')))
+  writeFileSync(join(dir, 'top.v'), `module top (input CLK, input RST, input [3:0] D, output [3:0] Q);
+  DFF #(.BW(3)) u_ff (.CLK(CLK), .RST(RST), .EN(1'b1), .D(D), .Q(Q));
+endmodule
+`)
+  const run = (...args: string[]) => spawnSync('bash', [script, '--project', dir, ...args], { encoding: 'utf8' })
+
+  const listed = run('--list')
+  assert.match(listed.stdout, /base\/DFF\.v/, 'the primitive the design instantiates is collected')
+  assert.match(listed.stdout, /added because the design does not elaborate without it: DFF/)
+
+  const made = run()
+  assert.equal(made.status, 0, made.stdout)
+  assert.match(made.stdout, /iverilog -g2005: ok/)
+  assert.ok(existsSync(join(dir, 'submission', `${basename(dir)}_submission/base/DFF.v`)), 'and it is staged')
+
+  // …unless the marking project supplies its own, which is what --no-deps is for
+  const bare = run('--no-deps')
+  assert.equal(bare.status, 1, 'without it the staged design does not elaborate, and that is reported')
+  assert.match(bare.stdout, /FAILED/)
+  assert.doesNotMatch(bare.stdout, /base\/DFF\.v/)
+})
+
 test('the spec registry table matches the real registry', () => {
   for (const def of Object.values(BASE_REGISTRY)) {
     const row = spec.split('\n').find(line => line.startsWith(`| \`${def.module}\` |`))

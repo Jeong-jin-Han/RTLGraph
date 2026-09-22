@@ -17,3 +17,9 @@ demo/uart-p01/
 packages/vscode-ext/README.md
 packages/vscode-ext/LICENSE
 packages/vscode-ext/CHANGELOG.md
+
+# What "Copy Agent Spec to Workspace" writes. It is generated, and a copy of it
+# inside a demo project would go stale the moment the real files change.
+demo/*/.agent/
+demo/*/.prompt/
+demo/*/.base/
