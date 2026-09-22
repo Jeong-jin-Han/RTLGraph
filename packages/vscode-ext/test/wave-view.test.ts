@@ -266,3 +266,27 @@ test('dragging the plot pans it rather than selecting the writing on it', { skip
   assert.equal(down.defaultPrevented, true, 'the selection never starts')
   assert.ok(plot.attributes.get('class')?.includes('panning'), 'and the hand says it is panning')
 })
+
+// Vivado shows whatever you dragged into the wave config, clock and all. This
+// view opens on what a reader wants first and keeps the rest a button away —
+// which is only defensible if the button exists.
+test('the clock and the bench variables are off by default, and one click away', { skip: !existsSync(BUNDLE) && 'run `npm run build -w rtlgraph`' }, async t => {
+  if (!existsSync(join(DEMO, 'tb_uart_corner.waveform.json'))) return t.skip('demo/uart-p01 is not here')
+  const view = await webview()
+  view.send(payload('tb_uart_corner'))
+  const named = () => view.byId('wave-labels')!.findAll(n => n.attributes.get('class')?.includes('name') === true)
+    .map(n => n.textContent)
+  const click = (label: string) => view.byId('toolbar')!.find(n => n.tag === 'button' && n.textContent === label)!.dispatch('click', {})
+
+  assert.equal(named().includes('clk'), false, 'the clock is not what a reader wants first')
+  assert.equal(named().includes('errors'), false, "nor is the bench's own counter")
+  // …but a register whose name merely contains "clock" is hardware and is shown
+  assert.ok(named().includes('clock_counter'), 'clock_counter is a register, not the clock')
+
+  click('clk')
+  assert.ok(named().includes('clk'), 'asked for, it appears')
+  click('var')
+  assert.ok(named().includes('errors') && named().includes('i'), "and so do the bench's variables")
+  click('clk')
+  assert.equal(named().includes('clk'), false, 'and it goes away again')
+})

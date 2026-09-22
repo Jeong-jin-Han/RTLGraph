@@ -17,6 +17,16 @@ export interface Trace {
   width: number
   /** True for the testbench's own signals — the ones a check drives or reads. */
   bench: boolean
+  /**
+   * What kind of row this is, so the view can leave some of them out by default
+   * and still let a reader ask for them:
+   *   `clock`    — the clock. At any zoom that shows a frame it is a grey blur.
+   *   `variable` — a bench's integers and parameters: not hardware.
+   *   `signal`   — everything else.
+   */
+  role: 'clock' | 'variable' | 'signal'
+  /** False for rows past the first screenful, ordered by how much they matter. */
+  primary: boolean
   /** `[time, value]`, in order, starting with the value at time 0. */
   points: readonly (readonly [number, string])[]
   /** The line of RTL that drives it, when one was found. */
@@ -58,7 +68,6 @@ export interface WaveView {
   omitted: number
 }
 
-const CLOCK = /(^|[_/])(clk|clock)([_/]|$)/i
 // What a dump calls a signal when it is not one: a testbench's counters and
 // flags are declared `integer`/`real`/`time`, and drawing them as if they were
 // wires fills the screen with loop variables.
@@ -73,16 +82,26 @@ function chooseTraces(wave: Waveform, facts: WaveFacts, limit: number): { traces
   // One row per net. A port appears once in the bench and again inside every
   // module it is wired to; the dump gives them all the same id, so the
   // shallowest path stands for the net and the rest are dropped.
+  //
+  // The clock and the bench's own variables are kept but marked: they are not
+  // what a reader wants first, and they are what a reader sometimes wants.
   const seen = new Set<string>()
   const candidates = [...wave.signals]
     .sort((a, b) => a.scope.length - b.scope.length || a.path.localeCompare(b.path))
     .filter(s => {
-      if (!s.hardware || NOT_HARDWARE.has(s.kind) || CLOCK.test(s.name)) return false
+      if (!s.hardware && !(s.scope.length === 1 && s.scope[0] === root)) return false
       if (seen.has(s.id)) return false
       seen.add(s.id)
       return true
     })
-  const rank = (path: string, depth: number) => {
+  // The clock is the one the measurements found — the most-toggling candidate —
+  // not everything whose name contains "clock". `clock_counter` is a register a
+  // reader may well want to see, and `CLOCK_FREQ` is a parameter.
+  const roleOf = (signal: { name: string; kind: string; path: string; width: number }): Trace['role'] =>
+    signal.path === facts.clock?.path ? 'clock' : NOT_HARDWARE.has(signal.kind) ? 'variable' : 'signal'
+  const rank = (path: string, depth: number, role: Trace['role']) => {
+    if (role === 'clock') return 90     // asked for, never first
+    if (role === 'variable') return 95  // a bench's counters, if anyone wants them
     const inHandshake = facts.handshakes.some(h => h.valid === path || h.ready === path)
     const isReset = facts.reset?.path === path
     if (inHandshake) return 0          // what a check is usually about
@@ -91,7 +110,7 @@ function chooseTraces(wave: Waveform, facts: WaveFacts, limit: number): { traces
     return 3 + depth                   // then the design, shallowest first
   }
   const ordered = [...candidates].sort((a, b) => {
-    const byRank = rank(a.path, a.scope.length) - rank(b.path, b.scope.length)
+    const byRank = rank(a.path, a.scope.length, roleOf(a)) - rank(b.path, b.scope.length, roleOf(b))
     if (byRank !== 0) return byRank
     return a.path.localeCompare(b.path)
   })
@@ -108,6 +127,8 @@ function chooseTraces(wave: Waveform, facts: WaveFacts, limit: number): { traces
       name: signal.name,
       width: signal.width,
       bench: signal.scope.length === 1 && signal.scope[0] === root,
+      role: roleOf(signal),
+      primary: false,
       points,
     })
   }
@@ -120,7 +141,15 @@ function chooseTraces(wave: Waveform, facts: WaveFacts, limit: number): { traces
   const labelled = distinct.map(trace => times.get(trace.name)! > 1
     ? { ...trace, name: trace.path.split('/').slice(-2).join('/') }
     : trace)
-  return { traces: labelled.slice(0, limit), omitted: Math.max(labelled.length - limit, 0) }
+  // The first screenful of ordinary signals is what opens; the clock, the
+  // bench's variables and anything past the limit are there to be switched on.
+  let shown = 0
+  for (const trace of labelled) {
+    if (trace.role !== 'signal') continue
+    trace.primary = shown < limit
+    shown += 1
+  }
+  return { traces: labelled.slice(0, Math.max(limit * 3, 48)), omitted: Math.max(labelled.length - Math.max(limit * 3, 48), 0) }
 }
 
 /** How the design came up, and then one marker per check the bench printed. */

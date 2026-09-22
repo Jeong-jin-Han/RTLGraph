@@ -29,6 +29,8 @@ let hot: number | undefined
 let hotTrace: string | undefined
 /** Places whose written explanation is unfolded. */
 const opened = new Set<string>()
+/** Rows a reader has asked for beyond the default screenful. */
+const alsoShow = { clock: false, variable: false }
 
 // ── the document ──────────────────────────────────────────────────────────────
 const toolbar = document.createElement('div')
@@ -39,7 +41,15 @@ const spacer = document.createElement('span')
 spacer.className = 'spacer'
 const buttons = document.createElement('span')
 buttons.className = 'group'
-const bar: { label: string; hint: keyof Words; fallback: string; run: () => void }[] = [
+const bar: { label: string; hint: keyof Words; fallback: string; run: () => void; pressed?: () => boolean }[] = [
+  {
+    label: 'clk', hint: 'showClock', fallback: 'show the clock',
+    run: () => { alsoShow.clock = !alsoShow.clock; draw() }, pressed: () => alsoShow.clock,
+  },
+  {
+    label: 'var', hint: 'showVariables', fallback: "show the bench's variables",
+    run: () => { alsoShow.variable = !alsoShow.variable; draw() }, pressed: () => alsoShow.variable,
+  },
   { label: '⟨', hint: 'previousPlace', fallback: 'the place before this one (←)', run: () => step(-1) },
   { label: '⟩', hint: 'nextPlace', fallback: 'the next place (→)', run: () => step(1) },
   { label: '−', hint: 'zoomOut', fallback: 'zoom out', run: () => zoom(1.6) },
@@ -53,7 +63,11 @@ const barButtons = bar.map(item => {
   buttons.append(button)
   return button
 })
-const retitleBar = () => barButtons.forEach((button, i) => { button.title = say(bar[i].hint, bar[i].fallback) })
+const retitleBar = () => barButtons.forEach((button, i) => {
+  button.title = say(bar[i].hint, bar[i].fallback)
+  const pressed = bar[i].pressed
+  if (pressed) button.setAttribute('aria-pressed', String(pressed()))
+})
 retitleBar()
 toolbar.append(title, spacer, buttons)
 
@@ -102,14 +116,22 @@ function shown(value: string, width: number): string {
   return Number.isNaN(n) ? value : `${n.toString(16).padStart(Math.ceil(width / 4), '0')}`
 }
 
+/** The rows on screen: the default screenful, plus whatever was switched on. */
+function rows(): Trace[] {
+  if (!view) return []
+  return view.traces.filter(trace => trace.role === 'signal' ? trace.primary : alsoShow[trace.role])
+}
+
 function draw(): void {
   if (!view) return
+  retitleBar()
+  const traces = rows()
   const span = Math.max(to - from, 1)
   const width = Math.max(plot.clientWidth || 600, 200)
   const x = (time: number) => ((time - from) / span) * width
 
-  title.textContent = `${atTime(from)} → ${atTime(to)}` +
-    (view.omitted > 0 ? `  ·  ${view.traces.length} / ${view.traces.length + view.omitted}` : '')
+  title.textContent = `${atTime(from)} → ${atTime(to)}  ·  ` +
+    `${traces.length} / ${view.traces.length + view.omitted}`
 
   // the rail: where to go
   rail.replaceChildren(...view.markers.map(marker => {
@@ -239,7 +261,7 @@ function draw(): void {
 
   // the labels, with the value under the cursor when there is one
   const watched = new Set(view.markers.find(m => m.id === active)?.watch ?? [])
-  labels.replaceChildren(...[axisLabel(), ...view.traces.map(trace => {
+  labels.replaceChildren(...[axisLabel(), ...traces.map(trace => {
     const row = document.createElement('div')
     row.className = `wave-label${trace.bench ? ' bench' : ''}` +
       (watched.size > 0 && !watched.has(trace.path) ? ' aside' : '') +
@@ -269,7 +291,7 @@ function draw(): void {
   })])
 
   // the traces
-  const height = AXIS + view.traces.length * ROW
+  const height = AXIS + traces.length * ROW
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
   svg.setAttribute('width', String(width))
   svg.setAttribute('height', String(height))
@@ -288,7 +310,7 @@ function draw(): void {
     add('text', { x: x(t) + 3, y: 12, class: 'wave-tick' }, atTime(t))
   }
 
-  view.traces.forEach((trace, row) => {
+  traces.forEach((trace, row) => {
     const top = AXIS + row * ROW + 4
     const bottom = AXIS + row * ROW + ROW - 6
     if (hotTrace === trace.path) {

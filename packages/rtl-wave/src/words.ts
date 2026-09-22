@@ -83,6 +83,8 @@ export interface Words {
   purpose: string
   how: string
   outcome: string
+  showClock: string
+  showVariables: string
   hoverForValues: string
   wholeRun: string
   zoomIn: string
@@ -172,6 +174,8 @@ const EN: Words = {
   how: 'how it was driven',
   outcome: 'what happened',
   askWhy: 'ask why — copies a request for this one check',
+  showClock: 'show the clock — a grey blur at this zoom, which is why it is off',
+  showVariables: "show the bench's own variables — counters and parameters, not hardware",
   hoverForValues: 'hover for values',
   wholeRun: 'the whole run',
   zoomIn: 'zoom in',
@@ -261,6 +265,8 @@ const KO: Words = {
   how: '방식',
   outcome: '결과',
   askWhy: '왜? 물어보기 — 이 체크 하나짜리 요청을 복사',
+  showClock: '클럭 보이기 — 이 배율에서는 회색 뭉개짐이라 꺼 둔다',
+  showVariables: '벤치 변수 보이기 — 카운터와 파라미터, 하드웨어가 아니다',
   hoverForValues: '올려놓으면 값',
   wholeRun: '실행 전체',
   zoomIn: '확대',

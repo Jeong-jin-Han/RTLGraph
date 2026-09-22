@@ -218,15 +218,18 @@ test('the view picks what a screen can hold, and what a check is about', () => {
   const view = buildView(wave, readFacts(wave, bench), 4)
 
   // the handshake first, then the reset, then the bench's other ports
-  assert.deepEqual(view.traces.map(t => t.path),
-    ['tb/data_out_ready', 'tb/data_out_valid', 'tb/reset', 'tb/data_out'])
+  const opens = view.traces.filter(t => t.primary).map(t => t.path)
+  assert.deepEqual(opens, ['tb/data_out_ready', 'tb/data_out_valid', 'tb/reset', 'tb/data_out'])
   assert.equal(view.traces[0].bench, true)
-  assert.equal(view.omitted > 0, true, 'and it says how many it left out')
 
-  // a clock is not drawn: at any useful zoom it is a grey blur
-  assert.equal(view.traces.some(t => t.name === 'clk'), false)
-  // nor is a parameter, nor a task local
-  assert.equal(view.traces.some(t => t.name === 'WIDTH' || t.path.startsWith('tb/expect')), false)
+  // the clock is there to be switched on, never on by default — and it is the
+  // one the measurements found, not everything whose name says "clock"
+  const clock = view.traces.find(t => t.role === 'clock')
+  assert.equal(clock?.name, 'clk')
+  assert.equal(clock?.primary, false)
+  // a parameter is a variable, not a signal; a task local is not there at all
+  assert.equal(view.traces.find(t => t.name === 'WIDTH')?.role, 'variable')
+  assert.equal(view.traces.some(t => t.path.startsWith('tb/expect')), false)
 
   // the first place to jump to is how it came up; then one per check
   assert.deepEqual(view.markers.map(m => [m.kind, m.label, m.from, m.to]), [
