@@ -135,6 +135,13 @@ click rather than a memory test.
 > only. The reading of *why* is a separate job, for `.prompt/rtlgraph/waveform/*.md`, which is told
 > to take every number from the dump and cite `file.v:line` for every claim.
 >
+> And `waveform.json` opens as a **drawing**, not as JSON: the places worth going to down the left —
+> how the design came up, then one per check the bench printed, each with what was measured there —
+> and the traces on the right. Click a place, or walk them with ← and →; hover for the value of
+> every signal at that instant. One row per net (a port either side of a boundary is one wire, not
+> two), the clock left out because at any useful zoom it is a grey blur, and a signal that is `x`
+> drawn in red so an undefined stretch is visible rather than merely absent.
+>
 > `.base/` is the one thing not under `rtlgraph/`: it is a library the design compiles against and
 > `source.lib` points at it by path, so it belongs to the project rather than to this extension.
 >

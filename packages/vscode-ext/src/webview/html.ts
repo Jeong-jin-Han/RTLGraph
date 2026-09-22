@@ -102,6 +102,31 @@ body.editing #stage g.wire { cursor: pointer; }
 #problems { max-height: 30%; overflow: auto; border-top: 1px solid #fcd34d; background: #fffbeb; padding: 4px 10px; font-family: ui-monospace, monospace; white-space: pre-wrap; }
 #problems summary { cursor: pointer; font-family: system-ui, sans-serif; font-weight: 600; }
 #problems .error { color: #b91c1c; }
+/* The waveform view: places to go on the left, traces on the right. */
+#wave-rail { width: 260px; overflow: auto; border-right: 1px solid #e5e7eb; background: #fbfdff; padding: 6px; }
+#wave-rail .wave-place { padding: 6px 8px; border: 1px solid transparent; border-radius: 6px; cursor: pointer; }
+#wave-rail .wave-place:hover { background: #eef2ff; }
+#wave-rail .wave-place.active { background: #eff6ff; border-color: #bfdbfe; }
+#wave-rail .wave-place.init .what { color: #b45309; }
+#wave-rail .what { font-weight: 600; color: #111827; }
+#wave-rail .when { font-family: ui-monospace, monospace; color: #6b7280; }
+#wave-rail .note { color: #6b7280; }
+#wave-canvas { flex: 1; display: flex; min-width: 0; overflow: auto; }
+#wave-labels { width: 190px; flex: none; border-right: 1px solid #e5e7eb; background: #ffffff; }
+#wave-labels .wave-label { height: 26px; display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 0 8px; border-bottom: 1px solid #f3f4f6; font-family: ui-monospace, monospace; color: #374151; overflow: hidden; }
+#wave-labels .wave-label.axis { height: 22px; font-family: system-ui, sans-serif; color: #6b7280; border-bottom: 1px solid #e5e7eb; }
+#wave-labels .wave-label.bench .name { color: #1d4ed8; }
+#wave-labels .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#wave-labels .value { color: #b45309; }
+#wave-plot { flex: 1; min-width: 0; cursor: crosshair; }
+#wave-plot .wave-line { stroke: #2563eb; stroke-width: 1.5; fill: none; }
+#wave-plot .wave-bus { stroke: #2563eb; stroke-width: 1.2; fill: #eff6ff; }
+#wave-plot .wave-unknown { fill: #fee2e2; stroke: #f87171; stroke-width: 1; }
+#wave-plot .wave-value { fill: #1f2937; font: 10px ui-monospace, monospace; text-anchor: middle; }
+#wave-plot .wave-row { stroke: #f3f4f6; stroke-width: 1; }
+#wave-plot .wave-grid { stroke: #eef2f7; stroke-width: 1; }
+#wave-plot .wave-tick { fill: #6b7280; font: 10px system-ui, sans-serif; }
+#wave-plot .wave-cursor { stroke: #f59e0b; stroke-width: 1; }
 [hidden] { display: none !important; }
 `
 

@@ -51,6 +51,10 @@ extension, so each line is something that broke once.
   other half: it asks an agent to explain *why* each check passed, against the
   code. Every number must come from the dump and every claim must cite
   `file.v:line`, so the analysis can be checked rather than believed.
+- **`waveform.json` opens as a waveform**, the way `*.rtlgraph.json` opens as a
+  schematic: places to go down the left (how it came up, then a check at a time,
+  each with its measurements), traces on the right, ← and → to walk them, hover
+  for values at an instant. One row per net, no clock, `x` in red.
 - Our own benches now print `[%0t]` before each line, which is what lets a check
   and a stretch of waveform be put beside each other.
 

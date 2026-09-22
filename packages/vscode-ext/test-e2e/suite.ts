@@ -94,6 +94,28 @@ export async function run(): Promise<void> {
   assert.equal(await vscode.env.clipboard.readText(), copied)
   log(`Copy Prompt Path puts ${PROMPT_DIR}/assignment/english.md on the clipboard`)
 
+  // The waveform view: a report opens as a drawing, and the drawing knows the
+  // places worth going to — how it came up, then a marker per check.
+  const waveReport = join(dirname(dirname(graphFile)), 'uart-p01/.agent/rtlgraph/tb-build/tb_uart_corner/waveform.json')
+  if (existsSync(waveReport)) {
+    const waveDoc = await vscode.workspace.openTextDocument(vscode.Uri.file(waveReport))
+    await vscode.commands.executeCommand('vscode.openWith', waveDoc.uri, 'rtlgraph.waveform')
+    await sleep(1500)
+    const tab = vscode.window.tabGroups.all.flatMap(g => g.tabs).find(t => t.label === 'waveform.json')
+    assert.ok(tab, 'waveform.json opens in a tab')
+    assert.equal((tab?.input as { viewType?: string })?.viewType?.endsWith('rtlgraph.waveform'), true,
+      'and it opens as the waveform view rather than as JSON')
+    // RTLGRAPH_SHOT=<file>: photograph the view rather than describing it.
+    if (process.env.RTLGRAPH_SHOT) {
+      await sleep(2500)
+      spawnSync('import', ['-window', 'root', process.env.RTLGRAPH_SHOT])
+    }
+    await vscode.commands.executeCommand('workbench.action.closeActiveEditor')
+    log('waveform.json opens in the waveform view')
+  } else {
+    log('waveform.json not built here; skipping the waveform view')
+  }
+
   // The palette can run the two shipped scripts. The command opens a terminal,
   // so what it returns is the script it found — that it resolved the namespaced
   // path at all is the thing worth pinning.

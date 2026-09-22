@@ -4,7 +4,7 @@ import { execFileSync } from 'node:child_process'
 import { existsSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { edgesOf, levelAt, levelBefore, parseVcd, readBenchLog, readFacts, reportMarkdown, seriesOf } from '../src/index.ts'
+import { buildView, edgesOf, levelAt, levelBefore, parseVcd, readBenchLog, readFacts, reportMarkdown, seriesOf } from '../src/index.ts'
 
 // A dump written by hand, so every fact below has a known answer. Two clock
 // periods of 10 ns, a reset released at 15 ns, a handshake whose valid clears
@@ -209,4 +209,34 @@ test('a real dump, from iverilog, through the shipped reader', t => {
   assert.ok(report.facts.changes > 100)
   assert.ok(report.bench.some((line: { text: string }) => line.text.includes('PASS')), 'the bench log came along')
   assert.match(readFileSync(join(dir, 'waveform.md'), 'utf8'), /^# What the waveform says/)
+})
+
+test('the view picks what a screen can hold, and what a check is about', () => {
+  const bench = readBenchLog('[30] ok: a byte arrived\n[50] ok: and the next one\n')
+  const wave = parseVcd(VCD)
+  const view = buildView(wave, readFacts(wave, bench), 4)
+
+  // the handshake first, then the reset, then the bench's other ports
+  assert.deepEqual(view.traces.map(t => t.path),
+    ['tb/data_out_ready', 'tb/data_out_valid', 'tb/reset', 'tb/data_out'])
+  assert.equal(view.traces[0].bench, true)
+  assert.equal(view.omitted > 0, true, 'and it says how many it left out')
+
+  // a clock is not drawn: at any useful zoom it is a grey blur
+  assert.equal(view.traces.some(t => t.name === 'clk'), false)
+  // nor is a parameter, nor a task local
+  assert.equal(view.traces.some(t => t.name === 'WIDTH' || t.path.startsWith('tb/expect')), false)
+
+  // the first place to jump to is how it came up; then one per check
+  assert.deepEqual(view.markers.map(m => [m.kind, m.label, m.from, m.to]), [
+    ['init', 'Coming up', 0, 30],
+    ['check', 'ok: a byte arrived', 0, 30],
+    ['check', 'ok: and the next one', 30, 50],
+  ])
+  assert.match(view.markers[0].notes.join(' '), /reset released at 15/)
+  assert.match(view.markers[1].notes.join(' '), /1 transfer\(s\) taken/)
+
+  // a trace carries its values, starting from what it held at time 0
+  const valid = view.traces.find(t => t.path === 'tb/data_out_valid')!
+  assert.deepEqual(valid.points, [[0, '0'], [30, '1'], [40, '0']])
 })

@@ -3,6 +3,7 @@ import { FILTER_PRESETS, type FilterPreset } from '@rtlgraph/ir'
 import { RtlGraphEditorProvider } from './editorProvider.ts'
 import { PRESET_LABELS } from './webview/state.ts'
 import { copyAgentSpec } from './agent/copyAgentSpec.ts'
+import { WaveViewProvider } from './waveView.ts'
 import { AGENT_DIR, MAKE_SUBMISSION, PROMPT_DIR, RUN_TB } from './agent/files.ts'
 import { exportSchematic } from './export.ts'
 import { EXPORT_FORMATS, viewName, type ExportFormat } from './exportFiles.ts'
@@ -241,6 +242,7 @@ async function projectsUnder(root: vscode.Uri, script: string): Promise<vscode.U
 export function activate(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
     RtlGraphEditorProvider.register(context),
+    WaveViewProvider.register(context),
 
     vscode.commands.registerCommand('rtlgraph.copyAgentSpec', async (clicked?: unknown) => {
       const target = await resolveTargetFolder(clicked)

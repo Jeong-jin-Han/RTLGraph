@@ -23,7 +23,8 @@
     "Visualization"
   ],
   "activationEvents": [
-    "onCustomEditor:rtlgraph.editor"
+    "onCustomEditor:rtlgraph.editor",
+    "onCustomEditor:rtlgraph.waveform"
   ],
   "capabilities": {
     "untrustedWorkspaces": {
@@ -71,6 +72,16 @@
           },
           {
             "filenamePattern": "*.rtlgraph-fsm.json"
+          }
+        ],
+        "priority": "default"
+      },
+      {
+        "viewType": "rtlgraph.waveform",
+        "displayName": "RTLGraph Waveform",
+        "selector": [
+          {
+            "filenamePattern": "**/waveform.json"
           }
         ],
         "priority": "default"

@@ -32,16 +32,22 @@ test('menus only reference contributed commands', () => {
   }
 })
 
-test('custom editor view type is consistent across manifest and provider', () => {
+test('custom editor view types are consistent across manifest and providers', () => {
   const viewType = /static readonly viewType = '([^']+)'/.exec(source)?.[1]
   assert.equal(viewType, 'rtlgraph.editor')
-  assert.deepEqual(manifest.contributes.customEditors.map((e: { viewType: string }) => e.viewType), [viewType])
-  assert.ok(manifest.activationEvents.includes(`onCustomEditor:${viewType}`))
+  const waveSource = readFileSync(join(import.meta.dirname, '../src/waveView.ts'), 'utf8')
+  const waveType = /static readonly viewType = '([^']+)'/.exec(waveSource)?.[1]
+  assert.equal(waveType, 'rtlgraph.waveform')
+
+  assert.deepEqual(manifest.contributes.customEditors.map((e: { viewType: string }) => e.viewType), [viewType, waveType])
+  for (const type of [viewType, waveType]) assert.ok(manifest.activationEvents.includes(`onCustomEditor:${type}`))
   assert.deepEqual(manifest.contributes.customEditors[0].selector, [
     { filenamePattern: '*.rtlgraph.json' },
     { filenamePattern: '*.rtlgraph-schematic.json' },
     { filenamePattern: '*.rtlgraph-fsm.json' },
   ])
+  // The waveform report a run writes, and nothing else — it is our own filename.
+  assert.deepEqual(manifest.contributes.customEditors[1].selector, [{ filenamePattern: '**/waveform.json' }])
 })
 
 test('webview html locks scripts and styles to a nonce', () => {
