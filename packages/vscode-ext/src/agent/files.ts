@@ -4,8 +4,9 @@
 // spec → an idea becomes a specification · rtl → that spec becomes new RTL ·
 // refactor → existing RTL is restructured and extended · rtlgraph → RTL becomes a
 // schematic · assignment → the same, for code that may not be touched at all, so
-// the files follow the folders the code already has.
-export const PROMPT_KINDS = ['spec', 'rtl', 'refactor', 'rtlgraph', 'assignment'] as const
+// the files follow the folders the code already has · waveform → a simulation
+// that already ran becomes an explanation of why it behaved that way.
+export const PROMPT_KINDS = ['spec', 'rtl', 'refactor', 'rtlgraph', 'assignment', 'waveform'] as const
 export const PROMPT_LANGUAGES = ['korean', 'english'] as const
 
 // Everything this extension writes lives under its own name inside the shared
@@ -21,6 +22,8 @@ export const VALIDATOR_FILE = `${AGENT_DIR}/validate.mjs`
 export const ENVIRONMENT_FILE = `${AGENT_DIR}/ENVIRONMENT.md`
 export const RUN_TB = `${AGENT_DIR}/run-tb.sh`
 export const MAKE_SUBMISSION = `${AGENT_DIR}/make-submission.sh`
+export const WAVE_BUNDLE = 'dist/agent/rtlgraph-wave.mjs'
+export const WAVE_READER = `${AGENT_DIR}/wave.mjs`
 
 // What earlier versions wrote at the top of `.agent/` and `.prompt/`. Copying
 // the spec again clears these, so a project does not end up holding both.
@@ -54,6 +57,9 @@ export const AGENT_FILES: readonly BundledFile[] = [
   // And one for the other end of the day: collect the .v files the handout asks
   // for, check they still elaborate, and zip them.
   { from: 'assets/agent/make-submission.sh', to: MAKE_SUBMISSION },
+  // Reads a dump and says what it measured — never why. `run-tb.sh --wave`
+  // calls it; the `waveform` prompt is what turns measurements into reasons.
+  { from: WAVE_BUNDLE, to: WAVE_READER },
   // For the reader, not the agent: which of the five to reach for, and why.
   ...PROMPT_LANGUAGES.map(language => ({
     from: `assets/prompt/README${language === 'english' ? '' : `.${language}`}.md`,

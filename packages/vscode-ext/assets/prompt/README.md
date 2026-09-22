@@ -2,7 +2,7 @@
 
 *(한국어: `README.korean.md`)*
 
-These five folders are ready-made instructions for an AI agent. You do not edit
+These six folders are ready-made instructions for an AI agent. You do not edit
 them and you do not paste their contents: you paste **their path**, plus the path
 of the project you want worked on. Which one you paste decides what happens —
 that is the whole interface.
@@ -32,13 +32,14 @@ path, the brief's path if there is one — and leave the rest alone.
 | RTL that works but is a mess, and you are allowed to restructure it | **`refactor`** | the code rearranged into the three-layer layout, then drawn |
 | A specification, and no code yet | **`rtl`** | new RTL written to that spec, simulated, then drawn |
 | An idea, and not even a specification | **`spec`** | a `SPEC.md` you can read, argue with, and then feed to `rtl` |
+| A simulation that already ran, and you want to know **why** it behaved that way | **`waveform`** | `waveform-analysis.md`: the dump's numbers explained against the code, check by check |
 
 If two of them look right, the question to ask is **"may the code change?"** —
 `rtlgraph` and `assignment` never touch it, `refactor` and `rtl` do.
 
 ---
 
-## The five, one at a time
+## The six, one at a time
 
 ### `rtlgraph` — existing RTL → a schematic
 
@@ -105,6 +106,22 @@ Do not point this at an assignment.
 Writes the modules, the testbenches and the RTLGraph files from a spec document.
 Needs a simulator; `.agent/rtlgraph/ENVIRONMENT.md` says which ones this machine has.
 
+### `waveform` — a run that happened → why it happened
+
+The only prompt that starts from a simulation rather than from code. Run
+`.agent/rtlgraph/run-tb.sh --wave` first: it dumps a waveform without editing any
+testbench and writes `waveform.md` (for you) and `waveform.json` (for the agent) —
+clock period, when the reset let go, what was still undefined afterwards, when
+each handshake was taken, and the run cut into one stretch per check the bench
+printed.
+
+Those are **measurements**. This prompt asks for the other half: which lines of
+the design produce those edges, why each check passed, and what would have to be
+wrong for it to fail. The agent is told to take every number from the dump and
+cite code for every claim, so the analysis can be checked rather than believed.
+It is the answer to "do I really have to open Vivado and stare at this?" — for
+reading, usually not; for debugging a failure, still yes.
+
 ### `spec` — an idea → `SPEC.md`
 
 For when the idea is still in your head or in a paragraph. Produces a
@@ -132,6 +149,8 @@ report catches up.
 
 1. **Read the given testbench's output first**, if there was one — that is the
    result that counts; everything else is evidence around it.
+   (`run-tb.sh --wave` adds `waveform.md` beside it: the numbers a PASS does not
+   mention — held times, waits, what was undefined after reset.)
 2. **Read the validator line it quotes.** `0 errors` is the bar. Warnings are
    either real findings about the code or something it should have fixed — the
    prompt asks it to tell you which.

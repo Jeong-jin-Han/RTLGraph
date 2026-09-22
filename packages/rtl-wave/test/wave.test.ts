@@ -1,0 +1,212 @@
+import { test } from 'node:test'
+import assert from 'node:assert/strict'
+import { execFileSync } from 'node:child_process'
+import { existsSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { edgesOf, levelAt, levelBefore, parseVcd, readBenchLog, readFacts, reportMarkdown, seriesOf } from '../src/index.ts'
+
+// A dump written by hand, so every fact below has a known answer. Two clock
+// periods of 10 ns, a reset released at 15 ns, a handshake whose valid clears
+// on the very edge that takes it, and one input that changes on the edge.
+const VCD = `$date Tue Sep 22 2026 $end
+$version hand-written $end
+$timescale 1ns $end
+$scope module tb $end
+$var reg 1 ! clk $end
+$var reg 1 " reset $end
+$var reg 1 # data_out_ready $end
+$var wire 1 $ data_out_valid $end
+$var wire 8 % data_out [7:0] $end
+$var parameter 32 & WIDTH $end
+$var reg 1 ' late $end
+$scope module dut $end
+$var wire 1 ! clk $end
+$var reg 4 ( count $end
+$var wire 1 ) stuck $end
+$upscope $end
+$upscope $end
+$enddefinitions $end
+#0
+0!
+1"
+0#
+0$
+bxxxxxxxx %
+b100000 &
+0'
+b0000 (
+x)
+#5
+1!
+#10
+0!
+#15
+0"
+#20
+1!
+b0001 (
+#25
+0!
+#30
+1!
+1$
+b10100101 %
+b0010 (
+#35
+0!
+1#
+#40
+1!
+0$
+b0011 (
+#45
+0!
+0#
+#50
+1!
+1'
+b0100 (
+#55
+0!
+#60
+1!
+`
+
+test('the reader takes a dump apart: scopes, aliases, vectors, times', () => {
+  const wave = parseVcd(VCD)
+  assert.equal(wave.timescale, '1ns')
+  assert.equal(wave.tick, 1e6) // femtoseconds in a nanosecond
+  assert.equal(wave.end, 60)
+
+  // clk is declared twice under two scopes and shares one id: both paths, one series.
+  const clk = wave.signals.filter(s => s.name === 'clk')
+  assert.deepEqual(clk.map(s => s.path), ['tb/clk', 'tb/dut/clk'])
+  assert.equal(clk[0].id, clk[1].id)
+  assert.equal(seriesOf(wave, 'tb/clk').length, seriesOf(wave, 'tb/dut/clk').length)
+
+  const data = seriesOf(wave, 'tb/data_out')
+  assert.equal(data[0].value, 'xxxxxxxx')
+  assert.equal(data[1].value, '10100101')
+  assert.deepEqual(edgesOf(seriesOf(wave, 'tb/clk'), '1'), [5, 20, 30, 40, 50, 60])
+})
+
+// The trap that made the first version of this report say every transfer was
+// missed: a dump records the value at T *after* everything at T has settled,
+// but edge-triggered logic sees what was there going in.
+test('a value at an edge is the value going into it, not the one left after', () => {
+  const wave = parseVcd(VCD)
+  const valid = seriesOf(wave, 'tb/data_out_valid')
+  assert.equal(levelAt(valid, 40), '0', 'after the edge at 40 the flag has cleared')
+  assert.equal(levelBefore(valid, 40), '1', 'going into that edge it was still up')
+})
+
+test('what the facts say about a design nobody has explained yet', () => {
+  const facts = readFacts(parseVcd(VCD))
+
+  assert.equal(facts.clock?.path, 'tb/clk')
+  assert.equal(facts.clock?.period, 10)
+  assert.equal(facts.clock?.hertz, 1e8)
+  assert.deepEqual(facts.clock?.periods, [10, 15]) // 5 → 20 is the gap while reset is held
+  assert.equal(facts.clock?.jitter, true, 'and that gap is worth saying out loud')
+  assert.equal(facts.reset?.path, 'tb/reset')
+  assert.equal(facts.reset?.releasedAt, 15)
+
+  // the handshake: raised at 30, taken on the edge at 40, held two clocks
+  assert.equal(facts.handshakes.length, 1)
+  assert.deepEqual(facts.handshakes[0].transfers, [{ raised: 30, taken: 40, waited: 1, held: 1 }])
+
+  // one bench-driven input moves on an active edge; the others do not
+  const late = facts.drives.find(d => d.path === 'tb/late')
+  assert.equal(late?.onEdge, 1)
+  assert.deepEqual(late?.onEdgeAt, [50])
+  assert.equal(facts.drives.find(d => d.path === 'tb/data_out_ready')?.onEdge, 0)
+  // a register inside the design is not the bench's drive, however it moves
+  assert.equal(facts.drives.some(d => d.path.startsWith('tb/dut/')), false)
+
+  // x after reset is worth naming; a parameter that never moves is not
+  assert.deepEqual(facts.unknown.map(s => s.path), ['tb/data_out', 'tb/dut/stuck'])
+  assert.ok(facts.idle.includes('tb/dut/stuck'))
+  assert.equal(facts.idle.includes('tb/WIDTH'), false, 'parameters are not signals that failed to move')
+  assert.equal(facts.busiest[0].path, 'tb/clk')
+
+  // initialization: what was undefined, and for how long
+  assert.deepEqual(facts.init.unknownAtZero, ['tb/data_out', 'tb/dut/stuck'])
+  assert.deepEqual(facts.init.unknownAfterReset, [
+    { path: 'tb/data_out', until: 30 },   // the bus takes 15 ns after reset to mean anything
+    { path: 'tb/dut/stuck' },             // and this one never does
+  ])
+  assert.equal(facts.init.settledAt, undefined, 'a run with something permanently x never settles')
+})
+
+test('the run is cut into stretches, one per check the bench printed', () => {
+  const bench = readBenchLog('[30] ok: a byte arrived\n[50] ok: and the next one\n')
+  const facts = readFacts(parseVcd(VCD), bench)
+  assert.deepEqual(facts.windows.map(w => [w.label, w.from, w.to]), [
+    ['ok: a byte arrived', 0, 30],
+    ['ok: and the next one', 30, 50],
+  ])
+  // the transfer that the first check is about falls inside the first stretch
+  assert.deepEqual(facts.windows[0].transfers, [{ valid: 'tb/data_out_valid', raised: 30, taken: 40, waited: 1 }])
+  assert.equal(facts.windows[0].reset, true, 'the reset is asserted at the start of the run')
+  assert.equal(facts.windows[1].reset, false)
+  assert.equal(facts.windows[0].moved[0].path, 'tb/clk')
+
+  // a bench that printed no times gets no stretches rather than invented ones
+  assert.deepEqual(readFacts(parseVcd(VCD), readBenchLog('ok: no time here\n')).windows, [])
+})
+
+test('the report says what it measured, and says it measured nothing else', () => {
+  const facts = readFacts(parseVcd(VCD))
+  const bench = readBenchLog('[30] ok: a byte arrived\nPASS: 0 mismatches\n')
+  const md = reportMarkdown({ facts: readFacts(parseVcd(VCD), bench), bench, source: { vcd: 'x.vcd' } })
+  assert.match(md, /Nothing here explains \*why\*/)
+  assert.match(md, /100\.000 MHz/)
+  assert.match(md, /\*\*2 different gaps\*\*/)
+  assert.match(md, /\| 30\.000 ns \| 40\.000 ns \| 1 clocks \| 1 clocks \|/)
+  assert.match(md, /⚠️ An input that changes on the active edge is a race/)
+  assert.match(md, /\| 30\.000 ns \| ok: a byte arrived \|/)
+  assert.match(md, /\| — \| PASS: 0 mismatches \|/)
+  assert.match(md, /## Coming up/)
+  assert.match(md, /`tb\/dut\/stuck` \| \*\*never in this run\*\*/)
+  assert.match(md, /### ok: a byte arrived/)
+})
+
+test('a bench line carries its time when the bench printed one', () => {
+  const lines = readBenchLog('[ 1065000 ] ok: held\nok: no timestamp here\n\n')
+  assert.deepEqual(lines, [{ time: 1065000, text: 'ok: held' }, { text: 'ok: no timestamp here' }])
+})
+
+test('a file that is not a dump is refused by name', () => {
+  assert.throws(() => parseVcd('hello'), /no \$enddefinitions/)
+  assert.throws(() => parseVcd('$enddefinitions $end\n#0\n1!\n'), /no \$timescale/)
+})
+
+// The end of the chain: a real simulator's dump, read by the bundled CLI.
+test('a real dump, from iverilog, through the shipped reader', t => {
+  const root = join(import.meta.dirname, '../../..')
+  const cli = join(root, 'packages/vscode-ext/dist/agent/rtlgraph-wave.mjs')
+  if (!existsSync(cli)) return t.skip('run `npm run build -w rtlgraph` first')
+  try {
+    execFileSync('iverilog', ['-V'], { stdio: 'ignore' })
+  } catch {
+    return t.skip('iverilog not installed')
+  }
+  const dir = mkdtempSync(join(tmpdir(), 'rtlgraph-wave-'))
+  // The bench is never edited to be watched: a module beside it does the dumping.
+  writeFileSync(join(dir, 'dumper.v'),
+    `module rtlgraph_dumper;\n  initial begin\n    $dumpfile("${join(dir, 'wave.vcd')}");\n    $dumpvars(0, tb_hw);\n  end\nendmodule\n`)
+  const demo = join(root, 'demo/hw')
+  execFileSync('iverilog', ['-g2005', '-o', join(dir, 'a.out'),
+    join(demo, 'tb_hw.v'), join(demo, 'hw_top.v'), join(demo, 'counter.v'), join(dir, 'dumper.v')])
+  const printed = execFileSync('vvp', ['-n', join(dir, 'a.out')], { encoding: 'utf8' })
+  writeFileSync(join(dir, 'bench.log'), printed)
+
+  execFileSync(process.execPath, [cli, join(dir, 'wave.vcd'), '--log', join(dir, 'bench.log'), '--out', dir], { encoding: 'utf8' })
+  const report = JSON.parse(readFileSync(join(dir, 'waveform.json'), 'utf8'))
+  assert.ok(report.facts.clock.period > 0, 'a clock was found and measured')
+  assert.equal(report.facts.clock.periods.length, 1, 'and it does not jitter')
+  assert.ok(report.facts.changes > 100)
+  assert.ok(report.bench.some((line: { text: string }) => line.text.includes('PASS')), 'the bench log came along')
+  assert.match(readFileSync(join(dir, 'waveform.md'), 'utf8'), /^# What the waveform says/)
+})

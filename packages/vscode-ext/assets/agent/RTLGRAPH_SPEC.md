@@ -446,6 +446,42 @@ rule is that **restructuring and new behaviour never happen in the same step**.
 
 ---
 
+## Workflow W — Waveform → why it passed
+
+Use when a simulation has run and someone wants to know *why* it behaved as it did — most often
+after `.agent/rtlgraph/run-tb.sh --wave`, which writes `waveform.md` (for a person) and
+`waveform.json` (for you) beside the build artefacts.
+
+The division of labour is the whole point of this workflow:
+
+| | Who | What it may say |
+|---|---|---|
+| **Measurement** | `wave.mjs`, from the dump | clock period, when the reset let go, what was still undefined, when each handshake was taken, which signals moved in the stretch before each check |
+| **Explanation** | you, from the code | which lines produce those edges, why the numbers are the numbers they are, what would have to change for them to differ |
+
+Rules that keep the two apart:
+
+1. **Every number you state comes from `waveform.json`.** Never round, never re-derive from the
+   design's parameters, never write a time the dump does not contain. If a number you expected is
+   missing from the measurements, say it is missing.
+2. **Every claim about behaviour cites code**, as `file.v:line` or `file.v:line-line`. "The byte is
+   held until the host takes it" is not an explanation; "`has_byte` stays set because the clearing
+   branch needs `data_out_ready` (`uart_receiver.v:86-87`)" is.
+3. **Initialization comes first.** A testbench that only checks outputs will pass while a register
+   spends the opening microsecond undefined. Say what the reset actually defines, which signals the
+   measurements list as still `x` afterwards, and — from the code — whether that matters.
+4. **One section per check.** `waveform.json` cuts the run into stretches, one per timestamped line
+   the bench printed. For each: what the bench claimed, what the wires did in that stretch, and the
+   path through the code that connects them. Name the lines that would have to be wrong for the
+   check to fail — that is what makes the analysis worth reading twice.
+5. **Disagreements are findings.** If the dump does not match what the code appears to say, write
+   that down rather than smoothing it over. The dump is what happened.
+
+Write `waveform-analysis.md` beside the report you read. Where NodeGraph is installed (see
+`.agent/rtlgraph/ENVIRONMENT.md`), the same content can carry `code` links per check.
+
+---
+
 ## Registry — primitives the extension draws as symbols
 
 `BW` is the **most significant bit index**: a port of width `BW` is `BW+1` bits (`DFF #(5)` holds 6

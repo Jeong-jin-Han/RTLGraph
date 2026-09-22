@@ -36,6 +36,24 @@ extension, so each line is something that broke once.
 - Two palette commands run them where their output can be read, in a terminal:
   **RTLGraph: Run the Testbenches** and **RTLGraph: Package the Submission**.
 
+### Reading a waveform instead of staring at one
+
+- **`.agent/rtlgraph/run-tb.sh --wave`** dumps a waveform while the benches run.
+  No testbench is edited to make it happen — a module beside it calls
+  `$dumpvars` — which is what makes it usable on the bench you are marked with.
+- **`.agent/rtlgraph/wave.mjs`** reads the dump and writes `waveform.md` (for a
+  person) and `waveform.json` (for an agent): clock period and whether it
+  wobbles, when the reset let go and **what was still undefined afterwards**,
+  every valid/ready transfer with what it waited and how long it was held, the
+  signals that never moved, and the run cut into one stretch per check the bench
+  printed with a time.
+- **`.prompt/rtlgraph/waveform/{korean,english}.md`**, a sixth branch, is the
+  other half: it asks an agent to explain *why* each check passed, against the
+  code. Every number must come from the dump and every claim must cite
+  `file.v:line`, so the analysis can be checked rather than believed.
+- Our own benches now print `[%0t]` before each line, which is what lets a check
+  and a stretch of waveform be put beside each other.
+
 ### One folder each
 
 - Everything the extension writes now lives under its own name:

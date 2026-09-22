@@ -29,6 +29,7 @@ const ROOT_SEARCH_DEPTH = 8
 // Every prompt the workspace has, as "<branch>/<language>" with what it is for.
 const PROMPT_ABOUT: Record<string, string> = {
   spec: 'an idea → SPEC.md',
+  waveform: 'a simulation that ran → why it behaved that way',
   rtl: 'a spec → new RTL in the three-layer layout',
   refactor: 'existing RTL → restructured RTL',
   rtlgraph: 'existing RTL → RTLGraph, your own project',

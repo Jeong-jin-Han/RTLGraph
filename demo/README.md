@@ -87,7 +87,9 @@ bash packages/vscode-ext/assets/agent/run-tb.sh --project demo/hw
 ```
 
 That is the script `RTLGraph: Copy Agent Spec to Workspace` writes as
-`.agent/rtlgraph/run-tb.sh`. It finds the benches (`tb/given/` for whatever the course
+`.agent/rtlgraph/run-tb.sh`. Add `--wave` and it also dumps a waveform and reads
+it back: `waveform.md` beside the build artefacts, measurements only — clock,
+reset, what was undefined after it, every handshake, and one stretch per check. It finds the benches (`tb/given/` for whatever the course
 handed out, `tb/mine/` for the project's own), swaps one at a time into the
 project folder, compiles it against every other `.v` — `.base/` included — and
 prints a verdict line each. It is the demo projects' `iverilog` lines in one

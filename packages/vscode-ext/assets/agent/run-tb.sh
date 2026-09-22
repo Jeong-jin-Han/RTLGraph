@@ -24,10 +24,16 @@
 #   --sim NAME      iverilog | vivado  (default: whichever is installed)
 #   --out DIR       where build artefacts go (default: <project>/.agent/tb-build)
 #   --top NAME      the bench's top module, when the file holds more than one
+#   --wave          also dump a waveform and write what it says (waveform.md)
 #   --keep          leave the last bench swapped into the project folder
 #   --in-place      do not swap anything; compile the benches where they lie
 #   --quiet         only the verdict lines, no simulator output
 #   -h, --help      this text
+#
+# With --wave the bench is never edited to make it dump: a small module beside
+# it calls $dumpvars, and .agent/rtlgraph/wave.mjs turns the dump into
+# waveform.md — measurements only. The "why did this pass?" reading is a
+# separate job, for .prompt/rtlgraph/waveform/*.md.
 #
 # Exit status is 0 only when every bench that ran reported PASS.
 
@@ -41,6 +47,7 @@ top=""
 quiet=0
 keep=0
 swap=1
+wave=0
 want=()
 
 while [ $# -gt 0 ]; do
@@ -49,6 +56,7 @@ while [ $# -gt 0 ]; do
     --sim) sim="$2"; shift 2 ;;
     --out) out="$2"; shift 2 ;;
     --top) top="$2"; shift 2 ;;
+    --wave) wave=1; shift ;;
     --keep) keep=1; shift ;;
     --in-place) swap=0; shift ;;
     --quiet) quiet=1; shift ;;
@@ -175,10 +183,29 @@ module_of() { sed -n 's/^[[:space:]]*module[[:space:]]\+\([A-Za-z_][A-Za-z0-9_$]
 # was fine. So try the plain dialect first and widen only if it fails.
 dialects_for() { case "$1" in *.sv) echo "-g2012" ;; *) echo "-g2005 -g2005-sv -g2012" ;; esac; }
 
+# A module that dumps, compiled alongside a bench that was never asked to. The
+# bench keeps its own file untouched — which matters most for the one bench we
+# are not allowed to edit.
+dumper_for() { # bench, workdir → prints the file to compile with it, or nothing
+  local bench=$1 work=$2 top
+  [ "$wave" = 1 ] || return 0
+  top=${top:-$(module_of "$bench")}
+  cat > "$work/rtlgraph_dumper.v" <<DUMPER
+module rtlgraph_dumper;
+    initial begin
+        \$dumpfile("$work/wave.vcd");
+        \$dumpvars(0, $top);
+    end
+endmodule
+DUMPER
+  printf '%s' "$work/rtlgraph_dumper.v"
+}
+
 run_iverilog() { # bench, workdir
-  local bench=$1 work=$2 first="" tried=""
+  local bench=$1 work=$2 first="" tried="" dump
+  dump=$(dumper_for "$bench" "$work")
   for dialect in $(dialects_for "$bench"); do
-    if iverilog "$dialect" -o "$work/a.out" "$bench" "${sources[@]}" > "$work/compile.$dialect.log" 2>&1; then
+    if iverilog "$dialect" -o "$work/a.out" "$bench" "${sources[@]}" ${dump:+"$dump"} > "$work/compile.$dialect.log" 2>&1; then
       cat "$work/compile.$dialect.log"
       ( cd -- "$project" && vvp -n "$work/a.out" )
       return
@@ -250,6 +277,15 @@ for bench in "${benches[@]}"; do
     "SAID NOTHING") silent=$((silent + 1)) ;;  # ran fine, judged nothing — a handed-out
     *) failed=$((failed + 1)) ;;               # bench often has no PASS line at all
   esac
+  if [ "$wave" = 1 ] && [ -f "$work/wave.vcd" ]; then
+    reader="$here/wave.mjs"
+    if [ -f "$reader" ] && command -v node >/dev/null 2>&1; then
+      node "$reader" "$work/wave.vcd" --log "$log" --out "$work" | sed 's/^/   /'
+    else
+      echo "   (dump written to ${work#"$project"/}/wave.vcd; wave.mjs or node missing, so nothing read it)"
+    fi
+  fi
+
   note=""
   case "$rel" in tb/given/*) note="← the one it is marked with" ;; esac
   verdicts+=("$(printf '%-15s %-40s %s' "$verdict" "$rel" "$note")")

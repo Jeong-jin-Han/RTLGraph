@@ -39,6 +39,17 @@ const configs = [
     banner: { js: '#!/usr/bin/env node' },
   },
   {
+    // The waveform reader, same deal: one file, no dependencies.
+    ...common,
+    sourcemap: false,
+    entryPoints: ['src/agent/wave-cli.ts'],
+    outfile: 'dist/agent/rtlgraph-wave.mjs',
+    platform: 'node',
+    format: 'esm',
+    target: 'node18',
+    banner: { js: '#!/usr/bin/env node' },
+  },
+  {
     ...common,
     entryPoints: ['src/webview/main.ts'],
     outfile: 'dist/webview.js',

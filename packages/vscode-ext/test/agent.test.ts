@@ -29,7 +29,7 @@ test('every file the command copies exists in the extension', () => {
 
 test('prompts: every kind in two languages, each pointing at a workflow the spec defines', () => {
   const workflows = [...spec.matchAll(/^## (Workflow ([A-Z]) — .+)$/gm)].map(m => [m[2], m[1]] as const)
-  assert.deepEqual(workflows.map(([letter]) => letter).sort(), ['A', 'B', 'C', 'S'])
+  assert.deepEqual(workflows.map(([letter]) => letter).sort(), ['A', 'B', 'C', 'S', 'W'])
   const byLetter = Object.fromEntries(workflows)
   const expected: Record<(typeof PROMPT_KINDS)[number], string> = {
     spec: byLetter.S, // idea → specification
@@ -37,6 +37,7 @@ test('prompts: every kind in two languages, each pointing at a workflow the spec
     refactor: byLetter.C, // existing RTL → restructured RTL
     rtlgraph: byLetter.A, // RTL → schematic
     assignment: byLetter.A, // the same, for code that may not be touched
+    waveform: byLetter.W, // a dump that exists → why the run looks like that
   }
   for (const kind of PROMPT_KINDS) {
     for (const language of PROMPT_LANGUAGES) {
@@ -50,7 +51,10 @@ test('prompts: every kind in two languages, each pointing at a workflow the spec
       }
       // The spec workflow writes a document, not RTLGraph files, so it runs no validator.
       const needles = ['.agent/rtlgraph/SPEC.md', '.agent/rtlgraph/ENVIRONMENT.md', '<PROJECT_ROOT_ABSOLUTE_PATH>']
-      for (const needle of kind === 'spec' ? [...needles, 'SPEC.md'] : [...needles, 'rtlgraph/validate.mjs']) {
+      // spec writes a document and waveform reads one: neither produces
+      // RTLGraph JSON, so neither runs the validator.
+      const extra = kind === 'spec' ? ['SPEC.md'] : kind === 'waveform' ? ['waveform.json', 'run-tb.sh --wave'] : ['rtlgraph/validate.mjs']
+      for (const needle of [...needles, ...extra]) {
         assert.ok(prompt.includes(needle), `${kind}/${language} mentions ${needle}`)
       }
     }

@@ -99,7 +99,7 @@ click rather than a memory test.
 | **Export** | SVG / PNG / PDF of exactly what is on screen, and XLSX of the tables behind it — all written without a dependency |
 | **Validator** | Schema, widths, ports, unreachable nets, missing `meaning`, and every `origin` checked against the Verilog itself. A `source.root` pointing at the wrong folder is reported once, with the value it should have, instead of once per element |
 | **Its own file icon** | RTLGraph marks the tabs it owns — the schematic, the state diagram, the requirement reader — whichever icon theme you use. In the Explorer the icon belongs to your theme; `RTLGraph: Mark RTLGraph Files in the Explorer` teaches Material Icon Theme about them |
-| **Agent-friendly** | `.agent/rtlgraph/SPEC.md` plus five ready-to-paste prompts, one per kind of job |
+| **Agent-friendly** | `.agent/rtlgraph/SPEC.md` plus six ready-to-paste prompts, one per kind of job |
 
 ---
 
@@ -116,14 +116,24 @@ click rather than a memory test.
 > .agent/rtlgraph/validate.mjs         the validator the agent runs on what it wrote
 > .agent/rtlgraph/run-tb.sh            runs the testbenches and says which passed
 > .agent/rtlgraph/make-submission.sh   collects the .v files to hand in, checks them, zips them
+> .agent/rtlgraph/wave.mjs             reads a simulation's dump and says what it measured
 > .prompt/rtlgraph/rtlgraph/{korean,english}.md    existing RTL → RTLGraph
 > .prompt/rtlgraph/assignment/{korean,english}.md  the same, for a skeleton that may not be touched
 > .prompt/rtlgraph/rtl/{korean,english}.md         spec → RTL in the three-layer layout, then RTLGraph
 > .prompt/rtlgraph/refactor/{korean,english}.md    existing RTL → restructured RTL, then RTLGraph
 > .prompt/rtlgraph/spec/{korean,english}.md        an idea → SPEC.md
-> .prompt/rtlgraph/README.md, README.korean.md     which of the five to reach for — for you, not the agent
+> .prompt/rtlgraph/waveform/{korean,english}.md    a run that happened → why it happened
+> .prompt/rtlgraph/README.md, README.korean.md     which of the six to reach for — for you, not the agent
 > .base/{DFF,INC,ADD,SUB,MUX2,CMP_EQ}.v            the primitives RTLGraph draws with symbols, plus a note
 > ```
+>
+> `.agent/rtlgraph/run-tb.sh --wave` closes the loop the other way. It dumps a waveform — adding a
+> module that calls `$dumpvars`, so no testbench is edited, the handed-out one included — and
+> `wave.mjs` turns the dump into `waveform.md`: clock period and whether it wobbles, when the reset
+> let go and what was **still undefined afterwards**, when each valid/ready transfer was taken and
+> how long it waited, and the run cut into one stretch per check the bench printed. Measurements
+> only. The reading of *why* is a separate job, for `.prompt/rtlgraph/waveform/*.md`, which is told
+> to take every number from the dump and cite `file.v:line` for every claim.
 >
 > `.base/` is the one thing not under `rtlgraph/`: it is a library the design compiles against and
 > `source.lib` points at it by path, so it belongs to the project rather than to this extension.
