@@ -33,6 +33,14 @@ testbench printed with a time.
   appears to say, write that down. The dump is what happened; your reading of
   the code is what you thought would happen.
 
+**One pass or one check at a time.** This prompt writes the whole document in
+one go, which is what you want before a demo or a hand-in: the RTL is read once
+for all of them, and a section can point at another. The waveform view also has
+a `?` on any check nobody has written about yet, which copies a request about
+that one check alone — cheaper when you only care about the one that surprised
+you, dearer if you end up asking for every check that way. Both append to the
+same file and are matched by the same headings, so they mix freely.
+
 ## Write `waveform/<bench>.waveform-analysis.md`, beside the report you read
 
 **Use the check's own printed line as the section heading** (`## ok: cleared once

@@ -9,7 +9,7 @@
 
 import * as vscode from 'vscode'
 import {
-  buildView, langOf, matchAnalysis, parseAnalysis, parseVcd, readFacts, wordsIn,
+  askFor, buildView, langOf, matchAnalysis, parseAnalysis, parseVcd, readFacts, wordsIn,
   type Lang, type WaveView,
 } from '@rtlgraph/wave'
 import { webviewHtml } from './webview/html.ts'
@@ -100,9 +100,40 @@ export class WaveViewProvider implements vscode.CustomTextEditorProvider {
     const watcher = vscode.workspace.onDidSaveTextDocument(saved => {
       if (saved.uri.toString() === document.uri.toString()) void send()
     })
-    panel.onDidDispose(() => watcher.dispose())
-    panel.webview.onDidReceiveMessage((message: { type?: string; file?: string; line?: number }) => {
+    // The analysis is written by an agent, one section at a time, in another
+    // window — so the view watches the file rather than waiting to be reopened.
+    const analysisPath = document.uri.path.replace(/\.waveform\.json$/, '.waveform-analysis.md')
+    const written = vscode.workspace.createFileSystemWatcher(
+      new vscode.RelativePattern(vscode.Uri.joinPath(document.uri, '..'), analysisPath.split('/').pop() ?? ''))
+    for (const event of [written.onDidCreate, written.onDidChange, written.onDidDelete]) event(() => void send())
+    panel.onDidDispose(() => {
+      watcher.dispose()
+      written.dispose()
+    })
+    panel.webview.onDidReceiveMessage(async (message: { type?: string; file?: string; line?: number; id?: string }) => {
       if (message?.type === 'ready') void send()
+      // One check at a time: the view asks, this composes the request with that
+      // stretch's measurements in it, and the clipboard carries it to whichever
+      // agent the user keeps open. Nothing here talks to a model.
+      if (message?.type === 'askAnalysis' && typeof message.id === 'string') {
+        const view = await this.read(document, lang)
+        const place = view?.markers.find(marker => marker.id === message.id)
+        if (!view || !place) return
+        const folder = vscode.workspace.getWorkspaceFolder(document.uri)?.uri
+        const request = askFor({
+          analysis: analysisPath.split('/').pop() ?? '',
+          report: document.uri.path.split('/').pop() ?? '',
+          place,
+          ...(place.did ? { window: { did: place.did, source: place.source } as never } : {}),
+          tick: view.tick,
+          ...(folder ? { project: folder.fsPath } : {}),
+        }, lang)
+        await vscode.env.clipboard.writeText(request)
+        void vscode.window.showInformationMessage(
+          lang === 'ko'
+            ? `RTLGraph: "${place.label}" 하나에 대한 요청을 복사했다 — 에이전트에 붙여넣으면 ${analysisPath.split('/').pop()} 에 그 절만 덧붙는다.`
+            : `RTLGraph: copied a request about "${place.label}" — paste it into your agent and it appends that one section to ${analysisPath.split('/').pop()}.`)
+      }
       // A check knows the line that printed it; opening it beside the drawing is
       // the whole point of recording it.
       if (message?.type === 'openCode' && typeof message.file === 'string') {

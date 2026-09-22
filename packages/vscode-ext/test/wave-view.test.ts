@@ -223,3 +223,17 @@ test('what an agent wrote about a check unfolds beside it, citations and all', {
   // sections that belong to no check are kept rather than dropped
   assert.ok(rail().findAll(n => n.attributes.get('class') === 'wave-note').length >= 1)
 })
+
+// A run has ten checks and nobody ordered ten essays: a place with no writing
+// yet offers to ask for that one, and the request carries its measurements.
+test('a check with nothing written offers to ask, one check at a time', { skip: !existsSync(BUNDLE) && 'run `npm run build -w rtlgraph`' }, async t => {
+  if (!existsSync(join(DEMO, 'tb_uart_loop.waveform.json'))) return t.skip('demo/uart-p01 is not here')
+  const view = await webview()
+  view.send(payload('tb_uart_loop')) // no analysis is written for this one
+  const asks = view.byId('wave-rail')!.findAll(n => n.attributes.get('class') === 'ask')
+  assert.ok(asks.length >= 3, 'every place without writing offers it')
+  asks[0].dispatch('click', {})
+  const posted = view.posted.at(-1) as { type: string; id: string }
+  assert.equal(posted.type, 'askAnalysis')
+  assert.equal(posted.id, 'init', 'and says which place it is about')
+})

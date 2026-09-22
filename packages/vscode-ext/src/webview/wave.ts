@@ -172,6 +172,20 @@ function draw(): void {
       })
       item.append(code)
     }
+    // Nobody has written about this one yet: offer to ask, for this check
+    // alone. A run has ten of them and explaining all ten at once is a long
+    // job nobody ordered.
+    if (!marker.explain) {
+      const ask = document.createElement('button')
+      ask.className = 'ask'
+      ask.textContent = `? ${say('why', 'why it passed')}`
+      ask.title = say('askWhy', 'ask why')
+      ask.addEventListener('click', event => {
+        event.stopPropagation()
+        vscode.postMessage({ type: 'askAnalysis', id: marker.id })
+      })
+      item.append(ask)
+    }
     // What an agent made of it, folded away until asked for: the measurements
     // are the claim, this is the argument, and a reader wants one at a time.
     if (marker.explain) {

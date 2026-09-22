@@ -4,7 +4,7 @@
 // that is what `.prompt/rtlgraph/waveform/*.md` asks an agent to add, against
 // the code, with line numbers.
 
-import { atTime, type BenchLine, type WaveFacts } from './facts.ts'
+import { asValue, atTime, type BenchLine, type WaveFacts } from './facts.ts'
 import { wordsIn, type Lang } from './words.ts'
 
 export interface Report {
@@ -115,8 +115,19 @@ export function reportMarkdown(report: Report, lang: Lang = 'en'): string {
         say(`- ${at(moment.at)} — ${moment.what}${moment.signal ? ` (\`${moment.signal}\`)` : ''}`)
       }
       if (window.focus.length > 0) say('')
-      say(w.busiestHere + (window.moved.length === 0 ? w.nothingMoved :
-        window.moved.map(m => `\`${m.path}\` ×${m.changes}`).join(', ')), '')
+      if (window.did.length === 0) {
+        say(w.nothingMoved, '')
+      } else {
+        for (const entry of window.did) {
+          const name = `\`${entry.path}\``
+          const from = asValue(entry.from, entry.width)
+          const to = asValue(entry.to, entry.width)
+          say('- ' + (entry.width === 1 && (entry.pulses ?? 0) > 1
+            ? w.didPulse(name, entry.pulses!)
+            : from === to ? w.didHold(name, to) : w.didChange(name, from, to, entry.changes, entry.counted)))
+        }
+        say('')
+      }
     }
   }
 

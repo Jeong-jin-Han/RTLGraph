@@ -84,6 +84,25 @@ export interface WindowFacts {
   transfers: readonly { valid: string; raised: number; taken?: number; waited?: number }[]
   /** What moved, busiest first — the signals worth looking at for this check. */
   moved: readonly { path: string; changes: number }[]
+  /**
+   * What each of them did, in the plainest terms the dump can support: what it
+   * held going in, what it held at the end, how many times it moved, and — for
+   * a one-bit signal — how many pulses that was. "busiest: clk, sample" says
+   * nothing; "sample pulsed 14 times, bit_counter went 10 → 0" is the check.
+   */
+  did: readonly {
+    path: string
+    /** So a reader can be shown `3c` rather than `00111100`. */
+    width: number
+    /** The value going into the stretch, and the one it ends on. */
+    from?: string
+    to?: string
+    changes: number
+    /** Rising edges, for a one-bit signal. */
+    pulses?: number
+    /** True when the values only ever decrease (or only increase) — a counter. */
+    counted?: 'up' | 'down'
+  }[]
   /** Was the reset asserted at any point in this stretch? */
   reset: boolean
 }
@@ -289,6 +308,45 @@ function windowFacts(wave: Waveform, bench: readonly BenchLine[], facts: {
       if (!signal || signal.kind === 'parameter') continue
       moved.set(signal.path, (moved.get(signal.path) ?? 0) + 1)
     }
+    // What each signal did across the stretch, not merely that it was busy.
+    // The clock is not news and a bench's loop counter is not hardware.
+    const did = [...moved]
+      .filter(([path]) => {
+        const signal = wave.signals.find(sig => sig.path === path)
+        return signal?.hardware === true && signal.kind !== 'parameter'
+          && signal.kind !== 'integer' && !CLOCK.test(signal.name)
+      })
+      .sort((a, b) => b[1] - a[1])
+      .map(([path, changes]) => {
+        const whole = seriesOf(wave, path)
+        const inside = whole.filter(c => c.time > from && c.time <= to)
+        const width = wave.signals.find(sig => sig.path === path)?.width ?? 1
+        const enter = levelBefore(whole, from + 1)
+        const leave = levelAt(whole, to)
+        const numbers = inside.map(c => (/[xzu]/i.test(c.value) ? NaN : Number.parseInt(c.value, 2)))
+        const usable = numbers.filter(n => Number.isFinite(n))
+        const down = usable.length > 2 && usable.every((n, i) => i === 0 || n <= usable[i - 1])
+        const up = usable.length > 2 && usable.every((n, i) => i === 0 || n >= usable[i - 1])
+        return {
+          path,
+          width,
+          ...(enter !== undefined ? { from: enter } : {}),
+          ...(leave !== undefined ? { to: leave } : {}),
+          changes,
+          ...(width === 1 ? { pulses: inside.filter(c => c.value === '1').length } : {}),
+          ...(width > 1 && (down || up) && !down !== !up ? { counted: down ? ('down' as const) : ('up' as const) } : {}),
+        }
+      })
+
+    // A port either side of a boundary is one wire twice; said twice it is noise.
+    const seen = new Set<string>()
+    const spoken = did.filter(entry => {
+      const signature = `${entry.width}:${entry.from}:${entry.to}:${entry.changes}:${entry.pulses ?? ''}`
+      if (seen.has(signature)) return false
+      seen.add(signature)
+      return true
+    }).slice(0, 6)
+
     const transfers = facts.handshakes.flatMap(h => h.transfers
       .filter(t => t.raised >= from && t.raised <= to)
       .map(t => ({ valid: h.valid, raised: t.raised, ...(t.taken !== undefined ? { taken: t.taken } : {}), ...(t.waited !== undefined ? { waited: t.waited } : {}) })))
@@ -299,6 +357,7 @@ function windowFacts(wave: Waveform, bench: readonly BenchLine[], facts: {
       focus: focusOf(wave, { from, to }, facts.handshakes, facts.reset, lang),
       transfers,
       moved: [...moved].map(([path, changes]) => ({ path, changes })).sort((a, b) => b.changes - a.changes).slice(0, 8),
+      did: spoken,
       reset: reset.some(c => c.time >= from && c.time <= to && c.value === '1'),
     })
     from = to
@@ -359,6 +418,14 @@ export function readBenchLog(text: string): BenchLine[] {
     const stamped = /^\s*\[?\s*(\d+)\s*(?:ps|ns|us)?\s*\]?\s*(.*)$/.exec(line)
     return stamped && stamped[2] !== '' ? { time: Number(stamped[1]), text: stamped[2].trim() } : { text: line.trim() }
   })
+}
+
+/** `00111100` at eight bits reads as `3c`; one bit reads as itself. */
+export function asValue(value: string | undefined, width: number): string {
+  if (value === undefined) return '—'
+  if (width === 1 || /[xzu]/i.test(value)) return value
+  const n = Number.parseInt(value, 2)
+  return Number.isNaN(n) ? value : n.toString(16).padStart(Math.ceil(width / 4), '0')
 }
 
 /** Milliseconds-friendly rendering of a dump time. */

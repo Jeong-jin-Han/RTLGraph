@@ -48,6 +48,13 @@ extension, so each line is something that broke once.
   every valid/ready transfer with what it waited and how long it was held, the
   signals that never moved, and the run cut into one stretch per check the bench
   printed with a time.
+- **A check with nothing written about it offers to ask.** The `?` on such a
+  place copies a request about that one stretch — its measured instants, what
+  each signal did, the line that printed it, and the rule that no number may be
+  invented — for pasting into whichever agent is open. The answer is appended to
+  the analysis file, which the view is watching, so it appears where it was
+  asked for. Useful when one check surprised you; the whole-document prompt is
+  cheaper when you want them all, and the prompts now say so.
 - **The analysis comes back into the view.** When `<bench>.waveform-analysis.md`
   exists beside a report, each section is folded in under the check it explains
   — matched by the heading, which the prompt asks to be the check's own printed

@@ -122,6 +122,8 @@ body.editing #stage g.wire { cursor: pointer; }
 /* What an agent wrote about a place, and the citations in it. */
 #wave-rail .why { margin-top: 5px; font: 11px system-ui, sans-serif; padding: 1px 6px; border: 1px solid #e5e7eb; border-radius: 4px; background: #ffffff; color: #6b7280; cursor: pointer; }
 #wave-rail .why:hover { border-color: #93c5fd; color: #1d4ed8; }
+#wave-rail .ask { margin-top: 5px; font: 11px system-ui, sans-serif; padding: 1px 6px; border: 1px dashed #d1d5db; border-radius: 4px; background: none; color: #9ca3af; cursor: pointer; }
+#wave-rail .ask:hover { border-color: #f59e0b; border-style: solid; color: #b45309; background: #fffbeb; }
 #wave-rail .prose { margin-top: 4px; padding: 6px 8px; border-left: 2px solid #bfdbfe; background: #ffffff; color: #374151; }
 #wave-rail .prose p { margin: 0 0 6px; }
 #wave-rail .prose p:last-child { margin-bottom: 0; }

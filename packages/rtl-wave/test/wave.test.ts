@@ -4,7 +4,7 @@ import { execFileSync } from 'node:child_process'
 import { existsSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { buildView, citationsIn, edgesOf, locateCheck, locateSignal, matchAnalysis, parseAnalysis, wordsIn, levelAt, levelBefore, parseVcd, readBenchLog, readFacts, reportMarkdown, seriesOf } from '../src/index.ts'
+import { askFor, buildView, citationsIn, edgesOf, locateCheck, locateSignal, matchAnalysis, parseAnalysis, wordsIn, levelAt, levelBefore, parseVcd, readBenchLog, readFacts, reportMarkdown, seriesOf } from '../src/index.ts'
 
 // A dump written by hand, so every fact below has a known answer. Two clock
 // periods of 10 ns, a reset released at 15 ns, a handshake whose valid clears
@@ -349,4 +349,36 @@ test('an analysis is matched to the places it explains, and nothing is guessed',
     { text: 'rx.v:86-87', file: 'rx.v', line: 86 },
     { text: 'top.v:9', file: 'top.v', line: 9 },
   ])
+})
+
+// The request the view copies: one check, its own numbers, and the rule that
+// nothing else may be invented.
+test('a request asks about one place and carries that place\'s measurements', () => {
+  const place = {
+    id: 'check-2', label: 'ok: cleared once taken', kind: 'check' as const,
+    from: 1450000, to: 1480000, notes: [], watch: [],
+    focus: [{ at: 1465000, what: 'taken after 40 clock(s)', signal: 'tb/data_out_ready' }],
+  }
+  const window = {
+    did: [{ path: 'tb/rx/has_byte', width: 1, from: '1', to: '0', changes: 1, pulses: 0 }],
+    source: { file: '../tb/mine/tb_uart_corner.v', line: 79, text: 'else $display("ok: cleared once taken");' },
+  }
+  const asked = askFor({
+    analysis: 'tb_uart_corner.waveform-analysis.md',
+    report: 'tb_uart_corner.waveform.json',
+    place, window: window as never, tick: 1000, project: '/w/uart',
+  }, 'ko')
+
+  assert.match(asked, /## ok: cleared once taken/, 'the heading the view will match on')
+  assert.match(asked, /tb_uart_corner\.waveform-analysis\.md 에 \*\*절 하나를 덧붙여\*\*/)
+  assert.match(asked, /1\.465 µs — taken after 40 clock\(s\)/, 'the measured instant, in the dump\'s own numbers')
+  assert.match(asked, /tb\/rx\/has_byte: 1 → 0/)
+  assert.match(asked, /tb_uart_corner\.v:79/, 'and where the check was printed')
+  assert.match(asked, /반올림하지도/, 'with the rule that keeps it checkable')
+  assert.match(asked, /이 절 하나만 쓰고 끝내/, 'one section, not the whole document')
+
+  // the same request in English names the same things
+  const english = askFor({ analysis: 'a.md', report: 'r.json', place, tick: 1000 }, 'en')
+  assert.match(english, /append one section/)
+  assert.match(english, /## ok: cleared once taken/)
 })

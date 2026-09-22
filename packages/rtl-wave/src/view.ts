@@ -7,7 +7,7 @@
 // keeps, and never the bookkeeping a simulator dumps alongside.
 
 import { seriesOf, type Waveform } from './vcd.ts'
-import type { WaveFacts } from './facts.ts'
+import { asValue, type WaveFacts, type WindowFacts } from './facts.ts'
 import { wordsIn, type Lang } from './words.ts'
 
 export interface Trace {
@@ -40,6 +40,8 @@ export interface Marker {
   watch: readonly string[]
   /** What an agent wrote about this place, if anyone has written it. */
   explain?: string
+  /** The measurements behind the notes, for composing a request about them. */
+  did?: WindowFacts['did']
 }
 
 export interface WaveView {
@@ -166,8 +168,19 @@ function markersFor(facts: WaveFacts, traces: readonly Trace[], lang: Lang): Mar
       notes: [
         ...(taken.length > 0 ? [w.transfersTaken(taken.length, taken.map(t => t.waited).join(', '))] : []),
         ...(window.reset ? [w.reset_in_stretch] : []),
+        // What the wires did here, in words: the thin version of this said
+        // "busiest: clk, sample", which is not a reading of anything.
+        ...window.did.map(entry => {
+          const name = entry.path.split('/').slice(-1)[0]
+          const from = asValue(entry.from, entry.width)
+          const to = asValue(entry.to, entry.width)
+          if (entry.width === 1 && (entry.pulses ?? 0) > 1) return w.didPulse(name, entry.pulses!)
+          if (from === to) return w.didHold(name, to)
+          return w.didChange(name, from, to, entry.changes, entry.counted)
+        }),
       ],
       ...(window.source ? { source: window.source } : {}),
+      did: window.did,
       focus: window.focus,
       watch: window.moved.slice(0, 6).map(m => m.path),
     })

@@ -57,6 +57,9 @@ export interface Words {
   reset_in_stretch: string
   busiestHere: string
   nothingMoved: string
+  didPulse: (name: string, times: number) => string
+  didChange: (name: string, from: string, to: string, changes: number, counting?: 'up' | 'down') => string
+  didHold: (name: string, value: string) => string
   transfersTaken: (count: number, waits: string) => string
   focusValidRose: string
   focusTaken: (clocks: number) => string
@@ -76,6 +79,7 @@ export interface Words {
   whatItSaid: string
 
   why: string
+  askWhy: string
   hoverForValues: string
   wholeRun: string
   zoomIn: string
@@ -138,6 +142,10 @@ const EN: Words = {
   reset_in_stretch: 'reset asserted in this stretch',
   busiestHere: 'Busiest here: ',
   nothingMoved: 'nothing moved',
+  didPulse: (name, times) => `${name} pulsed ${times}×`,
+  didChange: (name, from, to, changes, counting) =>
+    `${name} ${from} → ${to}` + (changes > 1 ? ` (${changes} changes${counting ? `, counting ${counting}` : ''})` : ''),
+  didHold: (name, value) => `${name} stayed ${value}`,
   transfersTaken: (count, waits) => `${count} transfer(s) taken, waiting ${waits} clock(s)`,
   focusValidRose: 'valid rose',
   focusTaken: clocks => `taken after ${clocks} clock(s)`,
@@ -157,6 +165,7 @@ const EN: Words = {
   whatItSaid: 'What it said',
 
   why: 'why it passed',
+  askWhy: 'ask why — copies a request for this one check',
   hoverForValues: 'hover for values',
   wholeRun: 'the whole run',
   zoomIn: 'zoom in',
@@ -219,6 +228,10 @@ const KO: Words = {
   reset_in_stretch: '이 구간에 리셋이 걸렸다',
   busiestHere: '여기서 가장 바쁜 것: ',
   nothingMoved: '움직인 것 없음',
+  didPulse: (name, times) => `${name} ${times}회 펄스`,
+  didChange: (name, from, to, changes, counting) =>
+    `${name} ${from} → ${to}` + (changes > 1 ? ` (${changes}회${counting ? (counting === 'down' ? ', 계속 감소' : ', 계속 증가') : ''})` : ''),
+  didHold: (name, value) => `${name} ${value} 유지`,
   transfersTaken: (count, waits) => `전송 ${count}건 성립, 대기 ${waits} 클럭`,
   focusValidRose: 'valid 상승',
   focusTaken: clocks => `${clocks} 클럭 뒤 가져감`,
@@ -238,6 +251,7 @@ const KO: Words = {
   whatItSaid: '무엇을 찍었나',
 
   why: '왜 통과했나',
+  askWhy: '왜? 물어보기 — 이 체크 하나짜리 요청을 복사',
   hoverForValues: '올려놓으면 값',
   wholeRun: '실행 전체',
   zoomIn: '확대',
