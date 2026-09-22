@@ -89,7 +89,7 @@ test('the second report draws too, and opens on something that moves', { skip: !
 // Several instants a few nanoseconds apart is the normal case — four of them
 // inside 60 ns is what the loop report opens on — so the labels have to stack
 // rather than print over one another.
-test('moment labels are laid out in lanes, never on top of each other', { skip: !existsSync(BUNDLE) && 'run `npm run build -w rtlgraph`' }, async t => {
+test('the badges that mark instants never sit on top of one another', { skip: !existsSync(BUNDLE) && 'run `npm run build -w rtlgraph`' }, async t => {
   if (!existsSync(join(DEMO, 'tb_uart_loop.waveform.json'))) return t.skip('demo/uart-p01 is not here')
   const view = await webview()
   const message = payload('tb_uart_loop')
@@ -103,19 +103,29 @@ test('moment labels are laid out in lanes, never on top of each other', { skip: 
   places[crowded].dispatch('click', {})
 
   const plot = view.byId('wave-plot')!
-  const boxes = plot.findAll(node => node.attributes.get('class')?.startsWith('wave-moment-box') ?? false)
-  assert.ok(boxes.length >= 2, 'the opening window has several instants worth marking')
+  const badges = plot.findAll(node => node.attributes.get('class')?.startsWith('wave-badge') === true && node.tag === 'rect')
+  assert.ok(badges.length >= 2, 'the check has several instants worth marking')
 
-  // no two labels share a lane and overlap in x
-  const placed = boxes.map(box => ({
-    x: Number(box.attributes.get('x')), y: Number(box.attributes.get('y')), w: Number(box.attributes.get('width')),
+  // the plot carries numbers, not sentences: the words appear on hover only
+  assert.equal(plot.findAll(n => n.attributes.get('class')?.includes('wave-moment-box') === true).length, 0)
+  const numbers = plot.findAll(n => n.attributes.get('class')?.startsWith('wave-badge-number') === true)
+  assert.deepEqual(numbers.map(n => n.textContent), badges.map((_, i) => String(i + 1)), 'numbered in time order')
+
+  // and no two badges share a lane and overlap in x
+  const placed = badges.map(badge => ({
+    x: Number(badge.attributes.get('x')), y: Number(badge.attributes.get('y')), w: Number(badge.attributes.get('width')),
   }))
   for (const [i, a] of placed.entries()) {
     for (const b of placed.slice(i + 1)) {
       if (a.y !== b.y) continue
-      assert.ok(a.x + a.w <= b.x || b.x + b.w <= a.x, `two labels overlap on the same lane at y=${a.y}`)
+      assert.ok(a.x + a.w <= b.x || b.x + b.w <= a.x, `two badges overlap on the same lane at y=${a.y}`)
     }
   }
+
+  // pointing at a badge is the other way in: the words appear beside it
+  badges[0].dispatch('mouseenter', {})
+  assert.equal(plot.findAll(n => n.attributes.get('class') === 'wave-moment-label hot').length, 1,
+    'the badge under the hand spells itself out')
 })
 
 // Pointing at something should say which line it means, without moving the view

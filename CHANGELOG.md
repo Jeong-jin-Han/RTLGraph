@@ -67,10 +67,11 @@ extension, so each line is something that broke once.
   Zooming about the middle is right in the middle and wrong at an edge, where
   what you are looking at slides off while the view grows around a point you
   did not pick.
-- Pointing at an instant in the rail lights the line it marks, without moving
-  the view; pointing at a signal picks its row out of the plot. And the labels
-  on those lines stack into lanes instead of printing over one another — four
-  instants inside 60 ns is the normal case, not the odd one.
+- The plot marks instants with **numbers**, not sentences: four of them inside
+  60 ns cannot all carry their wording, but they can all carry a badge, and the
+  same number sits beside the words in the rail. Pointing at either — the badge
+  or the line in the list — lights the other and spells it out, without moving
+  the view. Pointing at a signal picks its row out of the plot.
 - The view opens on something that moves: a report whose reset releases at 40 ns
   used to frame those 40 ns of a 4 µs run and read as broken. Two signals of the
   same name (a `bit_counter` per module) now wear the scope that tells them

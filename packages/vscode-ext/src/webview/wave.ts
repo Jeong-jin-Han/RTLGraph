@@ -131,10 +131,15 @@ function draw(): void {
     if (marker.focus.length > 0) {
       const moments = document.createElement('div')
       moments.className = 'moments'
-      for (const moment of marker.focus) {
+      for (const [i, moment] of numbered(marker).entries()) {
         const button = document.createElement('button')
         button.className = `moment${hot === moment.at ? ' hot' : ''}`
-        button.textContent = `${atTime(moment.at)} · ${moment.what}`
+        const badge = document.createElement('span')
+        badge.className = 'badge'
+        badge.textContent = String(i + 1)
+        const said = document.createElement('span')
+        said.textContent = `${atTime(moment.at)} · ${moment.what}`
+        button.append(badge, said)
         button.title = moment.signal ?? ''
         button.addEventListener('click', event => {
           event.stopPropagation()
@@ -269,27 +274,42 @@ function draw(): void {
     if (place.from > from || place.to < to) {
       add('rect', { x: x(place.from), y: AXIS, width: Math.max(x(place.to) - x(place.from), 1), height: height - AXIS, class: 'wave-window' })
     }
-    // Labels stack into lanes rather than printing over one another: several
-    // instants a few nanoseconds apart is the normal case, not the odd one.
+    // A number, not a sentence. Four instants inside sixty nanoseconds cannot
+    // all carry their wording on the plot; they can all carry a badge, and the
+    // same number sits beside the words in the rail. Pointing at one — here or
+    // there — is what spells it out.
     const lanes: number[] = []
-    for (const moment of [...place.focus].sort((a, b) => a.at - b.at)) {
+    for (const [i, moment] of numbered(place).entries()) {
       if (moment.at < from || moment.at > to) continue
       const lit = hot === moment.at
-      add('line', {
-        x1: x(moment.at), y1: AXIS, x2: x(moment.at), y2: height,
-        class: `wave-moment${lit ? ' hot' : ''}`,
-      })
-      const left = x(moment.at) + 4
-      const wide = textWidth(moment.what) + 8
-      let lane = lanes.findIndex(end => end < left)
-      if (lane < 0) {
-        if (lanes.length >= 4 && !lit) continue // out of room: the line still marks it
-        lane = Math.min(lanes.length, 3)
+      const at = x(moment.at)
+      add('line', { x1: at, y1: AXIS, x2: at, y2: height, class: `wave-moment${lit ? ' hot' : ''}` })
+
+      const size = 15
+      // An instant at 0 sits on the very edge; the badge is nudged inside so it
+      // can be read and clicked, while its line stays where the instant is.
+      const badgeX = Math.min(Math.max(at - size / 2, 0), Math.max(width - size, 0))
+      let lane = lanes.findIndex(end => end < badgeX)
+      if (lane < 0) lane = Math.min(lanes.length, 5)
+      lanes[lane] = badgeX + size + 2
+      const y = AXIS + 3 + lane * (size + 2)
+      const badge = add('rect', { x: badgeX, y, width: size, height: size, rx: 4, class: `wave-badge${lit ? ' hot' : ''}` })
+      const number = add('text', { x: badgeX + size / 2, y: y + 11, class: `wave-badge-number${lit ? ' hot' : ''}` }, String(i + 1))
+      for (const node of [badge, number]) {
+        node.addEventListener('mouseenter', () => {
+          hot = moment.at
+          if (moment.signal) hotTrace = moment.signal
+          draw()
+        })
+        node.addEventListener('mouseleave', () => { hot = undefined; hotTrace = undefined; draw() })
       }
-      lanes[lane] = left + wide
-      const y = AXIS + 4 + lane * 13
-      add('rect', { x: left - 3, y, width: wide, height: 12, rx: 3, class: `wave-moment-box${lit ? ' hot' : ''}` })
-      add('text', { x: left, y: y + 9, class: `wave-moment-label${lit ? ' hot' : ''}` }, moment.what)
+      // Only the one under the hand says what it is, and it says it where there
+      // is room: to the right unless that would run off the edge.
+      if (!lit) continue
+      const wide = textWidth(moment.what) + 10
+      const left = badgeX + size + 4 + wide > width ? Math.max(badgeX - 4 - wide, 0) : badgeX + size + 4
+      add('rect', { x: left, y, width: wide, height: size, rx: 3, class: 'wave-moment-box hot' })
+      add('text', { x: left + 5, y: y + 11, class: 'wave-moment-label hot' }, moment.what)
     }
   }
 
@@ -297,6 +317,11 @@ function draw(): void {
     add('line', { x1: x(cursor), y1: 0, x2: x(cursor), y2: height, class: 'wave-cursor' })
   }
   plot.replaceChildren(svg)
+}
+
+/** A place's instants in time order — the order their badges are numbered in. */
+function numbered(place: Marker): Marker['focus'] {
+  return [...place.focus].sort((a, b) => a.at - b.at)
 }
 
 /** Roughly how wide a label draws — Hangul is about twice a Latin letter. */

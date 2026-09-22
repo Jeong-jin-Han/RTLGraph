@@ -112,7 +112,10 @@ body.editing #stage g.wire { cursor: pointer; }
 #wave-rail .when { font-family: ui-monospace, monospace; color: #6b7280; }
 #wave-rail .note { color: #6b7280; }
 #wave-rail .moments { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 3px; }
-#wave-rail .moment { font: 11px ui-monospace, monospace; padding: 1px 6px; border: 1px solid #e5e7eb; border-radius: 10px; background: #ffffff; color: #b45309; cursor: pointer; }
+#wave-rail .moment { display: inline-flex; align-items: center; gap: 5px; font: 11px ui-monospace, monospace; padding: 1px 6px 1px 2px; border: 1px solid #e5e7eb; border-radius: 10px; background: #ffffff; color: #b45309; cursor: pointer; }
+/* The number the plot draws in its badge, so the two can be read together. */
+#wave-rail .moment .badge { display: inline-flex; align-items: center; justify-content: center; width: 15px; height: 15px; border-radius: 4px; background: #fef3c7; color: #92400e; font-weight: 600; }
+#wave-rail .moment.hot .badge { background: #f59e0b; color: #ffffff; }
 #wave-rail .moment:hover, #wave-rail .moment.hot { border-color: #f59e0b; background: #fffbeb; }
 #wave-rail .source { margin-top: 4px; font: 11px ui-monospace, monospace; padding: 1px 6px; border: 1px solid #dbeafe; border-radius: 4px; background: #eff6ff; color: #1d4ed8; cursor: pointer; }
 #wave-rail .source:hover { border-color: #93c5fd; }
@@ -141,8 +144,11 @@ body.editing #stage g.wire { cursor: pointer; }
 #wave-plot .wave-window { fill: #eff6ff; opacity: 0.6; }
 #wave-plot .wave-moment { stroke: #f59e0b; stroke-width: 1; stroke-dasharray: 3 3; opacity: 0.55; }
 #wave-plot .wave-moment.hot { stroke-width: 2; stroke-dasharray: none; opacity: 1; }
-#wave-plot .wave-moment-box { fill: #ffffff; stroke: #fcd34d; stroke-width: 1; opacity: 0.9; }
-#wave-plot .wave-moment-box.hot { fill: #fffbeb; stroke: #f59e0b; opacity: 1; }
+#wave-plot .wave-moment-box.hot { fill: #fffbeb; stroke: #f59e0b; stroke-width: 1; }
+#wave-plot .wave-badge { fill: #fef3c7; stroke: #f59e0b; stroke-width: 1; cursor: pointer; }
+#wave-plot .wave-badge.hot { fill: #f59e0b; }
+#wave-plot .wave-badge-number { fill: #92400e; font: 600 10px system-ui, sans-serif; text-anchor: middle; cursor: pointer; pointer-events: none; }
+#wave-plot .wave-badge-number.hot { fill: #ffffff; }
 #wave-plot .wave-moment-label { fill: #b45309; font: 10px system-ui, sans-serif; }
 #wave-plot .wave-moment-label.hot { fill: #92400e; font-weight: 600; }
 /* The row the hand is over, in the plot and in the labels beside it. */
