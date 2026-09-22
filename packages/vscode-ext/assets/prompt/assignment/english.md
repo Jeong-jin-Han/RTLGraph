@@ -102,6 +102,11 @@ If GIVEN_TB is empty, leave `tb/given/` empty too, and say in your report that
 nothing was handed out to be marked against — so that when it does arrive, the
 only thing left to do is drop it in and run one command.
 
+Where the skeleton leaves a body for you to write, comment it the way the spec's
+"Comments — top down, in the reader's language" section asks — a header saying
+what the module is for and the one idea that makes it work, then a reason per
+block. The handout's own comments stay exactly as they are; yours go around them.
+
 The skeleton is not yours to change, but what you write around it is. Add
 testbenches in `tb/mine/`, named `tb_<what>.v`, that drive the given ports only,
 by their given names, and prove the design against the handout rather than

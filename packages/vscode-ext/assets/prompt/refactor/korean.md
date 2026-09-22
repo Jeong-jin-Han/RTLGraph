@@ -12,6 +12,8 @@ Existing RTL → Refactored RTL" 을 따라줘. 이미 있는 코드를 바탕�
 어디를 어떻게 바꿔야 하는지를 짧게 설명해줘. 그 다음 바로 작업해줘.
 
 - 코드를 건드리기 전에 테스트벤치로 기준선(tb/baseline.txt)을 먼저 덤프해줘.
+- 옮긴 코드의 주석은 스펙의 "Comments — top down" 절대로 다시 써줘: 모듈마다 머리말,
+  블록마다 이유 한 줄. 읽을 수 없는 구조 개선은 개선이 아니야.
 - 구조 정리와 기능 추가는 반드시 나눠서 해줘. 먼저 동작이 같은 상태로 3층 구조(main
   component 폴더 안의 comb/data_path, comb/control_path, seq, tb)로 옮기고, 기준선
   diff 가 비어 있는지 확인해. 그 다음에 REQUEST 의 기능을 더하고, 그 기능에 대한

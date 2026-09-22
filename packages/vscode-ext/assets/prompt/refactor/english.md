@@ -12,6 +12,9 @@ First explain briefly how the code is structured today, which of the contracts
 C1–C7 it breaks, and what has to change to fit REQUEST in. Then do the work.
 
 - Dump a baseline (tb/baseline.txt) with a testbench before touching the code.
+- Comment what you move the way the spec's "Comments — top down" section asks: a
+  header per module and a reason per block. Restructured code nobody can read is
+  not an improvement.
 - Keep restructuring and new behaviour apart. First move the design into the
   three-layer layout (comb/data_path, comb/control_path, seq, tb inside the main
   component folder) with behaviour unchanged, and check that the baseline diff is

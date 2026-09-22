@@ -18,7 +18,10 @@ with comb/data_path, comb/control_path, seq and tb inside it, settle the datapat
 boxes and the control signal table, then fill in the code. If MAIN_COMPONENT is
 filled in, use that name; if it is empty, choose one and tell me why.
 
-Keep contracts C1–C7 and confirm compile, elaboration and simulation with a
+Comment it the way "Comments — top down, in the reader's language" in the spec
+asks: a header per module (what it is for, the shape of what flows through it,
+the one idea that makes it work, the state it keeps), then a line per block
+saying **why**. Keep contracts C1–C7 and confirm compile, elaboration and simulation with a
 simulator listed in RTLGRAPH_ENVIRONMENT.md. Put testbenches in tb/, driving inputs on the
 falling edge and checking on the rising edge.
 

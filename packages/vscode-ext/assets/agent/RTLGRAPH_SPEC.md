@@ -680,6 +680,37 @@ Never use line numbers or counters in ids — the user's layout is matched by id
 
 ---
 
+## Comments — top down, in the reader's language
+
+Whenever you write RTL (Workflow B, Workflow C, or filling in a handed-out skeleton), the comments
+are part of the deliverable. Someone opens the file cold and has to understand it before they can
+trust it, and that is the order to write for: **the whole before the parts, the reason before the
+mechanism**.
+
+**A header on every module**, before the port list, saying in the reader's language:
+
+1. what it is for, in a sentence;
+2. the shape of what flows through it — a small ASCII drawing where that helps (a UART frame, a
+   handshake, a pipeline's stages);
+3. **the one idea that makes it work**, and why the obvious alternative is worse. This is the
+   sentence a reader is really looking for: "the line is read at the middle of a symbol, because
+   the two clocks are not the same and the middle is where the error has the most room";
+4. the state it keeps — one line per register, saying what it remembers, not what type it is.
+
+**Inside, a comment per block that says why, never what.** `// count up` over `count <= count + 1`
+is noise. `// the counter is also the busy flag: 0 means nothing is in flight` is the thing that
+was in the author's head and nowhere in the code. Where a branch order matters, say that it
+matters and what breaks if it is swapped.
+
+**Names stay as the code spells them**, in any language: `bit_counter` is `bit_counter` in a Korean
+comment. Translate the prose, never the identifiers.
+
+Comments follow the language the prompt asks for its report in: Korean prompts get Korean comments.
+A handed-out skeleton's own comments are never touched, reworded, or translated — write yours
+around them.
+
+---
+
 ## Language rules
 - Ids, net names, module names, pin names, literals: exactly as in the code, never translated.
 - `meaning`, `label`, `note`, diagnostic `msg`: in the language the user asked for. In Korean, add the

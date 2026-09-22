@@ -100,6 +100,19 @@ extension, so each line is something that broke once.
 - Our own benches now print `[%0t]` before each line, which is what lets a check
   and a stretch of waveform be put beside each other.
 
+### Comments are part of the deliverable
+
+- The spec has a section on them, and the prompts that write RTL point at it:
+  a header per module in the reader's language — what it is for, the shape of
+  what flows through it, **the one idea that makes it work**, and the state it
+  keeps — then a line per block saying *why*, never restating the expression.
+  Names from the code are never translated, and a handout's own comments are
+  never touched.
+- demo/uart-p01's receiver is rewritten that way, in Korean. Nothing about the
+  logic changed; every line number that pointed into it did, so the schematic's
+  origins, both NodeGraph files (links and the snippets they quote), the
+  waveform analysis's citations and the report's signal map were moved with it.
+
 ### One folder each
 
 - Everything the extension writes now lives under its own name:
