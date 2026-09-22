@@ -62,6 +62,11 @@ extension, so each line is something that broke once.
   parsing Verilog), and each signal's name opens the line of RTL that drives it
   — a clocked assignment before a continuous one before a declaration, and the
   design before the bench that merely declares the same name.
+- Zooming holds an edge when one is in view: at the end of the run the end stays
+  put and the left side moves, and with the whole run on screen the start stays.
+  Zooming about the middle is right in the middle and wrong at an edge, where
+  what you are looking at slides off while the view grows around a point you
+  did not pick.
 - Pointing at an instant in the rail lights the line it marks, without moving
   the view; pointing at a signal picks its row out of the plot. And the labels
   on those lines stack into lanes instead of printing over one another — four

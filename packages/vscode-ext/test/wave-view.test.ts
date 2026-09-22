@@ -140,3 +140,31 @@ test('pointing at a moment, or at a signal, lights up what it refers to', { skip
     'the row under the hand is picked out in the plot')
   assert.ok(view.byId('wave-labels')!.children.some(r => r.attributes.get('class')?.includes('hot')), 'and in the labels')
 })
+
+// Zooming about the middle is right in the middle of a run and wrong at its
+// end: the thing you are looking at slides off the screen while the view grows
+// around a point you did not choose.
+test('an edge of the run holds still while the rest zooms', { skip: !existsSync(BUNDLE) && 'run `npm run build -w rtlgraph`' }, async t => {
+  if (!existsSync(join(DEMO, 'tb_uart_corner.waveform.json'))) return t.skip('demo/uart-p01 is not here')
+  const view = await webview()
+  const message = payload('tb_uart_corner')
+  view.send(message)
+  const window = () => view.byId('toolbar')!.find(n => n.attributes.get('class') === 'label')!.textContent
+  const click = (label: string) => view.byId('toolbar')!.find(n => n.tag === 'button' && n.textContent === label)!.dispatch('click', {})
+
+  // the last check ends where the run does
+  const places = view.byId('wave-rail')!.children.filter(c => c.attributes.get('class')?.includes('wave-place'))
+  places[places.length - 1].dispatch('click', {})
+  const ended = window().split('→')[1]
+  click('−')
+  assert.equal(window().split('→')[1], ended, 'zooming out at the end keeps the end where it is')
+  click('+')
+  assert.equal(window().split('→')[1], ended, 'and so does zooming back in')
+  assert.notEqual(window().split('→')[0], '0 fs ', 'the left edge is what moved')
+
+  // at the start it is the other way round
+  click('⇔')
+  const started = window().split('→')[0]
+  click('+')
+  assert.equal(window().split('→')[0], started, 'the whole run zooms from its start')
+})

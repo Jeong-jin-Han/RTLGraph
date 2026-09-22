@@ -343,11 +343,30 @@ function step(by: number): void {
   if (next) show(next)
 }
 
+/**
+ * Zoom about the middle — except at an edge of the run, where the edge is what
+ * you are holding on to. Looking at the last frame and zooming out to see how
+ * it got there should keep the last frame on screen, not slide it off the right
+ * while the view "grows" around a point in the middle.
+ */
 function zoom(by: number): void {
-  const middleTime = (from + to) / 2
-  const span = (to - from) * by
-  from = Math.max(middleTime - span / 2, 0)
-  to = Math.min(middleTime + span / 2, view?.end ?? middleTime + span / 2)
+  const end = view?.end ?? to
+  const span = Math.max((to - from) * by, 1)
+  const atStart = from <= 0
+  const atEnd = to >= end
+  if (atEnd && !atStart) {
+    to = end
+    from = Math.max(end - span, 0)
+  } else if (atStart) {
+    // Including the whole run: time reads left to right, so zooming in on it
+    // keeps the start rather than drifting away from both ends at once.
+    from = 0
+    to = Math.min(span, end)
+  } else {
+    const middleTime = (from + to) / 2
+    from = Math.max(middleTime - span / 2, 0)
+    to = Math.min(middleTime + span / 2, end)
+  }
   draw()
 }
 
