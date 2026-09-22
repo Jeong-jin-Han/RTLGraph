@@ -98,7 +98,7 @@ click rather than a memory test.
 | **State machines** | `*.rtlgraph-fsm.json` draws Moore or Mealy as a diagram with the transition table beside it |
 | **Export** | SVG / PNG / PDF of exactly what is on screen, and XLSX of the tables behind it — all written without a dependency |
 | **Validator** | Schema, widths, ports, unreachable nets, missing `meaning`, and every `origin` checked against the Verilog itself. A `source.root` pointing at the wrong folder is reported once, with the value it should have, instead of once per element |
-| **Its own file icon** | RTLGraph marks the tabs it owns — the schematic, the state diagram, the requirement reader — whichever icon theme you use. In the Explorer the icon belongs to your theme; `RTLGraph: Mark RTLGraph Files in the Explorer` teaches Material Icon Theme about them |
+| **Its own file icon** | RTLGraph marks the tabs it owns — the schematic, the state diagram, the waveform, the requirement reader — whichever icon theme you use. In the Explorer the icon belongs to your theme; `RTLGraph: Mark RTLGraph Files in the Explorer` teaches Material Icon Theme about them |
 | **Agent-friendly** | `.agent/rtlgraph/SPEC.md` plus six ready-to-paste prompts, one per kind of job |
 
 ---
@@ -290,7 +290,7 @@ matter. That icon comes from your file icon theme; RTLGraph contributes a
 `rtlgraph` language (JSON's grammar, unchanged, so highlighting survives) which
 the default theme falls back to, but a theme that resolves by extension —
 Material Icon Theme, say — sees `.json` and draws braces before ever asking.
-Run `RTLGraph: Mark RTLGraph Files in the Explorer` and it offers to add the three
+Run `RTLGraph: Mark RTLGraph Files in the Explorer` and it offers to add the four
 patterns to Material's associations (it asks first; it is your settings file). On
 the default theme nothing is needed — RTLGraph's own icon is used there.
 
@@ -384,7 +384,7 @@ node packages/vscode-ext/dist/agent/rtlgraph-validate.mjs <graph>
 | `RTLGraph: Copy Prompt Path` | Pick a branch of work; its `.prompt/rtlgraph/…md` path goes to the clipboard |
 | `RTLGraph: Run the Testbenches` | Runs `.agent/rtlgraph/run-tb.sh` in a terminal — both folders, or only `given` / `mine` |
 | `RTLGraph: Package the Submission` | Runs `.agent/rtlgraph/make-submission.sh` — list first, or write the zip |
-| `RTLGraph: Mark RTLGraph Files in the Explorer` | Teaches Material Icon Theme about `*.rtlgraph.json` (asks before touching your settings) |
+| `RTLGraph: Mark RTLGraph Files in the Explorer` | Teaches Material Icon Theme about `*.rtlgraph.json` and `*.waveform.json` (asks before touching your settings) |
 | `RTLGraph: Export Schematic (SVG / PNG / PDF)` | Exports the current view (also the **Export…** toolbar button) |
 | `RTLGraph: Fold Components` / `Unfold Components` | The selected component — on its own (what is inside goes back to folded) or with everything inside — else the whole hierarchy |
 | `RTLGraph: Open Component Schematic` | Opens the selected component's own schematic file |

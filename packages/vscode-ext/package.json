@@ -43,7 +43,8 @@
         "filenamePatterns": [
           "*.rtlgraph.json",
           "*.rtlgraph-schematic.json",
-          "*.rtlgraph-fsm.json"
+          "*.rtlgraph-fsm.json",
+          "*.waveform.json"
         ],
         "icon": {
           "light": "resources/file-icon.svg",

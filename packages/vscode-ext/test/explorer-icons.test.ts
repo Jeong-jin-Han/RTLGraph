@@ -3,15 +3,16 @@ import assert from 'node:assert/strict'
 import { MATERIAL_ICON, RTLGRAPH_FILES, withRtlgraphFiles } from '../src/explorerIcons.ts'
 
 // The Explorer's icon comes from the reader's icon theme, so the only thing we
-// can do is add three lines to it — without touching whatever else is there.
+// can do is add a line per pattern — without touching whatever else is there.
 
-test('the three RTLGraph patterns are added to what is already associated', () => {
+test('every RTLGraph pattern is added to what is already associated', () => {
   const now = withRtlgraphFiles({ '*.proto': 'proto' })
   assert.deepEqual(now, {
     '*.proto': 'proto',
     '*.rtlgraph.json': MATERIAL_ICON,
     '*.rtlgraph-schematic.json': MATERIAL_ICON,
     '*.rtlgraph-fsm.json': MATERIAL_ICON,
+    '*.waveform.json': MATERIAL_ICON,
   })
 })
 

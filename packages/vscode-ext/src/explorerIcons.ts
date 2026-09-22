@@ -12,7 +12,10 @@
 // the reader's, and an extension that quietly rewrites their settings is worse
 // than braces.
 
-export const RTLGRAPH_FILES = ['*.rtlgraph.json', '*.rtlgraph-schematic.json', '*.rtlgraph-fsm.json']
+export const RTLGRAPH_FILES = [
+  '*.rtlgraph.json', '*.rtlgraph-schematic.json', '*.rtlgraph-fsm.json',
+  '*.waveform.json', // what a run leaves behind: also ours, also a drawing
+]
 
 // Material's own icon for hardware description files. The mark cannot be ours —
 // an association names one of the theme's icons, not a file of ours.

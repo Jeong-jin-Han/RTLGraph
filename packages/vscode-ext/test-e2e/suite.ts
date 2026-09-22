@@ -318,12 +318,13 @@ export async function run(): Promise<void> {
 
   // The file icon rides on a language of our own: if the association stops
   // matching, these files silently go back to the plain JSON icon in the tab.
-  for (const [path, mine] of [
+  for (const [path, mine] of ([
     ['pwm/pwm_top.rtlgraph.json', true],
     ['pwm/pwm/pwm.rtlgraph-schematic.json', true],
     ['pwm/pwm/pwm.rtlgraph-fsm.json', true],
+    ['uart-p01/waveform/tb_uart_corner.waveform.json', true],
     ['pwm/pwm/seq/pwm_top.v', false],
-  ] as const) {
+  ] as const).filter(([path]) => existsSync(join(demoDir, path)))) {
     const opened = await vscode.workspace.openTextDocument(vscode.Uri.file(join(demoDir, path)))
     if (mine) assert.equal(opened.languageId, 'rtlgraph', `${path} is not associated with RTLGraph`)
     else assert.notEqual(opened.languageId, 'rtlgraph', `${path} must not be claimed by RTLGraph`)

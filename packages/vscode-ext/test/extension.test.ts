@@ -32,6 +32,16 @@ test('menus only reference contributed commands', () => {
   }
 })
 
+// The tab icon rides on the contributed language: every file this extension
+// opens as a drawing must be in it, or that tab falls back to plain JSON braces.
+test('every file we open as a drawing is claimed by the RTLGraph language', () => {
+  const patterns: string[] = manifest.contributes.languages[0].filenamePatterns
+  const opened = manifest.contributes.customEditors.flatMap((e: { selector: { filenamePattern: string }[] }) =>
+    e.selector.map(s => s.filenamePattern))
+  assert.deepEqual([...opened].sort(), [...patterns].sort())
+  assert.ok(patterns.includes('*.waveform.json'))
+})
+
 test('custom editor view types are consistent across manifest and providers', () => {
   const viewType = /static readonly viewType = '([^']+)'/.exec(source)?.[1]
   assert.equal(viewType, 'rtlgraph.editor')
