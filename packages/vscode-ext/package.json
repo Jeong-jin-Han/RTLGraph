@@ -152,6 +152,16 @@
           "command": "rtlgraph.copyAgentSpec",
           "when": "explorerResourceIsFolder",
           "group": "rtlgraph"
+        },
+        {
+          "command": "rtlgraph.runTestbenches",
+          "when": "explorerResourceIsFolder",
+          "group": "rtlgraph"
+        },
+        {
+          "command": "rtlgraph.makeSubmission",
+          "when": "explorerResourceIsFolder",
+          "group": "rtlgraph"
         }
       ]
     },

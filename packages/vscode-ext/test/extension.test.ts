@@ -24,7 +24,12 @@ test('menus only reference contributed commands', () => {
   const menus = Object.values(manifest.contributes.menus).flat() as { command: string }[]
   assert.ok(menus.length > 0)
   for (const item of menus) assert.ok(declared.has(item.command), item.command)
-  assert.deepEqual(manifest.contributes.menus['explorer/context'].map((m: { command: string }) => m.command), ['rtlgraph.copyAgentSpec'])
+  // Right-clicking a project folder is how all three are reached in practice.
+  assert.deepEqual(manifest.contributes.menus['explorer/context'].map((m: { command: string }) => m.command),
+    ['rtlgraph.copyAgentSpec', 'rtlgraph.runTestbenches', 'rtlgraph.makeSubmission'])
+  for (const item of manifest.contributes.menus['explorer/context']) {
+    assert.equal(item.when, 'explorerResourceIsFolder', `${item.command} is offered on folders only`)
+  }
 })
 
 test('custom editor view type is consistent across manifest and provider', () => {

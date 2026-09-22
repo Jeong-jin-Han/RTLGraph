@@ -190,22 +190,51 @@ function scriptArgs(args: unknown): { which?: string; folder?: vscode.Uri } {
 // swallowing it into a notification would hide the simulator's own words, which
 // are the point.
 async function runShippedScript(script: string, args: string, where?: vscode.Uri): Promise<string | undefined> {
-  const folders = where ? [where] : (vscode.workspace.workspaceFolders ?? []).map(f => f.uri)
-  for (const folder of folders) {
-    const path = vscode.Uri.joinPath(folder, script)
-    try {
-      await vscode.workspace.fs.stat(path)
-    } catch {
-      continue
-    }
-    const terminal = vscode.window.createTerminal({ name: `RTLGraph: ${script.split('/').pop()}`, cwd: folder })
-    terminal.show()
-    terminal.sendText(`"${path.fsPath}"${args ? ` ${args}` : ''}`)
-    return path.fsPath
+  const found = where ? await projectsUnder(where, script) : (await Promise.all(
+    (vscode.workspace.workspaceFolders ?? []).map(f => projectsUnder(f.uri, script)))).flat()
+  if (found.length === 0) {
+    void vscode.window.showWarningMessage(
+      `RTLGraph: no ${script} here yet — run "Copy Agent Spec to Workspace" first.`)
+    return undefined
   }
-  void vscode.window.showWarningMessage(
-    `RTLGraph: no ${script} here yet — run "Copy Agent Spec to Workspace" first.`)
-  return undefined
+  // A workspace can hold several projects (this repository's own demo/ folder
+  // does), so ask rather than guessing which one was meant.
+  const folder = found.length === 1 ? found[0] : (await vscode.window.showQuickPick(
+    found.map(uri => ({ label: uri.path.split('/').pop() ?? uri.fsPath, description: uri.fsPath, uri })),
+    { placeHolder: 'Which project?' },
+  ))?.uri
+  if (!folder) return undefined
+  const path = vscode.Uri.joinPath(folder, script)
+  const terminal = vscode.window.createTerminal({ name: `RTLGraph: ${script.split('/').pop()}`, cwd: folder })
+  terminal.show()
+  terminal.sendText(`"${path.fsPath}"${args ? ` ${args}` : ''}`)
+  return path.fsPath
+}
+
+/** Folders at or one level under `root` that carry the given shipped script. */
+async function projectsUnder(root: vscode.Uri, script: string): Promise<vscode.Uri[]> {
+  const has = async (folder: vscode.Uri) => {
+    try {
+      await vscode.workspace.fs.stat(vscode.Uri.joinPath(folder, script))
+      return true
+    } catch {
+      return false
+    }
+  }
+  if (await has(root)) return [root]
+  let children: [string, vscode.FileType][] = []
+  try {
+    children = await vscode.workspace.fs.readDirectory(root)
+  } catch {
+    return []
+  }
+  const out: vscode.Uri[] = []
+  for (const [name, type] of children) {
+    if (type !== vscode.FileType.Directory || name.startsWith('.')) continue
+    const child = vscode.Uri.joinPath(root, name)
+    if (await has(child)) out.push(child)
+  }
+  return out
 }
 
 // Only this package imports `vscode`; everything else lives in @rtlgraph/*.
@@ -245,6 +274,7 @@ export function activate(context: vscode.ExtensionContext): void {
       const picked = which ?? (await vscode.window.showQuickPick(
         [
           { label: 'both', description: 'tb/given/ and tb/mine/', value: '' },
+          { label: 'both, and read the waveform', description: 'also dumps and writes waveform.md', value: '--wave' },
           { label: 'given', description: 'only the bench the work is marked with', value: 'given' },
           { label: 'mine', description: 'only the benches written for this project', value: 'mine' },
         ],
