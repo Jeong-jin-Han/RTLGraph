@@ -38,10 +38,14 @@ export interface Marker {
   focus: readonly { at: number; what: string; signal?: string }[]
   /** Signals that moved here — what this check is actually about. */
   watch: readonly string[]
+  /** What an agent wrote about this place, if anyone has written it. */
+  explain?: string
 }
 
 export interface WaveView {
   tick: number
+  /** Sections of the analysis that belong to no particular place. */
+  notes?: readonly { heading: string; body: string }[]
   timescale: string
   end: number
   traces: readonly Trace[]

@@ -95,7 +95,11 @@ what was undefined after it, every handshake, one stretch per check. The
 run is there to walk, check by check — each check linking to the testbench line
 that printed it, each signal name to the RTL line that drives it. The demo's
 reports are written in Korean (`RTLGRAPH_LANG=ko`), which is also what the
-`rtlgraph.language` setting does for the view. Reports live with the project; only the
+`rtlgraph.language` setting does for the view.
+`tb_uart_corner.waveform-analysis.md` is the other half of that pair, written
+against the code the way `.prompt/rtlgraph/waveform/korean.md` asks for it: the
+view folds each of its sections in under the check it explains, and every
+`uart_receiver.v:NN` in it opens that line. Reports live with the project; only the
 compiler's scratch goes to `.rtlgraph-build/`. It finds the benches (`tb/given/` for whatever the course
 handed out, `tb/mine/` for the project's own), swaps one at a time into the
 project folder, compiles it against every other `.v` — `.base/` included — and

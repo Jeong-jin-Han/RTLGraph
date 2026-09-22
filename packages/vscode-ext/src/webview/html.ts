@@ -119,6 +119,15 @@ body.editing #stage g.wire { cursor: pointer; }
 #wave-rail .moment:hover, #wave-rail .moment.hot { border-color: #f59e0b; background: #fffbeb; }
 #wave-rail .source { margin-top: 4px; font: 11px ui-monospace, monospace; padding: 1px 6px; border: 1px solid #dbeafe; border-radius: 4px; background: #eff6ff; color: #1d4ed8; cursor: pointer; }
 #wave-rail .source:hover { border-color: #93c5fd; }
+/* What an agent wrote about a place, and the citations in it. */
+#wave-rail .why { margin-top: 5px; font: 11px system-ui, sans-serif; padding: 1px 6px; border: 1px solid #e5e7eb; border-radius: 4px; background: #ffffff; color: #6b7280; cursor: pointer; }
+#wave-rail .why:hover { border-color: #93c5fd; color: #1d4ed8; }
+#wave-rail .prose { margin-top: 4px; padding: 6px 8px; border-left: 2px solid #bfdbfe; background: #ffffff; color: #374151; }
+#wave-rail .prose p { margin: 0 0 6px; }
+#wave-rail .prose p:last-child { margin-bottom: 0; }
+#wave-rail .cite { font: 11px ui-monospace, monospace; padding: 0 3px; border: 0; border-radius: 3px; background: #eff6ff; color: #1d4ed8; cursor: pointer; }
+#wave-rail .cite:hover { background: #dbeafe; }
+#wave-rail .wave-note { margin-top: 8px; padding: 6px 8px; border-top: 1px solid #e5e7eb; }
 #wave-canvas { flex: 1; display: flex; min-width: 0; overflow: auto; }
 #wave-labels { width: 190px; flex: none; border-right: 1px solid #e5e7eb; background: #ffffff; }
 #wave-labels .wave-label { height: 26px; display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 0 8px; border-bottom: 1px solid #f3f4f6; font-family: ui-monospace, monospace; color: #374151; overflow: hidden; }

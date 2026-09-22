@@ -27,6 +27,8 @@ let cursor: number | undefined
 let hot: number | undefined
 /** The trace the hand is over. */
 let hotTrace: string | undefined
+/** Places whose written explanation is unfolded. */
+const opened = new Set<string>()
 
 // ── the document ──────────────────────────────────────────────────────────────
 const toolbar = document.createElement('div')
@@ -170,9 +172,36 @@ function draw(): void {
       })
       item.append(code)
     }
+    // What an agent made of it, folded away until asked for: the measurements
+    // are the claim, this is the argument, and a reader wants one at a time.
+    if (marker.explain) {
+      const toggle = document.createElement('button')
+      toggle.className = 'why'
+      toggle.textContent = `${opened.has(marker.id) ? '▾' : '▸'} ${say('why', 'why it passed')}`
+      toggle.addEventListener('click', event => {
+        event.stopPropagation()
+        if (opened.has(marker.id)) opened.delete(marker.id)
+        else opened.add(marker.id)
+        draw()
+      })
+      item.append(toggle)
+      if (opened.has(marker.id)) item.append(prose(marker.explain))
+    }
     item.addEventListener('click', () => show(marker))
     return item
   }))
+
+  // Sections of the analysis that belong to no single check — what is still
+  // unproven, usually. They are the writer's, so they are not thrown away.
+  for (const note of view.notes ?? []) {
+    const block = document.createElement('div')
+    block.className = 'wave-note'
+    const head = document.createElement('div')
+    head.className = 'what'
+    head.textContent = note.heading
+    block.append(head, prose(note.body))
+    rail.append(block)
+  }
 
   // the labels, with the value under the cursor when there is one
   const watched = new Set(view.markers.find(m => m.id === active)?.watch ?? [])
@@ -313,6 +342,46 @@ function draw(): void {
     add('line', { x1: x(cursor), y1: 0, x2: x(cursor), y2: height, class: 'wave-cursor' })
   }
   plot.replaceChildren(svg)
+}
+
+/**
+ * Prose from the analysis, with its citations made into buttons. `uart_receiver.v:47`
+ * is the whole point of asking for line numbers, so it opens the line.
+ */
+const CITATION = /([\w./-]+\.(?:v|sv|json|md)):(\d+)(?:-\d+)?/g
+
+function prose(text: string): HTMLElement {
+  const block = document.createElement('div')
+  block.className = 'prose'
+  for (const paragraph of text.split(/\n{2,}/)) {
+    const line = document.createElement('p')
+    let at = 0
+    for (const match of paragraph.matchAll(CITATION)) {
+      const before = paragraph.slice(at, match.index)
+      if (before) {
+        const span = document.createElement('span')
+        span.textContent = before.replace(/[`*]/g, '')
+        line.append(span)
+      }
+      const link = document.createElement('button')
+      link.className = 'cite'
+      link.textContent = match[0]
+      link.addEventListener('click', event => {
+        event.stopPropagation()
+        vscode.postMessage({ type: 'openCode', file: match[1], line: Number(match[2]) })
+      })
+      line.append(link)
+      at = match.index + match[0].length
+    }
+    const rest = paragraph.slice(at)
+    if (rest) {
+      const span = document.createElement('span')
+      span.textContent = rest.replace(/[`*]/g, '')
+      line.append(span)
+    }
+    block.append(line)
+  }
+  return block
 }
 
 /** A place's instants in time order — the order their badges are numbered in. */

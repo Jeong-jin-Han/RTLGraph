@@ -48,6 +48,11 @@ extension, so each line is something that broke once.
   every valid/ready transfer with what it waited and how long it was held, the
   signals that never moved, and the run cut into one stretch per check the bench
   printed with a time.
+- **The analysis comes back into the view.** When `<bench>.waveform-analysis.md`
+  exists beside a report, each section is folded in under the check it explains
+  — matched by the heading, which the prompt asks to be the check's own printed
+  line — with every `file.v:line` in it a button. The measurements are the
+  claim, the writing is the argument, and they now sit on one screen.
 - **`.prompt/rtlgraph/waveform/{korean,english}.md`**, a sixth branch, is the
   other half: it asks an agent to explain *why* each check passed, against the
   code. Every number must come from the dump and every claim must cite

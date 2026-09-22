@@ -130,6 +130,9 @@ export class FakeElement {
       preventDefault() {
         full.defaultPrevented = true
       },
+      stopPropagation() {
+        full.propagationStopped = true
+      },
       ...event,
     }
     for (const handler of [...(this.listeners.get(type) ?? [])]) handler(full)
@@ -160,6 +163,9 @@ export class FakeElement {
 export interface FakeEvent {
   type: string
   target: FakeElement | null
+  /** A handler that stops a click reaching the row behind it calls this. */
+  stopPropagation(): void
+  propagationStopped?: boolean
   button: number
   clientX: number
   clientY: number

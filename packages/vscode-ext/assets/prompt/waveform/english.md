@@ -35,6 +35,12 @@ testbench printed with a time.
 
 ## Write `waveform/<bench>.waveform-analysis.md`, beside the report you read
 
+**Use the check's own printed line as the section heading** (`## ok: cleared once
+taken`), and `## Coming up` — or the same words in your language — for the
+opening one. The waveform view reads this file back and puts each section beside
+the instants it explains, matching them by that heading; a section whose heading
+names no check is shown on its own rather than pinned to the wrong one.
+
 **1. How it comes up.** Start here, because a testbench that only checks outputs
 will pass while a register spends the opening microsecond undefined. From the
 measurements: what was `x` at time 0, what the reset released at, what was still

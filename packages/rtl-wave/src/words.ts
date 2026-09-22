@@ -75,6 +75,7 @@ export interface Words {
   when: string
   whatItSaid: string
 
+  why: string
   hoverForValues: string
   wholeRun: string
   zoomIn: string
@@ -155,6 +156,7 @@ const EN: Words = {
   when: 'When',
   whatItSaid: 'What it said',
 
+  why: 'why it passed',
   hoverForValues: 'hover for values',
   wholeRun: 'the whole run',
   zoomIn: 'zoom in',
@@ -235,6 +237,7 @@ const KO: Words = {
   when: '시각',
   whatItSaid: '무엇을 찍었나',
 
+  why: '왜 통과했나',
   hoverForValues: '올려놓으면 값',
   wholeRun: '실행 전체',
   zoomIn: '확대',

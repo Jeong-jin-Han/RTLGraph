@@ -4,7 +4,7 @@ import { execFileSync } from 'node:child_process'
 import { existsSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { buildView, edgesOf, locateCheck, locateSignal, wordsIn, levelAt, levelBefore, parseVcd, readBenchLog, readFacts, reportMarkdown, seriesOf } from '../src/index.ts'
+import { buildView, citationsIn, edgesOf, locateCheck, locateSignal, matchAnalysis, parseAnalysis, wordsIn, levelAt, levelBefore, parseVcd, readBenchLog, readFacts, reportMarkdown, seriesOf } from '../src/index.ts'
 
 // A dump written by hand, so every fact below has a known answer. Two clock
 // periods of 10 ns, a reset released at 15 ns, a handshake whose valid clears
@@ -309,4 +309,44 @@ test('the report can be written in Korean without translating what the code says
   assert.match(ko, /30\.000 ns/)
   assert.match(ko, /ok: a byte arrived/)
   assert.equal(wordsIn('en').comingUp, 'Coming up')
+})
+
+// The other half of the pair: an agent writes why, in a file a person can read,
+// and it has to find its way back to the instants it is about.
+test('an analysis is matched to the places it explains, and nothing is guessed', () => {
+  const analysis = parseAnalysis([
+    '# tb_x — why',
+    '',
+    'Numbers from the report, claims against the code.',
+    '',
+    '## 깨어나는 과정',
+    'Reset clears the four registers (`rx.v:58`).',
+    '',
+    '## ok: held while data_out_ready is low (3c)',
+    'It waits because the clearing branch needs ready (`rx.v:86-87`).',
+    '',
+    '## ok: nothing the bench ever printed',
+    'Left over.',
+  ].join('\n'))
+
+  assert.equal(analysis.preamble, 'Numbers from the report, claims against the code.')
+  assert.equal(analysis.sections.length, 3)
+
+  const places = [
+    { id: 'init', label: 'Coming up', kind: 'init' as const },
+    { id: 'check-1', label: 'ok: held while data_out_ready is low (3c)', kind: 'check' as const },
+    { id: 'check-2', label: 'ok: cleared once taken', kind: 'check' as const },
+  ]
+  const { matched, spare } = matchAnalysis(analysis, places)
+  assert.match(matched.get('init')!.body, /Reset clears/)
+  assert.match(matched.get('check-1')!.body, /clearing branch/)
+  assert.equal(matched.has('check-2'), false, 'a check nobody wrote about gets nothing')
+  assert.deepEqual(spare.map(s => s.heading), ['ok: nothing the bench ever printed'],
+    'and a section about nothing is kept rather than pinned on a check')
+
+  // the citations in it are what make it checkable
+  assert.deepEqual(citationsIn('waits because of (`rx.v:86-87`) and `top.v:9`'), [
+    { text: 'rx.v:86-87', file: 'rx.v', line: 86 },
+    { text: 'top.v:9', file: 'top.v', line: 9 },
+  ])
 })

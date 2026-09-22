@@ -8,7 +8,10 @@
 // read files and a dump is too big to want to parse twice.
 
 import * as vscode from 'vscode'
-import { buildView, langOf, parseVcd, readFacts, wordsIn, type Lang, type WaveView } from '@rtlgraph/wave'
+import {
+  buildView, langOf, matchAnalysis, parseAnalysis, parseVcd, readFacts, wordsIn,
+  type Lang, type WaveView,
+} from '@rtlgraph/wave'
 import { webviewHtml } from './webview/html.ts'
 
 interface StoredWindow {
@@ -115,6 +118,29 @@ export class WaveViewProvider implements vscode.CustomTextEditorProvider {
     await send()
   }
 
+  /**
+   * The reading an agent wrote, if it is there: `<bench>.waveform-analysis.md`
+   * beside the report. The measurements say what happened; this says why, and
+   * the two belong on the same screen — that is the whole point of writing it
+   * against the code rather than against the picture.
+   */
+  private async explain(document: vscode.TextDocument, view: WaveView): Promise<void> {
+    const beside = document.uri.path.replace(/\.waveform\.json$/, '.waveform-analysis.md')
+    let markdown: string
+    try {
+      markdown = new TextDecoder().decode(await vscode.workspace.fs.readFile(document.uri.with({ path: beside })))
+    } catch {
+      return // nobody has written one yet
+    }
+    const analysis = parseAnalysis(markdown)
+    const { matched, spare } = matchAnalysis(analysis, view.markers)
+    for (const marker of view.markers) {
+      const section = matched.get(marker.id)
+      if (section) Object.assign(marker, { explain: section.body })
+    }
+    if (spare.length > 0) Object.assign(view, { notes: spare.map(s => ({ heading: s.heading, body: s.body })) })
+  }
+
   /** The report plus the dump it names, turned into what the view draws. */
   private async read(document: vscode.TextDocument, lang: Lang = 'en'): Promise<WaveView | undefined> {
     let report: StoredReport
@@ -147,6 +173,7 @@ export class WaveViewProvider implements vscode.CustomTextEditorProvider {
       const place = report.signals?.[trace.name]
       if (place) Object.assign(trace, { source: place })
     }
+    await this.explain(document, view)
     return view
   }
 }

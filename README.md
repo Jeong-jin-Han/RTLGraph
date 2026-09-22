@@ -144,7 +144,13 @@ click rather than a memory test.
 > the instants worth looking at as buttons, and the **line of the testbench that printed it** — and
 > the traces on the right, where **each signal's name opens the line of RTL that drives it**.
 > Matching every instant of a waveform to code is hopeless; matching a check and a signal is not,
-> and those two jumps are what a reader actually asks for. Click a place, or walk them with ← and →; hover for the value of
+> and those two jumps are what a reader actually asks for.
+>
+> And when an agent has written the other half — `waveform/<bench>.waveform-analysis.md`, from the
+> `waveform` prompt — the view reads it back and folds each section in beside the check it explains:
+> **the measurements are the claim, that is the argument**, one click away, with every `file.v:line`
+> in it a button. Sections that belong to no single check are kept at the end rather than pinned
+> onto one. Click a place, or walk them with ← and →; hover for the value of
 > every signal at that instant. One row per net (a port either side of a boundary is one wire, not
 > two), the clock left out because at any useful zoom it is a grey blur, and a signal that is `x`
 > drawn in red so an undefined stretch is visible rather than merely absent.

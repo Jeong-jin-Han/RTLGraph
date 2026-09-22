@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { buildView, parseVcd, readBenchLog, readFacts, wordsIn } from '@rtlgraph/wave'
+import { buildView, matchAnalysis, parseAnalysis, parseVcd, readBenchLog, readFacts, wordsIn } from '@rtlgraph/wave'
 import { loadWebview, type Harness } from './dom.ts'
 
 // The waveform webview, driven the way the host drives it. It exists because
@@ -29,6 +29,16 @@ function payload(bench: string) {
   for (const trace of view.traces) {
     const place = report.signals?.[trace.name]
     if (place) Object.assign(trace, { source: place })
+  }
+  // …and the reading an agent wrote about it, if there is one beside the report
+  const analysisPath = join(DEMO, `${bench}.waveform-analysis.md`)
+  if (existsSync(analysisPath)) {
+    const { matched, spare } = matchAnalysis(parseAnalysis(readFileSync(analysisPath, 'utf8')), view.markers)
+    for (const marker of view.markers) {
+      const section = matched.get(marker.id)
+      if (section) Object.assign(marker, { explain: section.body })
+    }
+    if (spare.length > 0) Object.assign(view, { notes: spare.map(s => ({ heading: s.heading, body: s.body })) })
   }
   const words = Object.fromEntries(Object.entries(wordsIn('ko')).filter(([, said]) => typeof said === 'string'))
   return { type: 'wave', view, words }
@@ -182,4 +192,34 @@ test('an edge of the run holds still while the rest zooms', { skip: !existsSync(
   const started = window().split('→')[0]
   click('+')
   assert.equal(window().split('→')[0], started, 'the whole run zooms from its start')
+})
+
+// The measurements are the claim; the analysis is the argument. They belong on
+// one screen, with the argument folded away until it is asked for.
+test('what an agent wrote about a check unfolds beside it, citations and all', { skip: !existsSync(BUNDLE) && 'run `npm run build -w rtlgraph`' }, async t => {
+  if (!existsSync(join(DEMO, 'tb_uart_corner.waveform-analysis.md'))) return t.skip('nobody has written one here')
+  const view = await webview()
+  view.send(payload('tb_uart_corner'))
+  const rail = () => view.byId('wave-rail')!
+
+  const fold = rail().find(n => n.attributes.get('class') === 'why')!
+  assert.match(fold.textContent, /왜 통과했나/)
+  // the sections that belong to no check are shown outright; a check's is not
+  const inPlaces = () => rail().findAll(n => n.attributes.get('class') === 'prose'
+    && n.parent?.attributes.get('class')?.includes('wave-place') === true)
+  assert.equal(inPlaces().length, 0, 'folded away to begin with')
+
+  fold.dispatch('click', {})
+  assert.equal(inPlaces().length, 1, 'and only the one that was asked for')
+  const cites = rail().findAll(n => n.attributes.get('class') === 'cite')
+  assert.ok(cites.length >= 1, 'the lines it cites are buttons')
+  assert.match(cites[0].textContent, /\.v:\d+/)
+  cites[0].dispatch('click', {})
+  const asked = view.posted.at(-1) as { type: string; file: string; line: number }
+  assert.equal(asked.type, 'openCode')
+  assert.match(asked.file, /\.v$/)
+  assert.ok(asked.line > 0)
+
+  // sections that belong to no check are kept rather than dropped
+  assert.ok(rail().findAll(n => n.attributes.get('class') === 'wave-note').length >= 1)
 })
