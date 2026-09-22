@@ -125,6 +125,23 @@ against itself:
   mean. A test whose purpose is not written down is a test nobody will trust
   later.
 
+**A bench is read back as three things: what the check is for, how it was driven,
+and what happened.** `run-tb.sh --wave` and the waveform view take the first from
+the line you print, the second from the statements you ran before printing it,
+and the third from the dump. Write so that all three survive:
+
+- **print what is being proven, not which case it is.** `ok: held while
+  data_out_ready is low` is a claim a reader can check; `ok: case 3` is not.
+- **drive through named tasks** — `frame(8'hA5)`, `put(1'b0, 2)`, `take` — so the
+  stimulus reads as sentences rather than as a wall of `@(negedge clk)`.
+- **one check per stretch**, printed the moment it is decided: the run is cut at
+  every printed line, so two checks in one breath cannot be told apart.
+- **prefix every line with `[%0t]`**, which is what lets a check be placed on the
+  dump at all.
+
+Why it behaved that way is *not* your job here — that is a separate pass, the
+`waveform` prompt, run later against the code.
+
 Drive inputs on the falling edge and check on the rising one, so the bench never
 changes a signal at the instant the design reads it. Run them all with
 `.agent/rtlgraph/run-tb.sh` (it uses the simulator `.agent/rtlgraph/ENVIRONMENT.md` lists) and say

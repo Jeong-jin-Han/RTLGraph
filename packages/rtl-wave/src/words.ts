@@ -80,6 +80,9 @@ export interface Words {
 
   why: string
   askWhy: string
+  purpose: string
+  how: string
+  outcome: string
   hoverForValues: string
   wholeRun: string
   zoomIn: string
@@ -165,6 +168,9 @@ const EN: Words = {
   whatItSaid: 'What it said',
 
   why: 'why it passed',
+  purpose: 'what it is for',
+  how: 'how it was driven',
+  outcome: 'what happened',
   askWhy: 'ask why — copies a request for this one check',
   hoverForValues: 'hover for values',
   wholeRun: 'the whole run',
@@ -251,6 +257,9 @@ const KO: Words = {
   whatItSaid: '무엇을 찍었나',
 
   why: '왜 통과했나',
+  purpose: '목적',
+  how: '방식',
+  outcome: '결과',
   askWhy: '왜? 물어보기 — 이 체크 하나짜리 요청을 복사',
   hoverForValues: '올려놓으면 값',
   wholeRun: '실행 전체',

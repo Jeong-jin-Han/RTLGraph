@@ -4,7 +4,7 @@ import { execFileSync } from 'node:child_process'
 import { existsSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { askFor, buildView, citationsIn, edgesOf, locateCheck, locateSignal, matchAnalysis, parseAnalysis, wordsIn, levelAt, levelBefore, parseVcd, readBenchLog, readFacts, reportMarkdown, seriesOf } from '../src/index.ts'
+import { askFor, buildView, citationsIn, stimulusFor, edgesOf, locateCheck, locateSignal, matchAnalysis, parseAnalysis, wordsIn, levelAt, levelBefore, parseVcd, readBenchLog, readFacts, reportMarkdown, seriesOf } from '../src/index.ts'
 
 // A dump written by hand, so every fact below has a known answer. Two clock
 // periods of 10 ns, a reset released at 15 ns, a handshake whose valid clears
@@ -381,4 +381,33 @@ test('a request asks about one place and carries that place\'s measurements', ()
   const english = askFor({ analysis: 'a.md', report: 'r.json', place, tick: 1000 }, 'en')
   assert.match(english, /append one section/)
   assert.match(english, /## ok: cleared once taken/)
+})
+
+// A card that says only what happened leaves the reader asking "from what?".
+// The answer is in the bench, a few lines above the line that closed the stretch.
+test('how a check was driven is read off the bench, plumbing left out', () => {
+  const bench = [
+    'initial begin',                            // 1
+    '    repeat (4) @(negedge clk);',           // 2 — plumbing: a plain wait
+    '    reset = 0;',                           // 3
+    '    @(negedge clk);',                      // 4 — plumbing
+    '',                                         // 5
+    '    // 1. a byte stands until it is taken',// 6
+    '    frame(8\'h3C);',                       // 7
+    '    repeat (SYMBOL * 4) @(negedge clk);',  // 8 — deliberate idling, kept
+    '    check(8\'h3C, "held while ready is low");', // 9
+    '    take;',                                // 10
+    '    frame(8\'hA5);',                       // 11
+    '    check(8\'hA5, "first of two");',       // 12
+  ].join('\n')
+
+  const first = { line: 9, text: 'check(8\'h3C, "held while ready is low");' }
+  assert.deepEqual(stimulusFor(bench, undefined, first).map(s => s.text), [
+    'reset = 0;',
+    'frame(8\'h3C);',
+    'repeat (SYMBOL * 4) @(negedge clk);',
+  ])
+
+  // between two checks, only what ran in between
+  assert.deepEqual(stimulusFor(bench, first, { line: 12, text: '' }).map(s => s.text), ['take;', 'frame(8\'hA5);'])
 })

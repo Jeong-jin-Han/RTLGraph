@@ -122,12 +122,32 @@ function draw(): void {
     when.className = 'when'
     when.textContent = `${atTime(marker.from)} → ${atTime(marker.to)}`
     item.append(head, when)
-    for (const note of marker.notes) {
-      const line = document.createElement('div')
-      line.className = 'note'
-      line.textContent = note
-      item.append(line)
+
+    // A card reads in the order a reader asks: what was this for, how was it
+    // driven, what happened. The first is the line the bench printed (the title
+    // above); the second comes from the bench's own statements; the third is
+    // what was measured.
+    const part = (label: string, rows: readonly { text: string; cls?: string; title?: string }[]) => {
+      if (rows.length === 0) return
+      const group = document.createElement('div')
+      group.className = 'part'
+      const name = document.createElement('div')
+      name.className = 'part-name'
+      name.textContent = label
+      group.append(name)
+      for (const row of rows) {
+        const line = document.createElement('div')
+        line.className = row.cls ?? 'note'
+        line.textContent = row.text
+        if (row.title) line.title = row.title
+        group.append(line)
+      }
+      item.append(group)
     }
+
+    part(say('how', 'how it was driven'),
+      (marker.stimulus ?? []).map(step => ({ text: step.text, cls: 'step', title: `:${step.line}` })))
+    part(say('outcome', 'what happened'), marker.notes.map(note => ({ text: note })))
     // Where to look, inside the stretch: each instant is a button that puts the
     // cursor on it, because "the transfer" is a moment, not a paragraph.
     if (marker.focus.length > 0) {

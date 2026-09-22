@@ -16,7 +16,9 @@
 
 import { readdirSync, readFileSync, statSync, writeFileSync, mkdirSync } from 'node:fs'
 import { basename, dirname, extname, join, relative, resolve } from 'node:path'
-import { langOf, locateCheck, locateSignal, parseVcd, readFacts, readBenchLog, reportMarkdown, reportJson } from '@rtlgraph/wave'
+import {
+  langOf, locateCheck, locateSignal, parseVcd, readFacts, readBenchLog, reportMarkdown, reportJson, stimulusFor,
+} from '@rtlgraph/wave'
 
 const args = process.argv.slice(2)
 const flag = (name: string) => {
@@ -53,9 +55,12 @@ const facts = readFacts(wave, bench, lang)
 if (benchPath) {
   const source = readFileSync(resolve(benchPath), 'utf8')
   const file = relative(outDir, resolve(benchPath))
+  let previous
   for (const window of facts.windows) {
     const found = locateCheck(source, window.label)
-    if (found) Object.assign(window, { source: { file, ...found } })
+    if (!found) continue
+    Object.assign(window, { source: { file, ...found }, stimulus: stimulusFor(source, previous, found) })
+    previous = found
   }
 }
 

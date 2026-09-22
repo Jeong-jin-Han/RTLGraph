@@ -680,6 +680,19 @@ Never use line numbers or counters in ids — the user's layout is matched by id
 
 ---
 
+## Testbenches — written to be read back
+
+A bench is not only run, it is read back: `.agent/rtlgraph/run-tb.sh --wave` cuts the dump at every
+line the bench prints, and the waveform view shows each stretch as **what the check is for** (the
+line you printed), **how it was driven** (the statements that ran before it) and **what happened**
+(the measurements). Write so that all three survive: print the claim rather than the case number,
+drive through named tasks, print one check the moment it is decided, and prefix every line with
+`[%0t]`.
+
+Why it behaved that way belongs to Workflow W, run later against the code — not here.
+
+---
+
 ## Comments — top down, in the reader's language
 
 Whenever you write RTL (Workflow B, Workflow C, or filling in a handed-out skeleton), the comments

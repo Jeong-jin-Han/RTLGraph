@@ -60,8 +60,11 @@ can be right anyway (a signal nothing reads) or whether this is a hole.
 
 - the line the bench printed, and the times the stretch spans;
 - what the wires did in it — the handshakes taken, the signals that moved most;
-- **the path through the code**: the sequence of lines that turns the stimulus
-  into the result the bench then asserted;
+- **the path through the design**, as a flow: how the stimulus travels signal →
+  signal → register until it is the result the bench asserted, one line citation
+  per step. This is the part a reader cannot get from the waveform — the picture
+  shows that `has_byte` rose, not that `bit_counter` reaching 1 at a symbol edge
+  is what raised it;
 - what would have to be wrong for this check to fail. A check that cannot fail
   is a check worth saying so about.
 

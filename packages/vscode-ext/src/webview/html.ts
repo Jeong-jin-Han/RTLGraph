@@ -111,6 +111,10 @@ body.editing #stage g.wire { cursor: pointer; }
 #wave-rail .what { font-weight: 600; color: #111827; }
 #wave-rail .when { font-family: ui-monospace, monospace; color: #6b7280; }
 #wave-rail .note { color: #6b7280; }
+/* 목적 · 방식 · 결과 — the order a reader asks in. */
+#wave-rail .part { margin-top: 5px; }
+#wave-rail .part-name { font-size: 10px; letter-spacing: 0.04em; text-transform: uppercase; color: #9ca3af; }
+#wave-rail .step { font-family: ui-monospace, monospace; color: #374151; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #wave-rail .moments { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 3px; }
 #wave-rail .moment { display: inline-flex; align-items: center; gap: 5px; font: 11px ui-monospace, monospace; padding: 1px 6px 1px 2px; border: 1px solid #e5e7eb; border-radius: 10px; background: #ffffff; color: #b45309; cursor: pointer; }
 /* The number the plot draws in its badge, so the two can be read together. */

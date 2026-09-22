@@ -78,6 +78,8 @@ export interface WindowFacts {
   to: number
   /** Where in the testbench that line was printed, when it could be found. */
   source?: { file: string; line: number; text: string }
+  /** The statements that drove this stretch, from the bench's own source. */
+  stimulus?: readonly { line: number; text: string }[]
   /** The instants worth looking at, and why — a transfer, a reset, an edge. */
   focus: readonly { at: number; what: string; signal?: string }[]
   /** Handshake transfers that completed inside it. */

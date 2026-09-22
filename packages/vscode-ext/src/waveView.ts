@@ -17,6 +17,8 @@ import { webviewHtml } from './webview/html.ts'
 interface StoredWindow {
   label: string
   source?: { file: string; line: number; text: string }
+  /** How the bench drove this stretch — worked out against its source. */
+  stimulus?: { line: number; text: string }[]
 }
 
 interface Place { file: string; line: number; text: string }
@@ -195,9 +197,12 @@ export class WaveViewProvider implements vscode.CustomTextEditorProvider {
     // that was worked out against the bench's source when the report was
     // written — so it is carried across rather than recomputed.
     const facts = readFacts(wave, report.bench ?? [], lang)
+    // Both of these were worked out against the bench's source when the report
+    // was written; the dump cannot know either, so they are carried across.
     for (const window of facts.windows) {
       const stored = report.facts?.windows?.find(w => w.label === window.label)
       if (stored?.source) Object.assign(window, { source: stored.source })
+      if (stored?.stimulus) Object.assign(window, { stimulus: stored.stimulus })
     }
     const view = buildView(wave, facts, 20, lang)
     for (const trace of view.traces) {

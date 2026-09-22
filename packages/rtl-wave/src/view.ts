@@ -34,6 +34,8 @@ export interface Marker {
   notes: readonly string[]
   /** The testbench line that printed this, relative to the report. */
   source?: { file: string; line: number; text: string }
+  /** How it was driven — the bench statements that ran before the check. */
+  stimulus?: readonly { line: number; text: string }[]
   /** Instants worth looking at inside the stretch. */
   focus: readonly { at: number; what: string; signal?: string }[]
   /** Signals that moved here — what this check is actually about. */
@@ -180,6 +182,7 @@ function markersFor(facts: WaveFacts, traces: readonly Trace[], lang: Lang): Mar
         }),
       ],
       ...(window.source ? { source: window.source } : {}),
+      ...(window.stimulus ? { stimulus: window.stimulus } : {}),
       did: window.did,
       focus: window.focus,
       watch: window.moved.slice(0, 6).map(m => m.path),

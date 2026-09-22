@@ -24,6 +24,7 @@ function payload(bench: string) {
   for (const window of facts.windows) {
     const stored = report.facts?.windows?.find((w: { label: string }) => w.label === window.label)
     if (stored?.source) Object.assign(window, { source: stored.source })
+    if (stored?.stimulus) Object.assign(window, { stimulus: stored.stimulus })
   }
   const view = buildView(wave, facts, 20, 'ko')
   for (const trace of view.traces) {
@@ -236,4 +237,19 @@ test('a check with nothing written offers to ask, one check at a time', { skip: 
   const posted = view.posted.at(-1) as { type: string; id: string }
   assert.equal(posted.type, 'askAnalysis')
   assert.equal(posted.id, 'init', 'and says which place it is about')
+})
+
+// The card reads in the order a reader asks in: what for, how, what happened.
+// "How" comes from the bench's own statements, which the dump cannot know — it
+// is carried from the report, and was dropped in transit once already.
+test('a card says how the stretch was driven, not only what came of it', { skip: !existsSync(BUNDLE) && 'run `npm run build -w rtlgraph`' }, async t => {
+  if (!existsSync(join(DEMO, 'tb_uart_corner.waveform.json'))) return t.skip('demo/uart-p01 is not here')
+  const view = await webview()
+  view.send(payload('tb_uart_corner'))
+  const rail = view.byId('wave-rail')!
+  const names = rail.findAll(n => n.attributes.get('class') === 'part-name').map(n => n.textContent)
+  assert.ok(names.includes('방식'), `the card shows how it was driven — got ${names.join(', ')}`)
+  assert.ok(names.includes('결과'))
+  const steps = rail.findAll(n => n.attributes.get('class') === 'step').map(n => n.textContent)
+  assert.ok(steps.some(step => step.includes('frame(')), `the driving statements are there — got ${steps.slice(0, 4).join(' | ')}`)
 })

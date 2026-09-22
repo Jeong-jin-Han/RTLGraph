@@ -86,3 +86,32 @@ export function locateSignal(source: string, name: string): Located | undefined 
   }
   return undefined
 }
+
+/**
+ * How a check was driven: the statements a bench ran between the previous
+ * printed line and this one. A card that says only what happened leaves the
+ * reader asking "from what?" — and the answer is already in the source, a few
+ * lines above the `$display` that closed the stretch.
+ *
+ * Only statements that do something are kept: no comments, no blank lines, no
+ * `$display`, no `end`. The point is the stimulus, not the plumbing.
+ */
+export function stimulusFor(source: string, from: Located | undefined, to: Located): Located[] {
+  const lines = source.split('\n')
+  const start = from ? from.line : Math.max(to.line - 12, 0)
+  const out: Located[] = []
+  for (let at = start; at < to.line - 1; at++) {
+    const text = (lines[at] ?? '').trim()
+    if (text === '' || text.startsWith('//')) continue
+    // Structure, not stimulus.
+    if (/^(initial|begin|end|endtask|endmodule|else|always)\b/.test(text)) continue
+    if (/\$display|\$finish/.test(text)) continue
+    // A wait of a plain number of clocks is plumbing; one written in symbols —
+    // `repeat (SYMBOL * 4)` — is the test deliberately doing nothing, and that
+    // is part of how it was driven.
+    if (/^@\(/.test(text)) continue
+    if (/^repeat\s*\(\s*\d+\s*\)\s*@/.test(text)) continue
+    out.push({ line: at + 1, text })
+  }
+  return out.slice(-6)
+}

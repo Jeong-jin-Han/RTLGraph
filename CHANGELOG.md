@@ -55,14 +55,21 @@ extension, so each line is something that broke once.
   the analysis file, which the view is watching, so it appears where it was
   asked for. Useful when one check surprised you; the whole-document prompt is
   cheaper when you want them all, and the prompts now say so.
+- **A card reads in the order a reader asks in**: what the check was for (the
+  line the bench printed), **how it was driven** (the statements that ran before
+  it, taken from the bench's own source — plumbing like a plain clock wait left
+  out), and what happened (the measurements). The spec and the prompts that
+  write benches now say so, since all three only survive if the bench prints the
+  claim rather than a case number and drives through named tasks.
 - **The analysis comes back into the view.** When `<bench>.waveform-analysis.md`
   exists beside a report, each section is folded in under the check it explains
   — matched by the heading, which the prompt asks to be the check's own printed
   line — with every `file.v:line` in it a button. The measurements are the
   claim, the writing is the argument, and they now sit on one screen.
 - **`.prompt/rtlgraph/waveform/{korean,english}.md`**, a sixth branch, is the
-  other half: it asks an agent to explain *why* each check passed, against the
-  code. Every number must come from the dump and every claim must cite
+  other half: it asks an agent to explain *why* each check passed — as **the path
+  through the design**, signal by signal with a line citation on each step,
+  which is the part a waveform cannot show — against the code. Every number must come from the dump and every claim must cite
   `file.v:line`, so the analysis can be checked rather than believed.
 - **`*.waveform.json` opens as a waveform**, the way `*.rtlgraph.json` opens as
   a schematic: places to go down the left (how it came up, then a check at a time,
