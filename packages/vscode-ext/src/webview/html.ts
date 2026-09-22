@@ -113,7 +113,7 @@ body.editing #stage g.wire { cursor: pointer; }
 #wave-rail .note { color: #6b7280; }
 #wave-rail .moments { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 3px; }
 #wave-rail .moment { font: 11px ui-monospace, monospace; padding: 1px 6px; border: 1px solid #e5e7eb; border-radius: 10px; background: #ffffff; color: #b45309; cursor: pointer; }
-#wave-rail .moment:hover { border-color: #f59e0b; background: #fffbeb; }
+#wave-rail .moment:hover, #wave-rail .moment.hot { border-color: #f59e0b; background: #fffbeb; }
 #wave-rail .source { margin-top: 4px; font: 11px ui-monospace, monospace; padding: 1px 6px; border: 1px solid #dbeafe; border-radius: 4px; background: #eff6ff; color: #1d4ed8; cursor: pointer; }
 #wave-rail .source:hover { border-color: #93c5fd; }
 #wave-canvas { flex: 1; display: flex; min-width: 0; overflow: auto; }
@@ -128,6 +128,7 @@ body.editing #stage g.wire { cursor: pointer; }
 #wave-labels .value { color: #b45309; }
 /* Signals that did not move in the chosen stretch: still drawn, but out of the way. */
 #wave-labels .wave-label.aside { opacity: 0.45; }
+#wave-labels .wave-label.hot { background: #fffbeb; opacity: 1; }
 #wave-plot { flex: 1; min-width: 0; cursor: crosshair; }
 #wave-plot .wave-line { stroke: #2563eb; stroke-width: 1.5; fill: none; }
 #wave-plot .wave-bus { stroke: #2563eb; stroke-width: 1.2; fill: #eff6ff; }
@@ -138,8 +139,15 @@ body.editing #stage g.wire { cursor: pointer; }
 #wave-plot .wave-tick { fill: #6b7280; font: 10px system-ui, sans-serif; }
 #wave-plot .wave-cursor { stroke: #f59e0b; stroke-width: 1; }
 #wave-plot .wave-window { fill: #eff6ff; opacity: 0.6; }
-#wave-plot .wave-moment { stroke: #f59e0b; stroke-width: 1; stroke-dasharray: 3 3; }
+#wave-plot .wave-moment { stroke: #f59e0b; stroke-width: 1; stroke-dasharray: 3 3; opacity: 0.55; }
+#wave-plot .wave-moment.hot { stroke-width: 2; stroke-dasharray: none; opacity: 1; }
+#wave-plot .wave-moment-box { fill: #ffffff; stroke: #fcd34d; stroke-width: 1; opacity: 0.9; }
+#wave-plot .wave-moment-box.hot { fill: #fffbeb; stroke: #f59e0b; opacity: 1; }
 #wave-plot .wave-moment-label { fill: #b45309; font: 10px system-ui, sans-serif; }
+#wave-plot .wave-moment-label.hot { fill: #92400e; font-weight: 600; }
+/* The row the hand is over, in the plot and in the labels beside it. */
+#wave-plot .wave-row-hot { fill: #fef3c7; opacity: 0.45; }
+#wave-plot .wave-line.hot { stroke: #b45309; stroke-width: 2.2; }
 [hidden] { display: none !important; }
 `
 

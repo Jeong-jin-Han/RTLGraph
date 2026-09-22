@@ -85,3 +85,58 @@ test('the second report draws too, and opens on something that moves', { skip: !
   assert.ok(opening.to - opening.from >= message.view.end / 50,
     `the opening window is ${opening.to - opening.from} of ${message.view.end}`)
 })
+
+// Several instants a few nanoseconds apart is the normal case — four of them
+// inside 60 ns is what the loop report opens on — so the labels have to stack
+// rather than print over one another.
+test('moment labels are laid out in lanes, never on top of each other', { skip: !existsSync(BUNDLE) && 'run `npm run build -w rtlgraph`' }, async t => {
+  if (!existsSync(join(DEMO, 'tb_uart_loop.waveform.json'))) return t.skip('demo/uart-p01 is not here')
+  const view = await webview()
+  const message = payload('tb_uart_loop')
+  view.send(message)
+
+  // The view opens on "coming up", which has one instant. The crowding happens
+  // on a check: six instants, four of them inside the first 60 ns.
+  const places = view.byId('wave-rail')!.children.filter(c => c.attributes.get('class')?.includes('wave-place'))
+  const crowded = message.view.markers.findIndex(m => m.focus.length >= 4)
+  assert.ok(crowded > 0, 'a check with several instants to mark')
+  places[crowded].dispatch('click', {})
+
+  const plot = view.byId('wave-plot')!
+  const boxes = plot.findAll(node => node.attributes.get('class')?.startsWith('wave-moment-box') ?? false)
+  assert.ok(boxes.length >= 2, 'the opening window has several instants worth marking')
+
+  // no two labels share a lane and overlap in x
+  const placed = boxes.map(box => ({
+    x: Number(box.attributes.get('x')), y: Number(box.attributes.get('y')), w: Number(box.attributes.get('width')),
+  }))
+  for (const [i, a] of placed.entries()) {
+    for (const b of placed.slice(i + 1)) {
+      if (a.y !== b.y) continue
+      assert.ok(a.x + a.w <= b.x || b.x + b.w <= a.x, `two labels overlap on the same lane at y=${a.y}`)
+    }
+  }
+})
+
+// Pointing at something should say which line it means, without moving the view
+// or asking for a click first.
+test('pointing at a moment, or at a signal, lights up what it refers to', { skip: !existsSync(BUNDLE) && 'run `npm run build -w rtlgraph`' }, async t => {
+  if (!existsSync(join(DEMO, 'tb_uart_corner.waveform.json'))) return t.skip('demo/uart-p01 is not here')
+  const view = await webview()
+  view.send(payload('tb_uart_corner'))
+
+  const hotLines = () => view.byId('wave-plot')!.findAll(n => n.attributes.get('class') === 'wave-moment hot').length
+  // `.moments` is the row that holds them; the pills themselves are buttons.
+  const pill = view.byId('wave-rail')!.find(n => n.tag === 'button' && n.attributes.get('class')?.startsWith('moment') === true)!
+  assert.equal(hotLines(), 0, 'nothing is lit before the hand arrives')
+  pill.dispatch('mouseenter', {})
+  assert.equal(hotLines(), 1, 'the instant the pill names is lit')
+  pill.dispatch('mouseleave', {})
+  assert.equal(hotLines(), 0, 'and goes out again')
+
+  const row = view.byId('wave-labels')!.children.find(r => r.attributes.get('class')?.includes('wave-label') && !r.attributes.get('class')?.includes('axis'))!
+  row.dispatch('mouseenter', {})
+  assert.equal(view.byId('wave-plot')!.findAll(n => n.attributes.get('class') === 'wave-row-hot').length, 1,
+    'the row under the hand is picked out in the plot')
+  assert.ok(view.byId('wave-labels')!.children.some(r => r.attributes.get('class')?.includes('hot')), 'and in the labels')
+})

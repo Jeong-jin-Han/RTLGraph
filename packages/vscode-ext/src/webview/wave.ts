@@ -23,6 +23,10 @@ let from = 0
 let to = 1
 let active = 'init'
 let cursor: number | undefined
+/** The moment the hand is over, in the rail or the plot. */
+let hot: number | undefined
+/** The trace the hand is over. */
+let hotTrace: string | undefined
 
 // ── the document ──────────────────────────────────────────────────────────────
 const toolbar = document.createElement('div')
@@ -129,13 +133,22 @@ function draw(): void {
       moments.className = 'moments'
       for (const moment of marker.focus) {
         const button = document.createElement('button')
-        button.className = 'moment'
+        button.className = `moment${hot === moment.at ? ' hot' : ''}`
         button.textContent = `${atTime(moment.at)} · ${moment.what}`
         button.title = moment.signal ?? ''
         button.addEventListener('click', event => {
           event.stopPropagation()
           look(marker, moment.at)
         })
+        // Pointing at one is enough to find it: the line it marks lights up
+        // without the view moving, so a hand can sweep the list and watch.
+        button.addEventListener('mouseenter', () => {
+          if (marker.id !== active) show(marker)
+          hot = moment.at
+          if (moment.signal) hotTrace = moment.signal
+          draw()
+        })
+        button.addEventListener('mouseleave', () => { hot = undefined; hotTrace = undefined; draw() })
         moments.append(button)
       }
       item.append(moments)
@@ -161,7 +174,10 @@ function draw(): void {
   labels.replaceChildren(...[axisLabel(), ...view.traces.map(trace => {
     const row = document.createElement('div')
     row.className = `wave-label${trace.bench ? ' bench' : ''}` +
-      (watched.size > 0 && !watched.has(trace.path) ? ' aside' : '')
+      (watched.size > 0 && !watched.has(trace.path) ? ' aside' : '') +
+      (hotTrace === trace.path ? ' hot' : '')
+    row.addEventListener('mouseenter', () => { hotTrace = trace.path; draw() })
+    row.addEventListener('mouseleave', () => { hotTrace = undefined; draw() })
     // The trace's own way back to the code: not every instant, but the line
     // that drives this signal, which is the jump a reader actually wants.
     const name = document.createElement(trace.source ? 'button' : 'span')
@@ -207,6 +223,9 @@ function draw(): void {
   view.traces.forEach((trace, row) => {
     const top = AXIS + row * ROW + 4
     const bottom = AXIS + row * ROW + ROW - 6
+    if (hotTrace === trace.path) {
+      add('rect', { x: 0, y: AXIS + row * ROW, width, height: ROW, class: 'wave-row-hot' })
+    }
     add('line', { x1: 0, y1: AXIS + row * ROW, x2: width, y2: AXIS + row * ROW, class: 'wave-row' })
     const points = trace.points
     let previous = valueAt(trace, from) ?? 'x'
@@ -214,9 +233,10 @@ function draw(): void {
     const segment = (value: string, a: number, b: number) => {
       if (b <= a) return
       const unknown = /[xzu]/i.test(value)
+      const lit = hotTrace === trace.path ? ' hot' : ''
       if (trace.width === 1 && !unknown) {
         const y = value === '1' ? top : bottom
-        add('line', { x1: a, y1: y, x2: b, y2: y, class: 'wave-line' })
+        add('line', { x1: a, y1: y, x2: b, y2: y, class: `wave-line${lit}` })
         return
       }
       if (unknown) {
@@ -235,7 +255,7 @@ function draw(): void {
       if (at > to) break
       segment(previous, x(startedAt), x(at))
       if (trace.width === 1 && !/[xzu]/i.test(previous) && !/[xzu]/i.test(value)) {
-        add('line', { x1: x(at), y1: top, x2: x(at), y2: bottom, class: 'wave-line' })
+        add('line', { x1: x(at), y1: top, x2: x(at), y2: bottom, class: `wave-line${hotTrace === trace.path ? ' hot' : ''}` })
       }
       previous = value
       startedAt = at
@@ -249,10 +269,27 @@ function draw(): void {
     if (place.from > from || place.to < to) {
       add('rect', { x: x(place.from), y: AXIS, width: Math.max(x(place.to) - x(place.from), 1), height: height - AXIS, class: 'wave-window' })
     }
-    for (const moment of place.focus) {
+    // Labels stack into lanes rather than printing over one another: several
+    // instants a few nanoseconds apart is the normal case, not the odd one.
+    const lanes: number[] = []
+    for (const moment of [...place.focus].sort((a, b) => a.at - b.at)) {
       if (moment.at < from || moment.at > to) continue
-      add('line', { x1: x(moment.at), y1: AXIS, x2: x(moment.at), y2: height, class: 'wave-moment' })
-      add('text', { x: x(moment.at) + 3, y: AXIS + 11, class: 'wave-moment-label' }, moment.what)
+      const lit = hot === moment.at
+      add('line', {
+        x1: x(moment.at), y1: AXIS, x2: x(moment.at), y2: height,
+        class: `wave-moment${lit ? ' hot' : ''}`,
+      })
+      const left = x(moment.at) + 4
+      const wide = textWidth(moment.what) + 8
+      let lane = lanes.findIndex(end => end < left)
+      if (lane < 0) {
+        if (lanes.length >= 4 && !lit) continue // out of room: the line still marks it
+        lane = Math.min(lanes.length, 3)
+      }
+      lanes[lane] = left + wide
+      const y = AXIS + 4 + lane * 13
+      add('rect', { x: left - 3, y, width: wide, height: 12, rx: 3, class: `wave-moment-box${lit ? ' hot' : ''}` })
+      add('text', { x: left, y: y + 9, class: `wave-moment-label${lit ? ' hot' : ''}` }, moment.what)
     }
   }
 
@@ -260,6 +297,13 @@ function draw(): void {
     add('line', { x1: x(cursor), y1: 0, x2: x(cursor), y2: height, class: 'wave-cursor' })
   }
   plot.replaceChildren(svg)
+}
+
+/** Roughly how wide a label draws — Hangul is about twice a Latin letter. */
+function textWidth(text: string): number {
+  let width = 0
+  for (const ch of text) width += ch.codePointAt(0)! > 0x1100 ? 10 : 5.4
+  return width
 }
 
 function axisLabel(): HTMLElement {

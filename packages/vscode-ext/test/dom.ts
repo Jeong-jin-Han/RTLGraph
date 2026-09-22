@@ -137,6 +137,16 @@ export class FakeElement {
   }
 
   // Depth-first search for a descendant, for tests that look for what was drawn.
+  /** Every descendant the predicate accepts, in document order. */
+  findAll(predicate: (element: FakeElement) => boolean): FakeElement[] {
+    const found: FakeElement[] = []
+    for (const child of this.children) {
+      if (predicate(child)) found.push(child)
+      found.push(...child.findAll(predicate))
+    }
+    return found
+  }
+
   find(predicate: (element: FakeElement) => boolean): FakeElement | undefined {
     for (const child of this.children) {
       if (predicate(child)) return child

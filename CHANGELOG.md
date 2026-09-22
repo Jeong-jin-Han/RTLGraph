@@ -62,6 +62,10 @@ extension, so each line is something that broke once.
   parsing Verilog), and each signal's name opens the line of RTL that drives it
   — a clocked assignment before a continuous one before a declaration, and the
   design before the bench that merely declares the same name.
+- Pointing at an instant in the rail lights the line it marks, without moving
+  the view; pointing at a signal picks its row out of the plot. And the labels
+  on those lines stack into lanes instead of printing over one another — four
+  instants inside 60 ns is the normal case, not the odd one.
 - The view opens on something that moves: a report whose reset releases at 40 ns
   used to frame those 40 ns of a 4 µs run and read as broken. Two signals of the
   same name (a `bit_counter` per module) now wear the scope that tells them
