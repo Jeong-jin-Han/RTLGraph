@@ -1,10 +1,11 @@
 # Changelog
 
-## 0.1.3
+## 0.1.4
 
-The version number skips 0.1.2: a build with that number was installed
-locally while this work was still moving, so the release that goes out
-carries a number nothing else has worn.
+0.1.2 and 0.1.3 were published while this work was still moving, so the
+number that goes out next is 0.1.4. The notes below cover everything
+since 0.1.1 — those two releases were interim builds of the same work,
+and this one supersedes both.
 
 Everything in this release came from driving a real assignment through the
 extension, so each line is something that broke once.
