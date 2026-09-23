@@ -327,6 +327,12 @@ echo "────────────────────────�
 for line in "${verdicts[@]}"; do echo "$line"; done
 printf '%d bench(es), %d failing' "${#benches[@]}" "$failed"
 [ "$silent" -eq 0 ] || printf ', %d with no PASS/FAIL line of its own — read its output above' "$silent"
-printf '.  artefacts in %s\n' "${out#"$project"/}"
+# A bench that passed took its scratch with it, so pointing at an empty folder —
+# or at one that is no longer there — reads as if something were left to look at.
+if [ -d "$out" ] && [ -n "$(ls -A "$out" 2>/dev/null)" ]; then
+  printf '.  artefacts in %s\n' "${out#"$project"/}"
+else
+  printf '\n'
+fi
 [ -z "$kept" ] || printf 'kept %s in the project folder (--keep).\n' "${kept#"$project"/}"
 [ "$failed" -eq 0 ] || exit 1
