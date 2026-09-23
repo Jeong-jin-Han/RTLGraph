@@ -36,6 +36,16 @@ if (files.length !== 1) {
 const vcdPath = resolve(files[0])
 const logPath = flag('--log')
 const outDir = resolve(flag('--out') ?? dirname(vcdPath))
+const projectDir = flag('--project')
+
+/**
+ * The simulator prints absolute paths — `/home/me/uart/tb.v:139: $finish` — and
+ * quoting them verbatim nails the report to one machine: copy the project
+ * elsewhere and every line still points at where it used to be. Inside the
+ * project, a path is written relative to the project, which is what it means.
+ */
+const here = projectDir ? `${resolve(projectDir)}/` : undefined
+const withoutProject = (text: string) => here ? text.split(here).join('') : text
 
 let wave
 try {
@@ -45,7 +55,7 @@ try {
   process.exit(1)
 }
 
-const bench = logPath ? readBenchLog(readFileSync(resolve(logPath), 'utf8')) : []
+const bench = logPath ? readBenchLog(withoutProject(readFileSync(resolve(logPath), 'utf8'))) : []
 const benchPath = flag('--bench')
 
 const lang = langOf(flag('--lang'))
@@ -80,7 +90,6 @@ function designFiles(dir: string, depth = 0): string[] {
   return out
 }
 
-const projectDir = flag('--project')
 const signals: Record<string, { file: string; line: number; text: string }> = {}
 // The best answer is the line that *drives* the signal in the design. A
 // testbench declares the same names to wire the design up, and answering with
