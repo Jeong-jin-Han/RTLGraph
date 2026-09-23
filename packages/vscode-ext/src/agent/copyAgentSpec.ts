@@ -38,18 +38,20 @@ function vivadoSettings(): string[] {
 export function collectEnvironment(): EnvironmentFacts {
   const facts: EnvironmentFacts = { generated: new Date().toISOString(), platform: process.platform, vivadoSettings: vivadoSettings() }
   for (const tool of Object.keys(PROBES) as ProbedTool[]) facts[tool] = probe(PROBES[tool])
-  facts.nodegraph = companion('JeongjinHan.nodegraph', '.agent/NODEGRAPH_SPEC.md')
+  // NodeGraph moved its spec when it namespaced its folders (1.0.9), so both
+  // places are tried: a path we print that is not there sends an agent looking.
+  facts.nodegraph = companion('JeongjinHan.nodegraph', ['.agent/nodegraph/SPEC.md', '.agent/NODEGRAPH_SPEC.md'])
   return facts
 }
 
 // An extension this one can work with, and where its own agent spec is, so the
 // agent reads that rather than guessing at its file format.
-function companion(id: string, spec: string): Companion | undefined {
+function companion(id: string, specs: readonly string[]): Companion | undefined {
   const found = vscode.extensions.getExtension(id)
   if (!found) return undefined
   const version = (found.packageJSON as { version?: string }).version ?? 'unknown'
-  const path = vscode.Uri.joinPath(found.extensionUri, spec).fsPath
-  return { version, ...(existsSync(path) ? { spec: path } : {}) }
+  const path = specs.map(spec => vscode.Uri.joinPath(found.extensionUri, spec).fsPath).find(existsSync)
+  return { version, ...(path ? { spec: path } : {}) }
 }
 
 export interface CopyResult {

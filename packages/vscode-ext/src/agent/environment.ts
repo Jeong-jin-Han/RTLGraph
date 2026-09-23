@@ -84,7 +84,9 @@ export function buildEnvironmentReport(f: EnvironmentFacts): string {
     '|---|---|---|',
     `| NodeGraph | ${f.nodegraph ? `✅ \`${f.nodegraph.version}\`` : '❌'} | ${f.nodegraph
       ? 'write the verification map beside the schematic: one node per thing a testbench proves, each linked to the code it exercises'
-        + (f.nodegraph.spec ? ` — read its own spec first: \`${f.nodegraph.spec}\`` : '')
+        + ` — read its own spec first: ${f.nodegraph.spec
+          ? `\`${f.nodegraph.spec}\``
+          : 'whatever it copied into this project, `.agent/nodegraph/SPEC.md`'}`
       : 'not installed — skip anything a prompt says about `*.nodegraph.json`'} |`,
     '',
     '## Recommendations',

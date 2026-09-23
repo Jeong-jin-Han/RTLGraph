@@ -83,10 +83,17 @@ one — the same verbatim rule as everywhere else.
 
 `.agent/rtlgraph/ENVIRONMENT.md` has a "Companion extensions" row for it. **If
 it says NodeGraph is not installed, skip this and say so.** If it is, read the
-spec that row points at and add one node per check to the project's
-`*.nodegraph.json`: the measured numbers in the content, a `code` link to the
-lines that produce them, and a second link to the bench line that asserted it.
-Keep whatever is already in that file.
+spec that row points at (if that path is not there, the project's own
+`.agent/nodegraph/SPEC.md`) and add one node per check: the measured numbers in
+the content, a `code` link to the lines that produce them, and a second link to
+the bench line that asserted it.
+
+Which file: the `*.nodegraph.json` **about verification** — the one that says
+what the testbenches catch — and only that one; if there is none, start
+`verification.nodegraph.json`. Never write into a map of the design's structure.
+Keep whatever is already in that file: if something there is wrong, say so in
+the node you add rather than correcting it. **Write new nodes in the language
+that file already uses** — one file, one language.
 
 Write in English. Keep signal, module, instance and pin names exactly as the
 code spells them. Run end to end without asking me anything; when you are done,
