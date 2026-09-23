@@ -159,8 +159,12 @@ click rather than a memory test.
 > in it a button. Sections that belong to no single check are kept at the end rather than pinned
 > onto one. Click a place, or walk them with ← and →; hover for the value of
 > every signal at that instant. One row per net (a port either side of a boundary is one wire, not
-> two), the clock left out because at any useful zoom it is a grey blur, and a signal that is `x`
-> drawn in red so an undefined stretch is visible rather than merely absent.
+> two), and a signal that is `x` drawn in red so an undefined stretch is visible rather than merely
+> absent. It is not a Vivado wave window, where you add what you want and everything you added
+> stays: it opens on a screenful of the signals a check is usually about, and the header counts what
+> that leaves out — `20 / 33`. The rest are three buttons: `clk` for the clock (a grey blur at any
+> zoom that shows a frame, which is why it is not first), `var` for the bench's own counters and
+> parameters, `⋯` for every remaining signal.
 >
 > `.base/` is the one thing not under `rtlgraph/`: it is a library the design compiles against and
 > `source.lib` points at it by path, so it belongs to the project rather than to this extension.

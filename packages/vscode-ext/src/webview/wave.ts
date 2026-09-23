@@ -30,7 +30,7 @@ let hotTrace: string | undefined
 /** Places whose written explanation is unfolded. */
 const opened = new Set<string>()
 /** Rows a reader has asked for beyond the default screenful. */
-const alsoShow = { clock: false, variable: false }
+const alsoShow = { clock: false, variable: false, rest: false }
 
 // ── the document ──────────────────────────────────────────────────────────────
 const toolbar = document.createElement('div')
@@ -49,6 +49,13 @@ const bar: { label: string; hint: keyof Words; fallback: string; run: () => void
   {
     label: 'var', hint: 'showVariables', fallback: "show the bench's variables",
     run: () => { alsoShow.variable = !alsoShow.variable; draw() }, pressed: () => alsoShow.variable,
+  },
+  {
+    // The view opens on a screenful. Without this the rest of the design is in
+    // the payload and on no screen: the count in the header says 20 / 33 and
+    // nothing brings the other thirteen back.
+    label: '⋯', hint: 'showRest', fallback: 'show every signal, not just the first screenful',
+    run: () => { alsoShow.rest = !alsoShow.rest; draw() }, pressed: () => alsoShow.rest,
   },
   { label: '⟨', hint: 'previousPlace', fallback: 'the place before this one (←)', run: () => step(-1) },
   { label: '⟩', hint: 'nextPlace', fallback: 'the next place (→)', run: () => step(1) },
@@ -119,7 +126,9 @@ function shown(value: string, width: number): string {
 /** The rows on screen: the default screenful, plus whatever was switched on. */
 function rows(): Trace[] {
   if (!view) return []
-  return view.traces.filter(trace => trace.role === 'signal' ? trace.primary : alsoShow[trace.role])
+  return view.traces.filter(trace => trace.role === 'signal'
+    ? trace.primary || alsoShow.rest
+    : alsoShow[trace.role])
 }
 
 function draw(): void {

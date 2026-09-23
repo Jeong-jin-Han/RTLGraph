@@ -56,11 +56,12 @@ extension, so each line is something that broke once.
   the analysis file, which the view is watching, so it appears where it was
   asked for. Useful when one check surprised you; the whole-document prompt is
   cheaper when you want them all, and the prompts now say so.
-- **`clk` and `var` in the toolbar.** The view opens on what a reader wants
+- **`clk`, `var` and `⋯` in the toolbar.** The view opens on what a reader wants
   first and keeps the rest one click away, rather than deciding for them: the
   clock (a grey blur at any zoom that shows a frame) and the bench's own
-  counters and parameters are off until asked for, and the header says how many
-  rows of the total are showing. A register whose name merely contains "clock" —
+  counters and parameters are off until asked for, `⋯` brings in the signals
+  past the first screenful, and the header says how many rows of the total are
+  showing. A register whose name merely contains "clock" —
   `clock_counter` — is a signal and was being dropped by a name match; the clock
   is now the one the measurements identified.
 - **A card reads in the order a reader asks in**: what the check was for (the

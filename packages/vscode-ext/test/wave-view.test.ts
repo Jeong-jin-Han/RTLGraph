@@ -17,7 +17,7 @@ const DEMO = join(import.meta.dirname, '../../../demo/uart-p01/waveform')
  * dump, the lines the report worked out against the source, and only the
  * wording that can cross into a webview.
  */
-function payload(bench: string) {
+function payload(bench: string, withAnalysis = true) {
   const report = JSON.parse(readFileSync(join(DEMO, `${bench}.waveform.json`), 'utf8'))
   const wave = parseVcd(readFileSync(join(DEMO, `${bench}.vcd`), 'utf8'))
   const facts = readFacts(wave, report.bench ?? [], 'ko')
@@ -33,7 +33,7 @@ function payload(bench: string) {
   }
   // …and the reading an agent wrote about it, if there is one beside the report
   const analysisPath = join(DEMO, `${bench}.waveform-analysis.md`)
-  if (existsSync(analysisPath)) {
+  if (withAnalysis && existsSync(analysisPath)) {
     const { matched, spare } = matchAnalysis(parseAnalysis(readFileSync(analysisPath, 'utf8')), view.markers)
     for (const marker of view.markers) {
       const section = matched.get(marker.id)
@@ -230,7 +230,8 @@ test('what an agent wrote about a check unfolds beside it, citations and all', {
 test('a check with nothing written offers to ask, one check at a time', { skip: !existsSync(BUNDLE) && 'run `npm run build -w rtlgraph`' }, async t => {
   if (!existsSync(join(DEMO, 'tb_uart_loop.waveform.json'))) return t.skip('demo/uart-p01 is not here')
   const view = await webview()
-  view.send(payload('tb_uart_loop')) // no analysis is written for this one
+  // as a project looks before anyone has written a word about the run
+  view.send(payload('tb_uart_loop', false))
   const asks = view.byId('wave-rail')!.findAll(n => n.attributes.get('class') === 'ask')
   assert.ok(asks.length >= 3, 'every place without writing offers it')
   asks[0].dispatch('click', {})
@@ -289,4 +290,25 @@ test('the clock and the bench variables are off by default, and one click away',
   assert.ok(named().includes('errors') && named().includes('i'), "and so do the bench's variables")
   click('clk')
   assert.equal(named().includes('clk'), false, 'and it goes away again')
+})
+
+// The same argument covers the rows past the first screenful: the header counts
+// them (20 / 33), so a reader who reads that and finds no way to see the other
+// thirteen is looking at a bug, not at a decision.
+test('the signals past the first screenful are a button away too', { skip: !existsSync(BUNDLE) && 'run `npm run build -w rtlgraph`' }, async t => {
+  if (!existsSync(join(DEMO, 'tb_uart_loop.waveform.json'))) return t.skip('demo/uart-p01 is not here')
+  const view = await webview()
+  const sent = payload('tb_uart_loop')
+  const rest = sent.view.traces.filter(t => t.role === 'signal' && !t.primary).map(t => t.name)
+  assert.ok(rest.length > 0, 'this report has more signals than one screenful')
+  view.send(sent)
+  const named = () => view.byId('wave-labels')!.findAll(n => n.attributes.get('class')?.includes('name') === true)
+    .map(n => n.textContent)
+  const click = (label: string) => view.byId('toolbar')!.find(n => n.tag === 'button' && n.textContent === label)!.dispatch('click', {})
+
+  assert.equal(rest.some(name => named().includes(name)), false, 'they are not on screen to begin with')
+  click('⋯')
+  for (const name of rest) assert.ok(named().includes(name), `${name} is reachable`)
+  click('⋯')
+  assert.equal(rest.some(name => named().includes(name)), false, 'and the screenful comes back')
 })
