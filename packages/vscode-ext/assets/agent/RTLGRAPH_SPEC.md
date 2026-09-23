@@ -449,9 +449,10 @@ rule is that **restructuring and new behaviour never happen in the same step**.
 ## Workflow W — Waveform → why it passed
 
 Use when a simulation has run and someone wants to know *why* it behaved as it did — most often
-after `.agent/rtlgraph/run-tb.sh --wave`, which writes
-`<project>/waveform/<bench>.waveform.md` (for a person) and `<bench>.waveform.json` (for you, and
-for the viewer). They sit with the project, like every other RTLGraph file — never inside
+after `.agent/rtlgraph/run-tb.sh --wave`, which writes `<project>/waveform/<bench>.vcd` and
+`<bench>.waveform.json` — the measurements, for you and for the viewer. Add `--report` if a person
+also wants the same numbers as prose in `<bench>.waveform.md`; nothing reads that file, so it is not
+written by default. They sit with the project, like every other RTLGraph file — never inside
 `.agent/`, which holds only what the copy command put there.
 
 The division of labour is the whole point of this workflow:

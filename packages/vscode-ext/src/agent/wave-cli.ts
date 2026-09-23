@@ -4,10 +4,11 @@
 // run without installing anything.
 //
 //   node .agent/rtlgraph/wave.mjs <dump.vcd> [--log <output>] [--bench <tb.v>]
-//                                  [--project <dir>] [--lang en|ko] [--out <folder>]
+//                                  [--project <dir>] [--lang en|ko] [--report] [--out <folder>]
 //
-// Writes <bench>.waveform.md (for a person) and <bench>.waveform.json (for an
-// agent, and for the viewer) beside the dump, or in --out. The name comes from
+// Writes <bench>.waveform.json — what the viewer opens and what an agent reads —
+// beside the dump, or in --out. `--report` adds <bench>.waveform.md, the same
+// measurements as prose, for reading without the editor. The name comes from
 // the dump's, so a project with several benches gets one report each and the
 // editor tabs say which is which — the same habit as *.rtlgraph.json.
 //
@@ -115,7 +116,7 @@ mkdirSync(outDir, { recursive: true })
 const stem = basename(vcdPath, extname(vcdPath))
 const md = join(outDir, `${stem}.waveform.md`)
 const json = join(outDir, `${stem}.waveform.json`)
-writeFileSync(md, reportMarkdown(report, lang))
+if (args.includes('--report')) writeFileSync(md, reportMarkdown(report, lang))
 writeFileSync(json, reportJson(report))
 
 const races = facts.drives.filter(d => d.onEdge > 0).length
@@ -127,5 +128,5 @@ for (const h of facts.handshakes) {
 }
 if (races > 0) console.log(`  ⚠️ ${races} bench-driven signal(s) change on the active clock edge`)
 if (facts.unknown.length > 0) console.log(`  ⚠️ ${facts.unknown.length} signal(s) still x/z after reset`)
-console.log(`  wrote ${md}`)
+if (args.includes('--report')) console.log(`  wrote ${md}`)
 console.log(`  wrote ${json}`)

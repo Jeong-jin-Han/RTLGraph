@@ -48,6 +48,35 @@ export interface BundledFile {
   to: string
 }
 
+/**
+ * What to copy into a project, given what it needs.
+ *
+ * Two of these are decided rather than fixed, because a project that carries
+ * files nobody opens is a project people stop reading:
+ *
+ * - **prompts** — only the language the reader asked for. Both, when they have
+ *   not said (`auto`), since guessing wrong is worse than one extra folder.
+ * - **primitives** — only the ones the code actually instantiates. A project
+ *   with no Verilog yet gets all of them; there is nothing to go on.
+ */
+export function filesFor(options: {
+  languages?: readonly (typeof PROMPT_LANGUAGES)[number][]
+  primitives?: readonly string[]
+} = {}): BundledFile[] {
+  const languages = options.languages ?? PROMPT_LANGUAGES
+  const primitives = options.primitives ?? BASE_MODULES
+  return AGENT_FILES.filter(file => {
+    const language = /\.prompt\/rtlgraph\/(?:[a-z]+\/)?(korean|english|README\.korean|README)\.md$/.exec(file.to)
+    if (language) {
+      const wanted = language[1].includes('korean') ? 'korean' : 'english'
+      return languages.includes(wanted as (typeof PROMPT_LANGUAGES)[number])
+    }
+    const primitive = /^\.base\/([A-Z_0-9]+)\.v$/.exec(file.to)
+    if (primitive) return primitives.includes(primitive[1])
+    return true
+  })
+}
+
 export const AGENT_FILES: readonly BundledFile[] = [
   { from: 'assets/agent/RTLGRAPH_SPEC.md', to: SPEC_FILE },
   { from: VALIDATOR_BUNDLE, to: VALIDATOR_FILE },

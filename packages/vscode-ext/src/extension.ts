@@ -238,6 +238,14 @@ async function projectsUnder(root: vscode.Uri, script: string): Promise<vscode.U
   return out
 }
 
+/** Which language's prompts to write: the one asked for, or both when not. */
+function promptLanguages(): ('korean' | 'english')[] | undefined {
+  const said = vscode.workspace.getConfiguration('rtlgraph').get<string>('language')
+  if (said === 'korean') return ['korean']
+  if (said === 'english') return ['english']
+  return undefined
+}
+
 // Only this package imports `vscode`; everything else lives in @rtlgraph/*.
 export function activate(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
@@ -253,7 +261,7 @@ export function activate(context: vscode.ExtensionContext): void {
       try {
         const { written, kept, cleared } = await vscode.window.withProgress(
           { location: vscode.ProgressLocation.Notification, title: 'RTLGraph: writing agent files…' },
-          () => copyAgentSpec(context.extensionUri, target),
+          () => copyAgentSpec(context.extensionUri, target, promptLanguages()),
         )
         void vscode.window.showInformationMessage(
           `RTLGraph: wrote ${AGENT_DIR}/ and ${PROMPT_DIR}/{spec,rtl,refactor,rtlgraph,assignment}/{korean,english}.md in ${target.fsPath}. ` +
@@ -276,7 +284,7 @@ export function activate(context: vscode.ExtensionContext): void {
       const picked = which ?? (await vscode.window.showQuickPick(
         [
           { label: 'both', description: 'tb/given/ and tb/mine/', value: '' },
-          { label: 'both, and read the waveform', description: 'also dumps and writes waveform.md', value: '--wave' },
+          { label: 'both, and read the waveform', description: 'also dumps it and measures it into waveform/', value: '--wave' },
           { label: 'given', description: 'only the bench the work is marked with', value: 'given' },
           { label: 'mine', description: 'only the benches written for this project', value: 'mine' },
         ],

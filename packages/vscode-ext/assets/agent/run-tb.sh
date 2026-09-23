@@ -24,8 +24,12 @@
 #   --sim NAME      iverilog | vivado  (default: whichever is installed)
 #   --out DIR       where build scratch goes (default: <project>/.rtlgraph-build)
 #   --top NAME      the bench's top module, when the file holds more than one
-#   --wave          also dump a waveform and write what it says (waveform/…md)
-#                   RTLGRAPH_LANG=ko writes that report in Korean
+#   --wave          also dump a waveform and read it: waveform/<bench>.vcd and
+#                   <bench>.waveform.json, which is what the viewer opens
+#   --report        with --wave, also write <bench>.waveform.md — the same
+#                   measurements as prose, for reading without the editor
+#   --keep-build    keep the compiler's scratch even when a bench passed
+#                   RTLGRAPH_LANG=ko writes in Korean
 #   --keep          leave the last bench swapped into the project folder
 #   --in-place      do not swap anything; compile the benches where they lie
 #   --quiet         only the verdict lines, no simulator output
@@ -50,6 +54,8 @@ quiet=0
 keep=0
 swap=1
 wave=0
+report=0
+keepbuild=0
 want=()
 
 while [ $# -gt 0 ]; do
@@ -59,6 +65,8 @@ while [ $# -gt 0 ]; do
     --out) out="$2"; shift 2 ;;
     --top) top="$2"; shift 2 ;;
     --wave) wave=1; shift ;;
+    --report) report=1; shift ;;
+    --keep-build) keepbuild=1; shift ;;
     --keep) keep=1; shift ;;
     --in-place) swap=0; shift ;;
     --quiet) quiet=1; shift ;;
@@ -288,11 +296,17 @@ for bench in "${benches[@]}"; do
     reader="$here/wave.mjs"
     if [ -f "$reader" ] && command -v node >/dev/null 2>&1; then
       node "$reader" "$waves/$(basename -- "${bench%.*}").vcd" --log "$log" --bench "$bench" \
-        --project "$project" ${RTLGRAPH_LANG:+--lang "$RTLGRAPH_LANG"} | sed 's/^/   /'
+        --project "$project" $([ "$report" = 1 ] && printf -- --report) \
+        ${RTLGRAPH_LANG:+--lang "$RTLGRAPH_LANG"} | sed 's/^/   /'
     else
       echo "   (dump written to waveform/$(basename -- "${bench%.*}").vcd; wave.mjs or node missing, so nothing read it)"
     fi
   fi
+
+  # A bench that passed leaves nothing behind; one that failed keeps its logs,
+  # which is exactly when anyone wants them.
+  [ "$verdict" = PASS ] && [ "$keepbuild" = 0 ] && rm -rf "$work"
+  rmdir "$out" 2>/dev/null || true
 
   note=""
   case "$rel" in tb/given/*) note="← the one it is marked with" ;; esac

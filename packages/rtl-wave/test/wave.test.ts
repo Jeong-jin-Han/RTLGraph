@@ -202,7 +202,9 @@ test('a real dump, from iverilog, through the shipped reader', t => {
   const printed = execFileSync('vvp', ['-n', join(dir, 'a.out')], { encoding: 'utf8' })
   writeFileSync(join(dir, 'bench.log'), printed)
 
-  execFileSync(process.execPath, [cli, join(dir, 'wave.vcd'), '--log', join(dir, 'bench.log'), '--out', dir], { encoding: 'utf8' })
+  // --report asks for the prose twin as well; without it only the JSON is written
+  execFileSync(process.execPath,
+    [cli, join(dir, 'wave.vcd'), '--log', join(dir, 'bench.log'), '--out', dir, '--report'], { encoding: 'utf8' })
   // named after the dump, so several benches do not overwrite one another
   const report = JSON.parse(readFileSync(join(dir, 'wave.waveform.json'), 'utf8'))
   assert.ok(report.facts.clock.period > 0, 'a clock was found and measured')

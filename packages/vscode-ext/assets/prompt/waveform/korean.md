@@ -10,10 +10,10 @@ PROJECT_FOLDER/.agent/rtlgraph/SPEC.md 와
 PROJECT_FOLDER/.agent/rtlgraph/ENVIRONMENT.md 는 이미 준비돼 있어 — 둘 다 읽고,
 "Workflow W — Waveform → why it passed" 를 따라줘.
 
-아직 보고서가 없으면 먼저 만들어: `.agent/rtlgraph/run-tb.sh --wave` 가 벤치를 돌리고,
-**어떤 테스트벤치도 고치지 않고** 파형을 덤프해서 `waveform/<벤치>.waveform.md` 와
-`waveform/<벤치>.waveform.json` 을 쓴다. 덤프를 위해 벤치를 고치지 마 — 실행기가
-덤프 전용 모듈을 따로 붙인다.
+아직 측정값이 없으면 먼저 만들어: `.agent/rtlgraph/run-tb.sh --wave` 가 벤치를 돌리고,
+**어떤 테스트벤치도 고치지 않고** 파형을 덤프해서 `waveform/<벤치>.vcd` 와
+`waveform/<벤치>.waveform.json`(네가 아래에서 읽을 측정값)을 쓴다. 덤프를 위해 벤치를
+고치지 마 — 실행기가 덤프 전용 모듈을 따로 붙인다.
 
 ## 무엇을 받았고, 그걸로 무엇을 하면 안 되는가
 

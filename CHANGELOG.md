@@ -42,8 +42,9 @@ extension, so each line is something that broke once.
   No testbench is edited to make it happen — a module beside it calls
   `$dumpvars` — which is what makes it usable on the bench you are marked with.
 - **`.agent/rtlgraph/wave.mjs`** reads the dump and writes
-  `waveform/<bench>.waveform.md` (for a person) and `<bench>.waveform.json` (for
-  an agent, and for the viewer) — with the project, not among the tools: clock period and whether it
+  `waveform/<bench>.waveform.json` (for the viewer and for an agent; `--report`
+  adds `<bench>.waveform.md`, the same numbers as prose for a person, which
+  nothing else reads) — with the project, not among the tools: clock period and whether it
   wobbles, when the reset let go and **what was still undefined afterwards**,
   every valid/ready transfer with what it waited and how long it was held, the
   signals that never moved, and the run cut into one stretch per check the bench
@@ -141,6 +142,18 @@ extension, so each line is something that broke once.
   `source.lib` points at it by path.
 - The prompt picker reads `.prompt/rtlgraph/` alone, so another tool's prompts
   no longer appear in it.
+- **Only what the project needs is written.** Copying the spec used to leave 26
+  files where a Korean project that instantiates a `DFF` needs 14: both
+  languages of all six prompts when
+  `rtlgraph.language` already says which one is read, and all six `.base/`
+  primitives when the design instantiates one. The copy now follows the setting
+  (`auto` still writes both) and scans the RTL for instantiations, carrying the
+  lot only when there is no RTL yet to go on.
+- **A run leaves the waveform, not a pile.** `--wave` writes the dump and the
+  measurements; `<bench>.waveform.md` — the same numbers as prose, which nothing
+  but a person reads — is now `--report`. The compiler's scratch moved into
+  `.rtlgraph-build/` and is removed when the bench passes, so a failure still
+  leaves the command that produced it (`--keep-build` keeps it either way).
 
 ### Fixes
 

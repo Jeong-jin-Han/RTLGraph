@@ -2,7 +2,9 @@ import * as vscode from 'vscode'
 import { execSync } from 'node:child_process'
 import { chmodSync, existsSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
-import { AGENT_FILES, ENVIRONMENT_FILE, PROMPT_KINDS, PROMPT_LANGUAGES, SUPERSEDED } from './files.ts'
+import {
+  AGENT_FILES, BASE_MODULES, ENVIRONMENT_FILE, filesFor, PROMPT_KINDS, PROMPT_LANGUAGES, SUPERSEDED,
+} from './files.ts'
 import { buildEnvironmentReport, PROBES, type Companion, type EnvironmentFacts, type ProbedTool } from './environment.ts'
 
 // First stdout line of a version command, or undefined when the tool is missing.
@@ -74,7 +76,42 @@ async function adapted(extensionUri: vscode.Uri, from: string, to: string, at: v
 
 // Opt-in: only runs from the command, never on activation, so nothing lands in a
 // repository the user did not choose.
-export async function copyAgentSpec(extensionUri: vscode.Uri, target: vscode.Uri): Promise<CopyResult> {
+/** The primitives this project instantiates but does not ship. */
+async function neededPrimitives(target: vscode.Uri): Promise<string[]> {
+  const found = new Set<string>()
+  const look = async (folder: vscode.Uri, depth: number): Promise<void> => {
+    if (depth > 4) return
+    let entries: [string, vscode.FileType][] = []
+    try {
+      entries = await vscode.workspace.fs.readDirectory(folder)
+    } catch {
+      return
+    }
+    for (const [name, type] of entries) {
+      if (name.startsWith('.') || name === 'node_modules') continue
+      const child = vscode.Uri.joinPath(folder, name)
+      if (type === vscode.FileType.Directory) {
+        await look(child, depth + 1)
+        continue
+      }
+      if (!/\.s?v$/.test(name)) continue
+      const text = new TextDecoder().decode(await vscode.workspace.fs.readFile(child))
+      for (const module of BASE_MODULES) {
+        // An instantiation, not the declaration inside .base itself.
+        if (new RegExp(`(^|[^\\w])${module}\\s*(#\\s*\\(|[A-Za-z_])`).test(text)) found.add(module)
+      }
+    }
+  }
+  await look(target, 0)
+  // Nothing written yet: there is nothing to go on, so carry the lot.
+  return found.size > 0 ? [...found] : [...BASE_MODULES]
+}
+
+export async function copyAgentSpec(
+  extensionUri: vscode.Uri,
+  target: vscode.Uri,
+  languages?: readonly (typeof PROMPT_LANGUAGES)[number][],
+): Promise<CopyResult> {
   const write = async (to: string, bytes: Uint8Array) => {
     const destination = vscode.Uri.joinPath(target, to)
     await vscode.workspace.fs.createDirectory(vscode.Uri.joinPath(destination, '..'))
@@ -82,7 +119,11 @@ export async function copyAgentSpec(extensionUri: vscode.Uri, target: vscode.Uri
   }
   const written: string[] = []
   const kept: string[] = []
-  for (const { from, to } of AGENT_FILES) {
+  const wanted = filesFor({
+    ...(languages ? { languages } : {}),
+    primitives: await neededPrimitives(target),
+  })
+  for (const { from, to } of wanted) {
     const destination = vscode.Uri.joinPath(target, to)
     if (await adapted(extensionUri, from, to, destination)) {
       kept.push(to)

@@ -5,7 +5,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, wri
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import type { RenderState } from '../src/protocol.ts'
-import { AGENT_FILES, ENVIRONMENT_FILE, PROMPT_DIR, RUN_TB, VALIDATOR_FILE } from '../src/agent/files.ts'
+import { ENVIRONMENT_FILE, filesFor, PROMPT_DIR, RUN_TB, VALIDATOR_FILE } from '../src/agent/files.ts'
 
 // Loaded by VS Code via --extensionTestsPath; resolves on success, throws on failure.
 // RTLGRAPH_E2E_FILE is the root file demo/acc/acc_top.rtlgraph.json: one main
@@ -38,7 +38,12 @@ export async function run(): Promise<void> {
   // ── Copy Agent Spec to Workspace ──
   const folder = mkdtempSync(join(tmpdir(), 'rtlgraph-e2e-'))
   const written = await vscode.commands.executeCommand<string[]>('rtlgraph.copyAgentSpec', vscode.Uri.file(folder))
-  const expected = [...AGENT_FILES.map(f => f.to), ENVIRONMENT_FILE].sort()
+  // An empty folder has no Verilog to read, so every primitive comes along; a
+  // project with code gets only what it instantiates (see agent.test.ts). The
+  // prompts follow the reader: this workspace sets rtlgraph.language to korean,
+  // so the English half is not written — with `auto`, both would be.
+  assert.equal(vscode.workspace.getConfiguration('rtlgraph').get('language'), 'korean')
+  const expected = [...filesFor({ languages: ['korean'] }).map(f => f.to), ENVIRONMENT_FILE].sort()
   assert.deepEqual([...(written ?? [])].sort(), expected)
   for (const file of expected) assert.ok(existsSync(join(folder, file)), file)
   assert.match(readFileSync(join(folder, ENVIRONMENT_FILE), 'utf8'), /^# RTLGraph — Agent Environment Report/)
@@ -89,10 +94,12 @@ export async function run(): Promise<void> {
 
   // The prompts are picked by branch and the path goes to the clipboard, which is
   // how they are used: pasted into an agent.
+  // Korean, because that is the only one copied here — the picker offers what is
+  // in the folder, so a reader set to one language never has to pass the other by.
   const copied = await vscode.commands.executeCommand<string>('rtlgraph.copyPromptPath', { kind: 'assignment', folder })
-  assert.equal(copied, join(folder, PROMPT_DIR, 'assignment/english.md'))
+  assert.equal(copied, join(folder, PROMPT_DIR, 'assignment/korean.md'))
   assert.equal(await vscode.env.clipboard.readText(), copied)
-  log(`Copy Prompt Path puts ${PROMPT_DIR}/assignment/english.md on the clipboard`)
+  log(`Copy Prompt Path puts ${PROMPT_DIR}/assignment/korean.md on the clipboard`)
 
   // The waveform view: a report opens as a drawing, and the drawing knows the
   // places worth going to — how it came up, then a marker per check.

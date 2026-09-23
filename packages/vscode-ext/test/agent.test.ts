@@ -5,7 +5,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 
 import { tmpdir } from 'node:os'
 import { basename, join, relative } from 'node:path'
 import { BASE_REGISTRY } from '@rtlgraph/registry'
-import { AGENT_FILES, BASE_MODULES, MAKE_SUBMISSION, PROMPT_KINDS, PROMPT_LANGUAGES, RUN_TB, VALIDATOR_BUNDLE } from '../src/agent/files.ts'
+import { AGENT_FILES, BASE_MODULES, filesFor, MAKE_SUBMISSION, PROMPT_KINDS, PROMPT_LANGUAGES, RUN_TB, VALIDATOR_BUNDLE } from '../src/agent/files.ts'
 import { buildEnvironmentReport } from '../src/agent/environment.ts'
 
 const ROOT = join(import.meta.dirname, '..')
@@ -198,6 +198,25 @@ endmodule
   assert.equal(bare.status, 1, 'without it the staged design does not elaborate, and that is reported')
   assert.match(bare.stdout, /FAILED/)
   assert.doesNotMatch(bare.stdout, /base\/DFF\.v/)
+})
+
+// A project that carries files nobody opens is a project people stop reading.
+test('only the language asked for, and only the primitives the code uses', () => {
+  const all = filesFor()
+  assert.deepEqual(all.map(f => f.to).sort(), AGENT_FILES.map(f => f.to).sort(), 'asked nothing, carry everything')
+
+  const korean = filesFor({ languages: ['korean'] })
+  const prompts = korean.filter(f => f.to.startsWith('.prompt/')).map(f => f.to)
+  assert.equal(prompts.some(to => /\/english\.md$|\/README\.md$/.test(to)), false, `no English prompts: ${prompts}`)
+  assert.equal(korean.filter(f => f.to.startsWith('.prompt/')).length, PROMPT_KINDS.length + 1,
+    'one per branch, plus the guide')
+  assert.ok(korean.some(f => f.to.endsWith('README.korean.md')), 'and the guide is the Korean one')
+
+  const one = filesFor({ primitives: ['DFF'] })
+  assert.deepEqual(one.filter(f => /^\.base\/.*\.v$/.test(f.to)).map(f => f.to), ['.base/DFF.v'])
+  assert.ok(one.some(f => f.to === '.base/README.md'), 'the note that says what they are stays')
+  // everything that is not a prompt or a primitive is always copied
+  assert.equal(one.some(f => f.to === '.agent/rtlgraph/SPEC.md'), true)
 })
 
 test('the spec registry table matches the real registry', () => {

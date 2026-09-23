@@ -12,8 +12,9 @@ read both, and follow "Workflow W — Waveform → why it passed".
 
 If no report exists yet, make one: `.agent/rtlgraph/run-tb.sh --wave` runs the
 benches, dumps a waveform without editing any testbench, and writes
-`waveform/<bench>.waveform.md` and `waveform/<bench>.waveform.json`. Do not edit a
-testbench to make it dump — the runner adds a module that does it.
+`waveform/<bench>.vcd` and `waveform/<bench>.waveform.json` — the measurements you
+read below. Do not edit a testbench to make it dump — the runner adds a module that
+does it.
 
 ## What you are given, and what you must not do with it
 

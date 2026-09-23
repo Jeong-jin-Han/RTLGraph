@@ -118,22 +118,29 @@ click rather than a memory test.
 > .agent/rtlgraph/make-submission.sh   collects the .v files to hand in, checks them, zips them
 > .agent/rtlgraph/wave.mjs             reads a simulation's dump and says what it measured
 >
-> Those are the tools. What a run produces belongs to the project, not to them:
-> `waveform/<bench>.waveform.json` (opens as a waveform), `.waveform.md` and the `.vcd` beside it,
-> with the compiler's scratch in `.rtlgraph-build/`.
-> .prompt/rtlgraph/rtlgraph/{korean,english}.md    existing RTL → RTLGraph
-> .prompt/rtlgraph/assignment/{korean,english}.md  the same, for a skeleton that may not be touched
-> .prompt/rtlgraph/rtl/{korean,english}.md         spec → RTL in the three-layer layout, then RTLGraph
-> .prompt/rtlgraph/refactor/{korean,english}.md    existing RTL → restructured RTL, then RTLGraph
-> .prompt/rtlgraph/spec/{korean,english}.md        an idea → SPEC.md
-> .prompt/rtlgraph/waveform/{korean,english}.md    a run that happened → why it happened
-> .prompt/rtlgraph/README.md, README.korean.md     which of the six to reach for — for you, not the agent
-> .base/{DFF,INC,ADD,SUB,MUX2,CMP_EQ}.v            the primitives RTLGraph draws with symbols, plus a note
+> .prompt/rtlgraph/rtlgraph/korean.md    existing RTL → RTLGraph
+> .prompt/rtlgraph/assignment/korean.md  the same, for a skeleton that may not be touched
+> .prompt/rtlgraph/rtl/korean.md         spec → RTL in the three-layer layout, then RTLGraph
+> .prompt/rtlgraph/refactor/korean.md    existing RTL → restructured RTL, then RTLGraph
+> .prompt/rtlgraph/spec/korean.md        an idea → SPEC.md
+> .prompt/rtlgraph/waveform/korean.md    a run that happened → why it happened
+> .prompt/rtlgraph/README.korean.md      which of the six to reach for — for you, not the agent
+> .base/DFF.v                            the primitives this design instantiates, plus a note
 > ```
+>
+> Only what this project needs is written: the prompts in the language `rtlgraph.language` is set to
+> (`auto` writes both `korean.md` and `english.md`), and out of `.base/` only the primitives the code
+> actually instantiates — `DFF`, `INC`, `ADD`, `SUB`, `MUX2`, `CMP_EQ` are all there to be had, and a
+> folder with no RTL in it yet gets the lot, since there is nothing to go on.
+>
+> Those are the tools. What a run produces belongs to the project, not to them:
+> `waveform/<bench>.waveform.json` (opens as a waveform) and the `.vcd` beside it — plus
+> `.waveform.md` if you asked for `--report`. The compiler's scratch goes in `.rtlgraph-build/`,
+> which is removed again when the bench passes (`--keep-build` keeps it).
 >
 > `.agent/rtlgraph/run-tb.sh --wave` closes the loop the other way. It dumps a waveform — adding a
 > module that calls `$dumpvars`, so no testbench is edited, the handed-out one included — and
-> `wave.mjs` turns the dump into `waveform/<bench>.waveform.md`: clock period and whether it wobbles, when the reset
+> `wave.mjs` turns the dump into `waveform/<bench>.waveform.json`: clock period and whether it wobbles, when the reset
 > let go and what was **still undefined afterwards**, when each valid/ready transfer was taken and
 > how long it waited, and the run cut into one stretch per check the bench printed. Measurements
 > only. The reading of *why* is a separate job, for `.prompt/rtlgraph/waveform/*.md`, which is told

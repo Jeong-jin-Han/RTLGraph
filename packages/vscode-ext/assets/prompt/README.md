@@ -110,8 +110,9 @@ Needs a simulator; `.agent/rtlgraph/ENVIRONMENT.md` says which ones this machine
 
 The only prompt that starts from a simulation rather than from code. Run
 `.agent/rtlgraph/run-tb.sh --wave` first: it dumps a waveform without editing any
-testbench and writes `waveform/<bench>.waveform.md` (for you) and
-`<bench>.waveform.json` (for the agent, and for the viewer) —
+testbench and writes `waveform/<bench>.vcd` and `<bench>.waveform.json` (for the
+agent, and for the viewer). Add `--report` if you also want the same numbers as
+prose in `<bench>.waveform.md` —
 clock period, when the reset let go, what was still undefined afterwards, when
 each handshake was taken, and the run cut into one stretch per check the bench
 printed.
@@ -150,8 +151,9 @@ report catches up.
 
 1. **Read the given testbench's output first**, if there was one — that is the
    result that counts; everything else is evidence around it.
-   (`run-tb.sh --wave` adds `waveform/<bench>.waveform.md`: the numbers a PASS does not
-   mention — held times, waits, what was undefined after reset.)
+   (`run-tb.sh --wave` leaves the waveform and its measurements in `waveform/`, and
+   `--report` turns them into `waveform/<bench>.waveform.md`: the numbers a PASS does
+   not mention — held times, waits, what was undefined after reset.)
 2. **Read the validator line it quotes.** `0 errors` is the bar. Warnings are
    either real findings about the code or something it should have fixed — the
    prompt asks it to tell you which.
