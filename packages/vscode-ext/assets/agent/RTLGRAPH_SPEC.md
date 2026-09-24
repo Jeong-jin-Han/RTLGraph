@@ -480,6 +480,29 @@ Rules that keep the two apart:
 5. **Disagreements are findings.** If the dump does not match what the code appears to say, write
    that down rather than smoothing it over. The dump is what happened.
 
+6. **Every section has the same three fields**, because this is read under time pressure and a
+   document arranged differently in every section is one nobody can find anything in:
+
+   ```
+   ## <the line the bench printed>
+
+   목적 / Purpose — what this check is out to prove. One sentence.
+   방식 / How — what the bench did: the stimulus and the expected value, one bench citation.
+   결과 / Outcome — measured times and values → it passed → the line of the design that made it so.
+
+   ### 더 보기 / More
+   The path step by step, tables, side observations. This folds away in the view, so it can run long.
+   ```
+
+   One or two sentences per field; anything longer moves under the fold. **Ten unfolded lines per
+   check is the ceiling** — a reader who cannot state a check's purpose, method and outcome in
+   thirty seconds cannot use the document, however complete it is.
+
+7. **Write it the way "Writing a reader can follow" says**, above. The three that bite hardest here:
+   a 결과 that could not be false is not a result (principle 2); a signal is called what the code
+   calls it (principle 6); and the shortening pass moves evidence under the fold rather than
+   deleting it (principle 8).
+
 Write `<bench>.waveform-analysis.md` beside the report you read, in `waveform/`. Where NodeGraph is installed (see
 `.agent/rtlgraph/ENVIRONMENT.md`), the same content can carry `code` links per check.
 
@@ -690,14 +713,62 @@ line you printed), **how it was driven** (the statements that ran before it) and
 drive through named tasks, print one check the moment it is decided, and prefix every line with
 `[%0t]`.
 
+**A testbench is commented like the design, and its constants more so.** Everything above applies
+here — the header, the reason per block, a line on every declaration — but a bench has two things a
+design does not, and both are read with suspicion:
+
+- **The numbers that make the test cheap.** A bench almost always shrinks something: `CLOCK_FREQ =
+  1_000_000` so that a symbol is ten cycles rather than 1085, a timeout of 2 ms, four bytes rather
+  than 256. Say so at the declaration — *what was shrunk, to what, and why that is still a fair
+  test*. An unexplained constant in a bench is the first thing a reader distrusts, and rightly:
+  `always #5 clk = ~clk` sets the real period, which is not what `CLOCK_FREQ` says.
+- **What each task drives, and on which edge.** One line per task: what it does to the wires, and
+  that inputs move on the falling edge so nothing changes on the edge the design samples.
+
+And the top of the file says **what this bench is out to catch** — one sentence per case, in the
+order the cases run, naming the spec sentence where there is one. That header is what somebody
+reads when a check fails at 2am; the rest of the bench is how it does it.
+
 Why it behaved that way belongs to Workflow W, run later against the code — not here.
+
+---
+
+## Writing a reader can follow
+
+Two of the things you produce here are prose, not data: **the comments in the RTL** and **the
+waveform analysis**. Both fail the same way, and it is not a style problem.
+
+> **The reason writing about your own design is hard has a name: you cannot un-know it.**
+> Once you know why `serial_in_d` resets to 1, a comment saying "reset to idle" reads as complete.
+> To the reader it says nothing — they do not yet have the thing that makes it make sense.
+> The bar is not "is this accurate". Accurate and unusable is the normal failure.
+
+The eight principles below are **constructive**: it is cheap to check whether a piece of writing
+satisfies one, and when it does not, the principle says what to change. That is why "be clear" and
+"omit needless words" are not on the list — you cannot check them.
+
+| # | Principle | What it means here | Check |
+|---|-----------|--------------------|-------|
+| 1 | **One reader, named** | Fix one concrete reader with the **minimum** expertise you expect — "knows Verilog and the UART idea, has never read this file" — and write to them. For an analysis, say who it is in the first line of the file; for RTL, the module header is written to them. | Does anything here use a term or a fact that reader does not have, without giving it? |
+| 2 | **A claim that could be wrong** | "The design works correctly" cannot be wrong, so it carries nothing. "`has_byte` rises on the stop bit's symbol edge and stays up for 40 clocks because only `data_out_ready` clears it" can be wrong, so it informs. Every 결과 field, and every module header's key sentence, is of the second kind. | Could this sentence turn out to be false? If not, rewrite it. |
+| 3 | **One landmark** | One sentence, at the top, that the whole file is about — the module's key idea, or what this run establishes. Everything below earns its place against it. | Can you say in one clause how this paragraph serves that sentence? |
+| 4 | **One point, stated first** | A comment block, or a field, carries exactly one point, and opens with it. Never build up to it through background. Two points means two blocks. | Does one sentence cover the whole block? Is it the first sentence? |
+| 5 | **Old to new** | Start each sentence from something already said and end on what is new. This is what turns a run of true statements into an argument the reader can follow. | Does this sentence begin with a word the previous one used? |
+| 6 | **One name per thing** | Signals, modules and instances keep the code's own spelling, everywhere, in any language: `bit_counter` is `bit_counter`, never "the counter" in one place and "비트 카운터" in the next. Two names for one thing is the most common reason a reader stops. | Does anything here appear under two names? |
+| 7 | **Just in time, layered** | Put an explanation in the place that needs it, not in the header where the reader cannot use it yet. The layers have different audiences: **module header / three fields = everyone; block comments / the folded part = whoever is actually digging.** | Is everything in this block used *in* this block? Do the headers alone tell the story? |
+| 8 | **Cut, then cut again** | When it feels finished, make a shortening pass — a required second pass. Cut run-ups, cut what another block already says, keep one running example rather than three. For an analysis, move rather than delete: evidence belongs under the fold, not in the bin. | Did you run the pass, and can you say what it removed? Is the same fact stated twice? |
+
+(Sources: Benjamin C. Pierce, *The Curse of Knowledge*, PLMW 2017 — the canonical reader, the
+landmark, falsifiable contributions, the running example, the shortening pass; Derek Dreyer, *How to
+Write Papers and Give Talks That People Can Follow*, PLMW@ICFP 2017 — one point per unit stated
+first, old-to-new, name your baby, just in time, audience layering.)
 
 ---
 
 ## Comments — top down, in the reader's language
 
 Whenever you write RTL (Workflow B, Workflow C, or filling in a handed-out skeleton), the comments
-are part of the deliverable. Someone opens the file cold and has to understand it before they can
+are part of the deliverable. The eight principles above apply to every line of them. Someone opens the file cold and has to understand it before they can
 trust it, and that is the order to write for: **the whole before the parts, the reason before the
 mechanism**.
 
@@ -711,13 +782,40 @@ mechanism**.
    the two clocks are not the same and the middle is where the error has the most room";
 4. the state it keeps — one line per register, saying what it remembers, not what type it is.
 
+**Every declaration says what it holds — parameters, localparams and locals included.** This is
+the part most often skipped, and it is the part a reader needs first: they meet `SAMPLE_TIME` in an
+expression long before they find out what it is. One short line each, saying:
+
+- **a `parameter`** — what it means to the outside, its units, and what happens if it is changed.
+  `parameter CLOCK_FREQ = 125_000_000` is not "the clock frequency"; it is "the frequency the
+  design is clocked at, in Hz — everything below is derived from it and nothing else reads it".
+- **a `localparam`** — **where the number comes from**, worked through once with real numbers, so
+  nobody has to redo the arithmetic: `// 비트 하나의 길이와, 그 한가운데. 125MHz / 115200baud 면
+  1085 클럭과 542 클럭이다.` A localparam whose value is a formula is the single best place in a
+  file to spend a comment.
+- **a register** — what it remembers and what its values *mean*, not its type. `4'd0` meaning
+  "idle" is the kind of thing that exists only in a comment. Say the encoding once, here, rather
+  than at each branch that relies on it.
+- **a wire** — what it is true of. `// 비트의 한가운데: 라인을 읽는 유일한 순간` beats anything
+  about `clock_counter == SAMPLE_TIME - 1`, which the reader can see.
+- **a width** — whenever it is derived (`$clog2(…)`) or easy to get wrong, say what fixes it.
+
+Declarations that only exist to be wired through — a port already described in the header, a
+temporary whose name says everything — take nothing. A comment per line is not the goal; a reader
+who never has to guess what a name holds is.
+
 **Inside, a comment per block that says why, never what.** `// count up` over `count <= count + 1`
 is noise. `// the counter is also the busy flag: 0 means nothing is in flight` is the thing that
 was in the author's head and nowhere in the code. Where a branch order matters, say that it
 matters and what breaks if it is swapped.
 
 **Names stay as the code spells them**, in any language: `bit_counter` is `bit_counter` in a Korean
-comment. Translate the prose, never the identifiers.
+comment. Translate the prose, never the identifiers. (Principle 6 — and the failure it prevents is
+a reader who cannot tell whether "the counter" is `bit_counter` or `clock_counter`.)
+
+**Then make the shortening pass** (principle 8). A comment that restates its expression, a second
+header paragraph saying what the first already said, a third example of the same idea: all of it
+goes. What survives is what was in your head and is nowhere in the code.
 
 Comments follow the language the prompt asks for its report in: Korean prompts get Korean comments.
 A handed-out skeleton's own comments are never touched, reworded, or translated — write yours

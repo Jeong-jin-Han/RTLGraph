@@ -39,7 +39,7 @@ export interface Marker {
   label: string
   from: number
   to: number
-  kind: 'init' | 'check'
+  kind: 'init' | 'check' | 'span'
   /** A line or two of what was measured here, already worded. */
   notes: readonly string[]
   /** The testbench line that printed this, relative to the report. */
@@ -66,6 +66,10 @@ export interface WaveView {
   markers: readonly Marker[]
   /** Paths the dump has that did not make the cut, so the view can say so. */
   omitted: number
+  /** The testbench this run came from, relative to the report. */
+  bench?: string
+  /** Set when that bench is the one the work is marked with (`tb/given/`). */
+  marking?: string
 }
 
 // What a dump calls a signal when it is not one: a testbench's counters and
@@ -217,7 +221,84 @@ function markersFor(facts: WaveFacts, traces: readonly Trace[], lang: Lang): Mar
       watch: window.moved.slice(0, 6).map(m => m.path),
     })
   }
+  // A bench that never prints `[%0t]` gives nothing to cut the run at — the one
+  // that decides the mark is often exactly that kind. Rather than one flat
+  // place for four microseconds, the dump's own quiet gaps are offered as
+  // stretches, labelled by time and never as checks: nobody claimed these.
+  if (facts.windows.length === 0) {
+    const spans = placesWithoutChecks(traces, facts, facts.end)
+    if (spans.length > 1) {
+      // …and "coming up" stops at the first cut. Without a check to end it, the
+      // opening place stretched over the whole run — 2.8 ms of a marking bench
+      // in one place, which is the same as having no places at all.
+      markers[0] = {
+        ...markers[0],
+        to: Math.min(markers[0].to, spans[0].to),
+        notes: [...markers[0].notes, w.noChecks],
+      }
+      for (const [i, span] of spans.entries()) {
+        markers.push({
+          id: `span-${i + 1}`,
+          label: `${w.activity} ${i + 1}`,
+          from: span.from,
+          to: span.to,
+          kind: 'span',
+          notes: span.moved.length > 0 ? [w.moved(span.moved.join(', '))] : [],
+          focus: [],
+          watch: span.watch,
+        })
+      }
+    }
+  }
   return markers
+}
+
+/**
+ * Where to cut a run that nobody timestamped.
+ *
+ * A marking bench prints 274 lines and not one `[%0t]`, so there is nothing to
+ * hang a check on — and one place for 2.8 ms is the same as no places at all.
+ * The cut is taken from the dump instead: **each time the design handed a byte
+ * over**, which is the one event in the run that means something on its own.
+ * Failing that (no handshake in the dump), the run is cut into equal stretches,
+ * which claims nothing at all. Either way these are stretches, never checks:
+ * the bench asserted none of them.
+ */
+function placesWithoutChecks(
+  traces: readonly Trace[],
+  facts: WaveFacts,
+  end: number,
+): { from: number; to: number; moved: string[]; watch: string[] }[] {
+  const moving = traces.filter(t => t.role === 'signal')
+  if (moving.length === 0 || end <= 0) return []
+  const WANTED = 8
+  const valid = facts.handshakes[0]?.valid
+  const rises = valid
+    ? (moving.find(t => t.path === valid)?.points ?? [])
+      .filter(([, value], i, all) => value === '1' && all[i - 1]?.[1] !== '1')
+      .map(([at]) => at)
+    : []
+  // Too many transfers to make a place each: take them spread across the run.
+  const cuts = rises.length >= 2
+    ? rises.filter((_, i) => i % Math.ceil(rises.length / WANTED) === 0)
+    : Array.from({ length: WANTED - 1 }, (_, i) => Math.round((end * (i + 1)) / WANTED))
+  const edges = [...new Set([0, ...cuts, end])].sort((a, b) => a - b)
+  const spans = []
+  for (let i = 0; i < edges.length - 1; i += 1) {
+    const from = edges[i]
+    const to = edges[i + 1]
+    const busy = moving
+      .map(trace => ({ trace, changes: trace.points.filter(([at]) => at > from && at <= to).length }))
+      .filter(entry => entry.changes > 0)
+      .sort((a, b) => b.changes - a.changes)
+    spans.push({
+      from,
+      to,
+      moved: [...new Set(busy.slice(0, 3).map(entry => entry.trace.name))],
+      watch: busy.slice(0, 6).map(entry => entry.trace.path),
+    })
+  }
+  return spans
 }
 
 export function buildView(wave: Waveform, facts: WaveFacts, limit = 20, lang: Lang = 'en'): WaveView {

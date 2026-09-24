@@ -28,7 +28,7 @@ function payload(bench: string, withAnalysis = true) {
   }
   const view = buildView(wave, facts, 20, 'ko')
   for (const trace of view.traces) {
-    const place = report.signals?.[trace.name]
+    const place = report.signals?.[trace.path] ?? report.signals?.[trace.name]
     if (place) Object.assign(trace, { source: place })
   }
   // …and the reading an agent wrote about it, if there is one beside the report
@@ -160,7 +160,11 @@ test('pointing at a moment, or at a signal, lights up what it refers to', { skip
   pill.dispatch('mouseleave', {})
   assert.equal(hotLines(), 0, 'and goes out again')
 
-  const row = view.byId('wave-labels')!.children.find(r => r.attributes.get('class')?.includes('wave-label') && !r.attributes.get('class')?.includes('axis'))!
+  // the first real signal row: not the time axis, and not a module heading
+  const row = view.byId('wave-labels')!.children.find(r => {
+    const kind = r.attributes.get('class') ?? ''
+    return kind.includes('wave-label') && !kind.includes('axis') && !kind.includes('group')
+  })!
   row.dispatch('mouseenter', {})
   assert.equal(view.byId('wave-plot')!.findAll(n => n.attributes.get('class') === 'wave-row-hot').length, 1,
     'the row under the hand is picked out in the plot')
@@ -205,14 +209,21 @@ test('what an agent wrote about a check unfolds beside it, citations and all', {
 
   const fold = rail().find(n => n.attributes.get('class') === 'why')!
   assert.match(fold.textContent, /왜 통과했나/)
-  // the sections that belong to no check are shown outright; a check's is not
-  const inPlaces = () => rail().findAll(n => n.attributes.get('class') === 'prose'
-    && n.parent?.attributes.get('class')?.includes('wave-place') === true)
-  assert.equal(inPlaces().length, 0, 'folded away to begin with')
+  // It opens in the panel on the right, not under the card: a reader reads the
+  // argument against the signals, and unfolding pushed those off the screen.
+  const panel = () => view.byId('wave-why')!
+  const written = () => panel().findAll(n => n.attributes.get('class') === 'prose')
+  assert.equal(written().length, 0, 'nothing is open to begin with')
+  assert.equal(panel().hidden, true, 'and the panel takes no room until asked for')
 
   fold.dispatch('click', {})
-  assert.equal(inPlaces().length, 1, 'and only the one that was asked for')
-  const cites = rail().findAll(n => n.attributes.get('class') === 'cite')
+  assert.equal(written().length, 1, 'and only the one that was asked for')
+  assert.equal(panel().hidden, false)
+  assert.equal(rail().findAll(n => n.attributes.get('class') === 'prose').length, 0,
+    'the list of places keeps its place')
+  assert.ok(panel().find(n => n.attributes.get('class') === 'why-title')!.textContent.length > 0,
+    'the panel says which check it is about')
+  const cites = panel().findAll(n => n.attributes.get('class') === 'cite')
   assert.ok(cites.length >= 1, 'the lines it cites are buttons')
   assert.match(cites[0].textContent, /\.v:\d+/)
   cites[0].dispatch('click', {})
@@ -223,6 +234,78 @@ test('what an agent wrote about a check unfolds beside it, citations and all', {
 
   // sections that belong to no check are kept rather than dropped
   assert.ok(rail().findAll(n => n.attributes.get('class') === 'wave-note').length >= 1)
+})
+
+// Thirty names in one list do not say where any of them lives. The report
+// already knows — each signal carries the line of RTL that drives it — so the
+// rows are grouped under the file that line is in.
+test('the rows are grouped by the module they belong to', { skip: !existsSync(BUNDLE) && 'run `npm run build -w rtlgraph`' }, async t => {
+  if (!existsSync(join(DEMO, 'tb_uart_loop.waveform.json'))) return t.skip('demo/uart-p01 is not here')
+  const view = await webview()
+  view.send(payload('tb_uart_loop'))
+  const labels = () => view.byId('wave-labels')!.children
+  const groups = () => labels().filter(r => r.attributes.get('class')?.includes('group') === true).map(r => r.textContent)
+
+  assert.ok(groups().includes('uart_receiver.v'), `the receiver's own signals are named as its: ${groups()}`)
+  assert.ok(groups().length >= 2, 'and the design is more than one module')
+
+  // A heading takes a lane in the plot too, or the two columns stop lining up:
+  // the labels and the traces are read across.
+  const lanes = labels().filter(r => r.attributes.get('class')?.includes('axis') !== true).length
+  const drawn = view.byId('wave-plot')!.findAll(n => n.attributes.get('class') === 'wave-row-group').length
+  assert.equal(drawn, groups().length, 'every heading has its own empty lane')
+  assert.ok(lanes > drawn, 'and the rest are signals')
+
+  // A constant and a signal that changes are different kinds of thing.
+  const vars = view.byId('toolbar')!.find(n => n.tag === 'button' && n.textContent === 'var')!
+  vars.dispatch('click', {})
+  assert.ok(groups().some(name => /파라미터|parameters/.test(name)), `the parameters are their own group: ${groups()}`)
+  vars.dispatch('click', {}) // the harness is shared: leave the view as it was found
+})
+
+// Every section is written as the same three fields, and what does not bear on
+// the verdict folds away: that is what makes a check readable in thirty seconds.
+test('the three fields read as fields, and the aside folds', { skip: !existsSync(BUNDLE) && 'run `npm run build -w rtlgraph`' }, async t => {
+  if (!existsSync(join(DEMO, 'tb_uart_corner.waveform.json'))) return t.skip('demo/uart-p01 is not here')
+  const view = await webview()
+  const sent = payload('tb_uart_corner')
+  Object.assign(sent.view.markers.find(m => m.id === 'init')!, {
+    explain: '목적 — 리셋 직후 설계가 정의되는지.\n방식 — 4 클럭 동안 reset 을 든다 (`tb.v:82`).'
+      + '\n결과 — 40.000 ns 에 전부 정의됐다 (`uart_receiver.v:84`).\n\n'
+      + '### 더 보기\n레지스터마다 어디서 정의되는지.',
+  })
+  view.send(sent)
+  view.byId('wave-rail')!.find(n => n.attributes.get('class') === 'why')!.dispatch('click', {})
+  const panel = view.byId('wave-why')!
+
+  const fields = panel.findAll(n => n.attributes.get('class') === 'field-name').map(n => n.textContent)
+  assert.deepEqual(fields, ['목적', '방식', '결과'], 'each field is labelled, in the order a reader asks in')
+  const fold = panel.find(n => n.tag === 'details')
+  assert.ok(fold, 'the aside is folded rather than run on')
+  assert.equal(fold!.find(n => n.tag === 'summary')!.textContent, '더 보기')
+  assert.ok(fold!.findAll(n => /레지스터마다/.test(n.textContent)).length > 0, 'and what it holds is inside it')
+})
+
+// An analysis writes tables — a register per row, what defines it, its reset
+// value — and a table poured into a paragraph is pipes and unreadable.
+test('a table in the writing is drawn as a table', { skip: !existsSync(BUNDLE) && 'run `npm run build -w rtlgraph`' }, async t => {
+  if (!existsSync(join(DEMO, 'tb_uart_corner.waveform.json'))) return t.skip('demo/uart-p01 is not here')
+  const view = await webview()
+  const sent = payload('tb_uart_corner')
+  const place = sent.view.markers.find(m => m.id === 'init')!
+  Object.assign(place, {
+    explain: '앞말\n\n| 레지스터 | 정의하는 줄 |\n|---|---|\n| `has_byte` | `uart_receiver.v:120` |\n| `rx_shift` | `uart_receiver.v:111` |\n\n뒷말',
+  })
+  view.send(sent)
+  view.byId('wave-rail')!.find(n => n.attributes.get('class') === 'why')!.dispatch('click', {})
+
+  const table = view.byId('wave-why')!.find(n => n.tag === 'table')
+  assert.ok(table, 'the rows are a table, not a paragraph of pipes')
+  assert.equal(table!.findAll(n => n.tag === 'th').length, 2, 'the header row is a header')
+  assert.equal(table!.findAll(n => n.tag === 'tr').length, 3, 'the rule under it is not a row')
+  // and the citations inside the cells are still buttons
+  assert.equal(table!.findAll(n => n.attributes.get('class') === 'cite').length, 2)
+  assert.equal(view.byId('wave-why')!.findAll(n => n.tag === 'p').length, 2, 'the prose around it is prose')
 })
 
 // A run has ten checks and nobody ordered ten essays: a place with no writing

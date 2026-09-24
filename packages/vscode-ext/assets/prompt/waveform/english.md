@@ -27,7 +27,10 @@ testbench printed with a time.
   the design's parameters, do not round, do not say "about". If something you
   expected to see is not in the measurements, say that it is not there.
 - **Every statement about behaviour cites the code**, as `file.v:12` or
-  `file.v:12-20`. "The byte waits for the host" explains nothing; "`has_byte`
+  `file.v:12-20` — **with the file name every time**. Once you have named a file,
+  a later bare `(`89`)` reads fine to you and is not a citation the view can turn
+  into a button, so the reader cannot follow it. "The byte waits for the host"
+  explains nothing; "`has_byte`
   stays set because the branch that clears it needs `data_out_ready`
   (`uart_receiver.v:86-87`)" is an explanation someone can check.
 - **A disagreement is a finding.** If the dump does not match what the code
@@ -50,24 +53,69 @@ opening one. The waveform view reads this file back and puts each section beside
 the instants it explains, matching them by that heading; a section whose heading
 names no check is shown on its own rather than pinned to the wrong one.
 
-**1. How it comes up.** Start here, because a testbench that only checks outputs
-will pass while a register spends the opening microsecond undefined. From the
-measurements: what was `x` at time 0, what the reset released at, what was still
-`x` after that and until when. From the code: which lines define each of those,
-and — for anything the measurements list as never defined — whether the design
-can be right anyway (a signal nothing reads) or whether this is a hole.
+**First, decide who you are writing to, and say so in the first line.** One person
+you could name, with the **minimum** expertise you expect — "knows Verilog and
+what a UART is, has never read this file". The reason a document like this comes
+out unreadable is not the writing, it is that **you already know the answer**: to
+someone who knows why `serial_in_d` resets to 1, "reset to idle" reads as a
+complete explanation, and to that reader it says nothing. The bar is not "is this
+accurate" — accurate and unusable is the default outcome.
 
-**2. One section per check.** For each stretch in `windows`, a short section:
+Follow the eight principles in **"Writing a reader can follow"** in
+`.agent/rtlgraph/SPEC.md`. The three that bite hardest here:
 
-- the line the bench printed, and the times the stretch spans;
-- what the wires did in it — the handshakes taken, the signals that moved most;
-- **the path through the design**, as a flow: how the stimulus travels signal →
-  signal → register until it is the result the bench asserted, one line citation
-  per step. This is the part a reader cannot get from the waveform — the picture
-  shows that `has_byte` rose, not that `bit_counter` reaching 1 at a symbol edge
-  is what raised it;
-- what would have to be wrong for this check to fail. A check that cannot fail
-  is a check worth saying so about.
+- **Only a sentence that could be false is a result.** "It behaves correctly"
+  cannot be false, so it carries nothing. "`has_byte` rises on the stop bit's
+  symbol edge and holds for 40 clocks because the clearing branch needs
+  `data_out_ready`" can be, so it does.
+- **One name per thing, the code's own.** `bit_counter` is `bit_counter`
+  everywhere — never "the counter" in the next sentence.
+- **Make a shortening pass when you think you are done.** Cut run-ups, cut what an
+  earlier section already said, keep one example rather than three. But **move
+  evidence under `### More` rather than deleting it.**
+
+And join the sections **old to new**: each one opens from wording the previous
+section used and ends on what is new. That is what makes nine true paragraphs
+read as one argument.
+
+**Every section has the same shape.** This is read during a viva, and a document
+whose sections are each arranged differently is a document nobody can find
+anything in. **Write every check as these three fields and nothing else:**
+
+```
+## <the line the bench printed>
+
+Purpose — what this test is out to prove. One sentence.
+How — what the bench did: the stimulus and the expected value, one bench citation.
+Outcome — the measured times and values → it passed → **the line of the design
+that made it so**.
+
+### More
+Side observations, follow-up questions, tables. This part folds away, so it can
+run long.
+```
+
+One or two sentences per field. Anything longer belongs under `### More`, which
+the view shows folded — what is folded cannot get in the way of the verdict. An
+observation that does not bear on the verdict (the list of `x` signals after
+reset, say) is **one line in the body and the rest folded.**
+
+**The most important thing in Outcome is the path through the design**: how the
+stimulus travels signal → signal → register until it is the result the bench
+asserted, one line citation per step. This is the part a reader cannot get from
+the waveform — the picture shows that `has_byte` rose, not that `bit_counter`
+reaching 1 at a symbol edge is what raised it. **What would have to be wrong for
+this check to fail** goes there too, in a line, or under the fold.
+
+**1. The first section — how it comes up.** Same three fields, kept short. A
+testbench that only checks outputs will pass while a register spends the opening
+microsecond undefined, so it is worth confirming: what was `x` at time 0, when
+the reset let go, what was still `x` after it. But if the answer is "the design
+was fully defined at release and what remains is the bench's own variables",
+**write that one line as the Outcome** and fold the per-register table.
+
+**2. One section per check** — one for each stretch in `windows`, same three
+fields.
 
 **3. What the waveform shows that no check asserts.** Held times, wait times,
 the gap between two frames, a signal that never moved. These are the facts a
@@ -77,7 +125,12 @@ passing test does not mention, and they are often the interesting ones.
 waveform establish, so the next reader knows where the edge is.
 
 If SPEC_DOCUMENT is given, quote the sentence a check comes from when there is
-one — the same verbatim rule as everywhere else.
+one — the same verbatim rule as everywhere else. If it is empty but the project
+plainly holds a brief (a PDF, say), use that and say in your report that you did.
+
+**The bar: can a reader say one check's purpose, method and outcome in thirty
+seconds?** More than ten unfolded lines per check and the answer is no — fold the
+difference.
 
 ## If NodeGraph is installed
 

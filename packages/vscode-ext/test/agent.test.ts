@@ -63,6 +63,25 @@ test('prompts: every kind in two languages, each pointing at a workflow the spec
   assert.ok(read('assets/prompt/rtl/english.md').includes('REQUEST ='))
 })
 
+// The two things this extension produces that are prose rather than data — the
+// comments in the RTL and the waveform analysis — fail the same way, so they are
+// governed by one section, and a prompt that writes either has to point at it.
+test('the prompts that write prose point at the writing principles', () => {
+  const heading = 'Writing a reader can follow'
+  assert.ok(spec.includes(`## ${heading}`), 'the spec defines them')
+  // Constructive means checkable: every principle carries what to look for.
+  const rows = [...spec.matchAll(/^\| \d+ \| \*\*(.+?)\*\* \|/gm)].map(m => m[1])
+  assert.equal(rows.length, 8, `eight principles, found ${rows}`)
+  assert.ok(spec.includes('Curse of Knowledge') && spec.includes('People Can Follow'), 'and says where they came from')
+
+  for (const kind of ['rtl', 'refactor', 'assignment', 'waveform'] as const) {
+    for (const language of PROMPT_LANGUAGES) {
+      assert.ok(flat(read(`assets/prompt/${kind}/${language}.md`)).includes(heading),
+        `${kind}/${language} points at "${heading}"`)
+    }
+  }
+})
+
 // The bench that decides the mark arrives late and has to be run at once, so
 // the runner is shipped with the prompts and the folder split is its contract.
 test('the testbench runner: two folders, the given one marked, the project folder left as it was', t => {

@@ -97,19 +97,82 @@ const signals: Record<string, { file: string; line: number; text: string }> = {}
 const STRENGTH = { clocked: 0, continuous: 1, blocking: 2, declaration: 3 } as const
 const isBench = (path: string) => /(^|\/)(tb|TB)_|_tb\.(s?v)$|\/tb\//.test(path)
 if (projectDir) {
-  const files = designFiles(resolve(projectDir)).map(path => ({ path, text: readFileSync(path, 'utf8') }))
-  const names = new Set(wave.signals.filter(s => s.hardware).map(s => s.name))
-  for (const name of names) {
-    let best: { score: number; file: string; line: number; text: string } | undefined
+  // The runner puts the bench in the project folder for the run and takes it out
+  // again, so the tree holds two copies of it: `tb/given/TB_uart_test.v` and a
+  // `TB_uart_test.v` at the root that is about to vanish. Citing the copy gives a
+  // report whose every bench link is dead by the time anyone opens it.
+  const bench = benchPath ? resolve(benchPath) : undefined
+  const copyOfBench = (path: string) =>
+    bench !== undefined && path !== bench && basename(path) === basename(bench)
+  const files = designFiles(resolve(projectDir))
+    .filter(path => !copyOfBench(path))
+    .map(path => ({ path, text: readFileSync(path, 'utf8') }))
+  if (bench && !files.some(file => file.path === bench)) {
+    try {
+      files.push({ path: bench, text: readFileSync(bench, 'utf8') })
+    } catch {
+      // the bench is not readable from here; the design files still are
+    }
+  }
+  const hardware = wave.signals.filter(s => s.hardware)
+  // Where each name is written, in each file, worked out once.
+  const found = new Map<string, Map<string, { line: number; text: string; kind?: string }>>()
+  for (const file of files) {
+    const here = new Map<string, { line: number; text: string; kind?: string }>()
+    for (const name of new Set(hardware.map(s => s.name))) {
+      const at = locateSignal(file.text, name)
+      if (at) here.set(name, at)
+    }
+    found.set(file.path, here)
+  }
+  // A name is not enough to say which file a signal is in: a transmitter and a
+  // receiver both have a `bit_counter`, and answering with whichever file was
+  // read first put half the design under the wrong module. An instance is, so
+  // each scope picks the file that declares the most of what that scope holds —
+  // its module — and its signals are read from there.
+  const scopes = new Map<string, string[]>()
+  for (const signal of hardware) {
+    const scope = signal.path.split('/').slice(0, -1).join('/')
+    const held = scopes.get(scope)
+    if (held) held.push(signal.name)
+    else scopes.set(scope, [signal.name])
+  }
+  const home = new Map<string, string>()
+  for (const [scope, names] of scopes) {
+    let best: { covers: number; score: number; path: string } | undefined
     for (const file of files) {
-      const found = locateSignal(file.text, name)
-      if (!found) continue
-      const score = (isBench(file.path) ? 10 : 0) + STRENGTH[found.kind ?? 'declaration']
-      if (!best || score < best.score) {
-        best = { score, file: relative(outDir, file.path), line: found.line, text: found.text }
+      const here = found.get(file.path)!
+      const covers = names.filter(name => here.has(name)).length
+      if (covers === 0) continue
+      // A bench declares the design's ports to wire it up, so it can cover a
+      // scope as well as the module does; the module is still the answer.
+      const score = isBench(file.path) ? 1 : 0
+      if (!best || covers > best.covers || (covers === best.covers && score < best.score)) {
+        best = { covers, score, path: file.path }
       }
     }
-    if (best) signals[name] = { file: best.file, line: best.line, text: best.text }
+    if (best) home.set(scope, best.path)
+  }
+  for (const signal of hardware) {
+    const scope = signal.path.split('/').slice(0, -1).join('/')
+    const where = home.get(scope)
+    const inModule = where ? found.get(where)!.get(signal.name) : undefined
+    if (inModule && where) {
+      signals[signal.path] = { file: relative(outDir, where), line: inModule.line, text: inModule.text }
+      continue
+    }
+    // Not in its own module's file — a port wired through, most often. Fall back
+    // to whoever drives it most strongly, design files before benches.
+    let best: { score: number; file: string; line: number; text: string } | undefined
+    for (const file of files) {
+      const at = found.get(file.path)!.get(signal.name)
+      if (!at) continue
+      const score = (isBench(file.path) ? 10 : 0) + STRENGTH[(at.kind ?? 'declaration') as keyof typeof STRENGTH]
+      if (!best || score < best.score) {
+        best = { score, file: relative(outDir, file.path), line: at.line, text: at.text }
+      }
+    }
+    if (best) signals[signal.path] = { file: best.file, line: best.line, text: best.text }
   }
 }
 
@@ -118,7 +181,13 @@ const report = {
   signals,
   bench,
   // Relative to the report, because that is how the viewer finds the dump again.
-  source: { vcd: relative(outDir, vcdPath) || basename(vcdPath), ...(logPath ? { log: basename(logPath) } : {}) },
+  // The bench is named too: which folder it came from is what says whether this
+  // run is the one the work is marked with.
+  source: {
+    vcd: relative(outDir, vcdPath) || basename(vcdPath),
+    ...(logPath ? { log: basename(logPath) } : {}),
+    ...(benchPath ? { bench: relative(outDir, resolve(benchPath)) } : {}),
+  },
 }
 
 mkdirSync(outDir, { recursive: true })

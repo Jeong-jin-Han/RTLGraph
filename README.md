@@ -154,13 +154,16 @@ click rather than a memory test.
 > and those two jumps are what a reader actually asks for.
 >
 > And when an agent has written the other half — `waveform/<bench>.waveform-analysis.md`, from the
-> `waveform` prompt — the view reads it back and folds each section in beside the check it explains:
-> **the measurements are the claim, that is the argument**, one click away, with every `file.v:line`
-> in it a button. Sections that belong to no single check are kept at the end rather than pinned
-> onto one. Click a place, or walk them with ← and →; hover for the value of
+> `waveform` prompt — the view reads it back and puts each section beside the check it explains,
+> **in a panel to the right of the traces** so the signals it is about stay on screen: **the
+> measurements are the claim, that is the argument**, one click away, with every `file.v:line` in it
+> a button. Every section is written in the same three fields — purpose, how it was driven, what came
+> of it — and what does not bear on the verdict folds away, so a check reads in thirty seconds.
+> Sections that belong to no single check are kept at the end rather than pinned onto one. Click a place, or walk them with ← and →; hover for the value of
 > every signal at that instant. One row per net (a port either side of a boundary is one wire, not
-> two), and a signal that is `x` drawn in red so an undefined stretch is visible rather than merely
-> absent. It is not a Vivado wave window, where you add what you want and everything you added
+> two), **grouped under the module each belongs to** — read off the line of RTL that drives it, so a
+> name never has to be traced by hand — and a signal that is `x` drawn in red so an undefined stretch
+> is visible rather than merely absent. It is not a Vivado wave window, where you add what you want and everything you added
 > stays: it opens on a screenful of the signals a check is usually about, and the header counts what
 > that leaves out — `20 / 33`. The rest are three buttons: `clk` for the clock (a grey blur at any
 > zoom that shows a frame, which is why it is not first), `var` for the bench's own counters and

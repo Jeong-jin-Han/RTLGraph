@@ -103,9 +103,13 @@ nothing was handed out to be marked against — so that when it does arrive, the
 only thing left to do is drop it in and run one command.
 
 Where the skeleton leaves a body for you to write, comment it the way the spec's
-"Comments — top down, in the reader's language" section asks — a header saying
-what the module is for and the one idea that makes it work, then a reason per
-block. The handout's own comments stay exactly as they are; yours go around them.
+"Writing a reader can follow" and "Comments — top down, in the reader's language"
+sections ask — a header saying what the module is for and the one idea that makes
+it work, then a reason per block and a line on every declaration: what a parameter
+means, where a localparam's number comes from, what a register's values mean. Your
+own testbenches follow the same rule, and there any constant that makes the test
+cheap says what was shrunk and why it is still fair. Point first, one name per
+thing, a shortening pass at the end. The handout's own comments stay exactly as they are; yours go around them.
 
 The skeleton is not yours to change, but what you write around it is. Add
 testbenches in `tb/mine/`, named `tb_<what>.v`, that drive the given ports only,

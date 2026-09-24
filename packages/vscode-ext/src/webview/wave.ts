@@ -27,7 +27,7 @@ let cursor: number | undefined
 let hot: number | undefined
 /** The trace the hand is over. */
 let hotTrace: string | undefined
-/** Places whose written explanation is unfolded. */
+/** Places whose written explanation is open in the panel on the right. */
 const opened = new Set<string>()
 /** Rows a reader has asked for beyond the default screenful. */
 const alsoShow = { clock: false, variable: false, rest: false }
@@ -89,7 +89,14 @@ labels.id = 'wave-labels'
 const plot = document.createElement('div')
 plot.id = 'wave-plot'
 canvas.append(labels, plot)
-middle.append(rail, canvas)
+// The written explanation opens here, to the right of the traces, rather than
+// unfolding inside the rail: a reader is reading the argument *against* the
+// signals, and an explanation that pushes the list off the screen takes away
+// the thing being explained.
+const why = document.createElement('div')
+why.id = 'wave-why'
+why.hidden = true
+middle.append(rail, canvas, why)
 document.body.append(toolbar, middle)
 
 const notice = document.createElement('div')
@@ -123,6 +130,50 @@ function shown(value: string, width: number): string {
   return Number.isNaN(n) ? value : `${n.toString(16).padStart(Math.ceil(width / 4), '0')}`
 }
 
+/**
+ * Which module a row belongs to.
+ *
+ * A flat list of thirty names does not say where any of them lives, and the
+ * answer is already in the report: every signal carries the line of RTL that
+ * drives it, so the file that line is in *is* the module. When there is no such
+ * line — a bench's own wire, a parameter — the instance it sits in says it.
+ */
+function moduleOf(trace: Trace): string {
+  if (trace.source) return trace.source.file.split('/').pop() ?? trace.source.file
+  const scope = trace.path.split('/')
+  return scope.length > 1 ? scope[scope.length - 2] : scope[0]
+}
+
+/** A row of the drawing: a module's heading, or one signal. */
+type Lane = { group: string; trace?: undefined } | { group?: undefined; trace: Trace }
+
+/**
+ * The rows grouped under the module each belongs to, in the order they were
+ * already in, with the parameters last: a constant and a signal that changes
+ * are different kinds of thing and reading them in one list makes both harder.
+ */
+function laneOrder(traces: readonly Trace[]): Lane[] {
+  const groups = new Map<string, Trace[]>()
+  const params: Trace[] = []
+  for (const trace of traces) {
+    if (trace.role === 'variable') { params.push(trace); continue }
+    const name = moduleOf(trace)
+    const found = groups.get(name)
+    if (found) found.push(trace)
+    else groups.set(name, [trace])
+  }
+  const lanes: Lane[] = []
+  for (const [name, members] of groups) {
+    lanes.push({ group: name })
+    for (const trace of members) lanes.push({ trace })
+  }
+  if (params.length > 0) {
+    lanes.push({ group: say('parameters', 'parameters and bench variables') })
+    for (const trace of params) lanes.push({ trace })
+  }
+  return lanes
+}
+
 /** The rows on screen: the default screenful, plus whatever was switched on. */
 function rows(): Trace[] {
   if (!view) return []
@@ -139,8 +190,21 @@ function draw(): void {
   const width = Math.max(plot.clientWidth || 600, 200)
   const x = (time: number) => ((time - from) / span) * width
 
-  title.textContent = `${atTime(from)} → ${atTime(to)}  ·  ` +
+  // One word, not a folder layout: whether this run is the one that decides the
+  // mark is the first thing a reader wants to know, and the file name does not
+  // say it.
+  title.replaceChildren()
+  if (view.marking) {
+    const badge = document.createElement('span')
+    badge.className = 'marking'
+    badge.textContent = view.marking
+    badge.title = view.bench ?? ''
+    title.append(badge)
+  }
+  const said = document.createElement('span')
+  said.textContent = `${atTime(from)} → ${atTime(to)}  ·  ` +
     `${traces.length} / ${view.traces.length + view.omitted}`
+  title.append(said)
 
   // the rail: where to go
   rail.replaceChildren(...view.markers.map(marker => {
@@ -245,12 +309,12 @@ function draw(): void {
       toggle.textContent = `${opened.has(marker.id) ? '▾' : '▸'} ${say('why', 'why it passed')}`
       toggle.addEventListener('click', event => {
         event.stopPropagation()
-        if (opened.has(marker.id)) opened.delete(marker.id)
-        else opened.add(marker.id)
+        const already = opened.has(marker.id)
+        opened.clear()
+        if (!already) opened.add(marker.id)
         draw()
       })
       item.append(toggle)
-      if (opened.has(marker.id)) item.append(prose(marker.explain))
     }
     item.addEventListener('click', () => show(marker))
     return item
@@ -261,16 +325,50 @@ function draw(): void {
   for (const note of view.notes ?? []) {
     const block = document.createElement('div')
     block.className = 'wave-note'
-    const head = document.createElement('div')
-    head.className = 'what'
+    const head = document.createElement('button')
+    head.className = 'what note-open'
     head.textContent = note.heading
-    block.append(head, prose(note.body))
+    head.addEventListener('click', () => {
+      if (opened.has(note.heading)) opened.delete(note.heading)
+      else { opened.clear(); opened.add(note.heading) }
+      draw()
+    })
+    block.append(head)
     rail.append(block)
+  }
+
+  // …and the panel it all opens into. One at a time: two arguments side by side
+  // is two things to read and no room for the traces they are about.
+  const open = [...view.markers.map(m => ({ head: m.label, id: m.id, body: m.explain })),
+    ...(view.notes ?? []).map(n => ({ head: n.heading, id: n.heading, body: n.body }))]
+    .find(entry => entry.body && opened.has(entry.id))
+  why.hidden = open === undefined
+  if (open) {
+    const head = document.createElement('div')
+    head.className = 'why-head'
+    const name = document.createElement('div')
+    name.className = 'why-title'
+    name.textContent = open.head
+    const close = document.createElement('button')
+    close.className = 'why-close'
+    close.textContent = '×'
+    close.title = say('closePanel', 'close')
+    close.addEventListener('click', () => { opened.clear(); draw() })
+    head.append(name, close)
+    why.replaceChildren(head, prose(open.body!))
   }
 
   // the labels, with the value under the cursor when there is one
   const watched = new Set(view.markers.find(m => m.id === active)?.watch ?? [])
-  labels.replaceChildren(...[axisLabel(), ...traces.map(trace => {
+  const lanes = laneOrder(traces)
+  labels.replaceChildren(...[axisLabel(), ...lanes.map(lane => {
+    if (lane.group !== undefined) {
+      const head = document.createElement('div')
+      head.className = 'wave-label group'
+      head.textContent = lane.group
+      return head
+    }
+    const trace = lane.trace
     const row = document.createElement('div')
     row.className = `wave-label${trace.bench ? ' bench' : ''}` +
       (watched.size > 0 && !watched.has(trace.path) ? ' aside' : '') +
@@ -300,7 +398,7 @@ function draw(): void {
   })])
 
   // the traces
-  const height = AXIS + traces.length * ROW
+  const height = AXIS + lanes.length * ROW
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
   svg.setAttribute('width', String(width))
   svg.setAttribute('height', String(height))
@@ -319,7 +417,15 @@ function draw(): void {
     add('text', { x: x(t) + 3, y: 12, class: 'wave-tick' }, atTime(t))
   }
 
-  traces.forEach((trace, row) => {
+  lanes.forEach((lane, row) => {
+    // A heading is a lane with nothing drawn in it, so the two columns stay in
+    // step: the labels and the traces are read across, and a row that exists on
+    // one side and not the other misreads every row under it.
+    if (lane.group !== undefined) {
+      add('rect', { x: 0, y: AXIS + row * ROW, width, height: ROW, class: 'wave-row-group' })
+      return
+    }
+    const trace = lane.trace
     const top = AXIS + row * ROW + 4
     const bottom = AXIS + row * ROW + ROW - 6
     if (hotTrace === trace.path) {
@@ -415,38 +521,112 @@ function draw(): void {
  */
 const CITATION = /([\w./-]+\.(?:v|sv|json|md)):(\d+)(?:-\d+)?/g
 
+/** `| a | b |` rows, which an analysis uses for anything with columns. */
+const isTable = (block: string) => block.split('\n').filter(l => l.trim().startsWith('|')).length >= 2
+
+function table(block: string): HTMLElement {
+  const table = document.createElement('table')
+  table.className = 'md-table'
+  const cells = (row: string) => row.trim().replace(/^\|/, '').replace(/\|$/, '').split('|').map(c => c.trim())
+  // The first row is the header until the `|---|---|` rule says it is over.
+  let head = true
+  for (const row of block.split('\n')) {
+    if (!row.trim().startsWith('|')) continue
+    if (/^\s*\|[\s|:-]+\|\s*$/.test(row)) { head = false; continue }
+    const tr = document.createElement('tr')
+    for (const cell of cells(row)) {
+      const td = document.createElement(head ? 'th' : 'td')
+      td.append(...inline(cell))
+      tr.append(td)
+    }
+    table.append(tr)
+  }
+  return table
+}
+
+/**
+ * `목적 — …` / `Outcome — …`: the three fields every section is written in, so
+ * they are read as fields rather than as three sentences that happen to be in a
+ * row. Anything else is ordinary prose.
+ */
+const FIELD = /^\s*(목적|방식|결과|Purpose|How|Outcome)\s*(?:—|-|:)\s*/
+
 function prose(text: string): HTMLElement {
   const block = document.createElement('div')
   block.className = 'prose'
+  // Everything from the first `###` is the writer's own aside: shown folded, so
+  // the verdict stays on one screen and the working is still there to open.
+  const [body, ...more] = text.split(/^###\s+/m)
+  if (more.length > 0) {
+    block.append(prose(body))
+    for (const aside of more) {
+      const [heading, ...rest] = aside.split('\n')
+      const fold = document.createElement('details')
+      fold.className = 'aside'
+      const summary = document.createElement('summary')
+      summary.textContent = heading.trim()
+      fold.append(summary, prose(rest.join('\n').trim()))
+      block.append(fold)
+    }
+    return block
+  }
   for (const paragraph of text.split(/\n{2,}/)) {
-    const line = document.createElement('p')
-    let at = 0
-    for (const match of paragraph.matchAll(CITATION)) {
-      const before = paragraph.slice(at, match.index)
-      if (before) {
-        const span = document.createElement('span')
-        span.textContent = before.replace(/[`*]/g, '')
-        line.append(span)
+    // A table written as markdown was being poured into a paragraph, pipes and
+    // all, which is unreadable and hides the numbers it was drawn for.
+    if (isTable(paragraph)) {
+      block.append(table(paragraph))
+      continue
+    }
+    // The three fields, one per line, are the shape the prompt asks for: keep
+    // them as separate rows rather than running them together as a paragraph.
+    const lines = paragraph.split('\n')
+    if (lines.some(line => FIELD.test(line))) {
+      for (const line of lines) {
+        const field = FIELD.exec(line)
+        const row = document.createElement('p')
+        row.className = field ? 'field' : 'field-more'
+        if (field) {
+          const name = document.createElement('span')
+          name.className = 'field-name'
+          name.textContent = field[1]
+          row.append(name)
+        }
+        row.append(...inline(line.replace(FIELD, '')))
+        block.append(row)
       }
-      const link = document.createElement('button')
-      link.className = 'cite'
-      link.textContent = match[0]
-      link.addEventListener('click', event => {
-        event.stopPropagation()
-        vscode.postMessage({ type: 'openCode', file: match[1], line: Number(match[2]) })
-      })
-      line.append(link)
-      at = match.index + match[0].length
+      continue
     }
-    const rest = paragraph.slice(at)
-    if (rest) {
-      const span = document.createElement('span')
-      span.textContent = rest.replace(/[`*]/g, '')
-      line.append(span)
-    }
+    const line = document.createElement('p')
+    line.append(...inline(paragraph))
     block.append(line)
   }
   return block
+}
+
+/** One run of text: what it says, with every `file.v:line` in it a way in. */
+function inline(text: string): HTMLElement[] {
+  const out: HTMLElement[] = []
+  let at = 0
+  const words = (said: string) => {
+    if (!said) return
+    const span = document.createElement('span')
+    span.textContent = said.replace(/[`*]/g, '')
+    out.push(span)
+  }
+  for (const match of text.matchAll(CITATION)) {
+    words(text.slice(at, match.index))
+    const link = document.createElement('button')
+    link.className = 'cite'
+    link.textContent = match[0]
+    link.addEventListener('click', event => {
+      event.stopPropagation()
+      vscode.postMessage({ type: 'openCode', file: match[1], line: Number(match[2]) })
+    })
+    out.push(link)
+    at = match.index + match[0].length
+  }
+  words(text.slice(at))
+  return out
 }
 
 /** A place's instants in time order — the order their badges are numbered in. */

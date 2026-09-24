@@ -422,3 +422,22 @@ test('how a check was driven is read off the bench, plumbing left out', () => {
   // between two checks, only what ran in between
   assert.deepEqual(stimulusFor(bench, first, { line: 12, text: '' }).map(s => s.text), ['take;', 'frame(8\'hA5);'])
 })
+
+// The bench that decides the mark is the one most likely to print nothing a
+// reader can hang a time on, and to instantiate the design twice.
+test('a bench that numbers its wires still has handshakes, and one that times nothing still has places', () => {
+  const dump = VCD
+    .replace('data_out_valid $end', 'data_out_valid1 $end')
+    .replace('data_out_ready $end', 'data_out_ready1 $end')
+  const wave = parseVcd(dump)
+  const facts = readFacts(wave, []) // nothing printed with a time: no windows
+  assert.equal(facts.windows.length, 0)
+  assert.equal(facts.handshakes.length, 1, 'data_out_valid1 pairs with data_out_ready1')
+
+  const view = buildView(wave, facts, 20)
+  const places = view.markers.filter(m => m.kind === 'span')
+  assert.ok(places.length >= 2, `the run is still divided into places: ${view.markers.map(m => m.label)}`)
+  assert.ok(view.markers[0].to <= places[0].to, 'and "coming up" no longer swallows the whole run')
+  // …and they are never passed off as checks the bench made
+  assert.equal(view.markers.some(m => m.kind === 'check'), false)
+})

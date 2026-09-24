@@ -50,6 +50,29 @@ extension, so each line is something that broke once.
   every valid/ready transfer with what it waited and how long it was held, the
   signals that never moved, and the run cut into one stretch per check the bench
   printed with a time.
+- **Every section is written in the same three fields** — 목적 / 방식 / 결과,
+  purpose, how it was driven, what came of it — and anything that does not bear
+  on the verdict folds away under `### 더 보기`. Asked to explain nine checks,
+  an agent wrote 368 lines of differently-shaped prose; the same prompt now
+  produces 172, three lines to a check, with the tables and the side
+  observations one click down. The bar is in the prompt: a reader who cannot
+  say a check's purpose, method and outcome in thirty seconds cannot use it.
+- **The writing opens beside the traces, not under the card.** Unfolding it in
+  the rail pushed the signals off the screen — the very thing being explained.
+  It opens in a panel on the right instead, one at a time, and the tables in it
+  are drawn as tables rather than poured into a paragraph as pipes.
+- **The rows are grouped by the module they belong to**, read off the line of
+  RTL that drives each signal, with the parameters and the bench's own variables
+  last. Which meant fixing what the report knew: signals were matched by bare
+  name, so a transmitter and a receiver that both have a `bit_counter` both
+  pointed at the receiver's file, and the bench's `errors` pointed at another
+  bench. Each scope now picks the file that declares the most of what it holds —
+  its module — and reads its signals from there.
+- **A citation in the writing opens the file it names.** It never had: the
+  report sits in `waveform/`, so `uart_receiver.v:79` resolved to
+  `waveform/uart_receiver.v`, which does not exist, and the click did nothing at
+  all — no editor, no error. The obvious places are tried in turn now, and a
+  file that is genuinely not there is said out loud.
 - **A check with nothing written about it offers to ask.** The `?` on such a
   place copies a request about that one stretch — its measured instants, what
   each signal did, the line that printed it, and the rule that no number may be

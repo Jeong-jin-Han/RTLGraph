@@ -35,10 +35,16 @@ and the third from the dump. Write so that all three survive:
 Why it behaved that way is *not* your job here — that is a separate pass, the
 `waveform` prompt, run later against the code.
 
-Comment it the way "Comments — top down, in the reader's language" in the spec
-asks: a header per module (what it is for, the shape of what flows through it,
-the one idea that makes it work, the state it keeps), then a line per block
-saying **why**. Keep contracts C1–C7 and confirm compile, elaboration and simulation with a
+Comment it the way "Writing a reader can follow" (the eight principles) and
+"Comments — top down, in the reader's language" ask: a header per module (what it
+is for, the shape of what flows through it, the one idea that makes it work, the
+state it keeps), then a line per block saying **why**, and **a line on every
+declaration** — what a parameter means and in what units, where a localparam's
+number comes from (worked through with real numbers), what a register's values
+mean. Same for the testbenches, and there especially for any constant that makes
+the test cheap: say what was shrunk and why it is still a fair test. Point first,
+one name per thing, each explanation where it is needed, and a shortening pass at
+the end. Keep contracts C1–C7 and confirm compile, elaboration and simulation with a
 simulator listed in RTLGRAPH_ENVIRONMENT.md. Put testbenches in tb/, driving inputs on the
 falling edge and checking on the rising edge.
 

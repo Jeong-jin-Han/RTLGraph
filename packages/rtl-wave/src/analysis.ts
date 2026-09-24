@@ -63,7 +63,7 @@ const COMING_UP = /(coming up|initial|초기|깨어나|리셋)/i
  */
 export function matchAnalysis(
   analysis: Analysis,
-  places: readonly { id: string; label: string; kind: 'init' | 'check' }[],
+  places: readonly { id: string; label: string; kind: 'init' | 'check' | 'span' }[],
 ): { matched: Map<string, AnalysisSection>; spare: readonly AnalysisSection[] } {
   const matched = new Map<string, AnalysisSection>()
   const used = new Set<AnalysisSection>()

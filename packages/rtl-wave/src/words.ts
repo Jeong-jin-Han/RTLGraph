@@ -86,6 +86,12 @@ export interface Words {
   showClock: string
   showVariables: string
   showRest: string
+  parameters: string
+  activity: string
+  noChecks: string
+  moved: (names: string) => string
+  markedWith: string
+  closePanel: string
   hoverForValues: string
   wholeRun: string
   zoomIn: string
@@ -178,6 +184,12 @@ const EN: Words = {
   showClock: 'show the clock — a grey blur at this zoom, which is why it is off',
   showVariables: "show the bench's own variables — counters and parameters, not hardware",
   showRest: 'show every signal — the view opens on the first screenful',
+  parameters: 'parameters and bench variables',
+  activity: 'stretch',
+  noChecks: 'this bench prints no times, so the stretches below are where the dump moved — not checks it claimed',
+  moved: (names: string) => `moved: ${names}`,
+  markedWith: 'the marking bench',
+  closePanel: 'close',
   hoverForValues: 'hover for values',
   wholeRun: 'the whole run',
   zoomIn: 'zoom in',
@@ -270,6 +282,12 @@ const KO: Words = {
   showClock: '클럭 보이기 — 이 배율에서는 회색 뭉개짐이라 꺼 둔다',
   showVariables: '벤치 변수 보이기 — 카운터와 파라미터, 하드웨어가 아니다',
   showRest: '신호 전부 보이기 — 처음에는 한 화면 분량만 나온다',
+  parameters: '파라미터와 벤치 변수',
+  activity: '구간',
+  noChecks: '이 벤치는 시각을 찍지 않는다 — 아래 구간은 덤프가 움직인 자리이지, 벤치가 주장한 체크가 아니다',
+  moved: (names: string) => `움직인 것: ${names}`,
+  markedWith: '조교 벤치',
+  closePanel: '닫기',
   hoverForValues: '올려놓으면 값',
   wholeRun: '실행 전체',
   zoomIn: '확대',

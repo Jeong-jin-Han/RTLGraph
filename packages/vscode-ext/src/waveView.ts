@@ -26,9 +26,9 @@ interface Place { file: string; line: number; text: string }
 interface StoredReport {
   facts?: { windows?: StoredWindow[] }
   bench?: { time?: number; text: string }[]
-  /** Signal name → the line of RTL that drives it, worked out when written. */
+  /** Signal path → the line of RTL that drives it, worked out when written. */
   signals?: Record<string, Place>
-  source?: { vcd?: string }
+  source?: { vcd?: string; bench?: string }
 }
 
 /**
@@ -139,7 +139,13 @@ export class WaveViewProvider implements vscode.CustomTextEditorProvider {
       // A check knows the line that printed it; opening it beside the drawing is
       // the whole point of recording it.
       if (message?.type === 'openCode' && typeof message.file === 'string') {
-        const target = vscode.Uri.joinPath(document.uri, '..', message.file)
+        const target = await this.locate(document, message.file)
+        if (!target) {
+          void vscode.window.showWarningMessage(lang === 'ko'
+            ? `RTLGraph: ${message.file} 을(를) 찾지 못했다 — 프로젝트 안에 없다.`
+            : `RTLGraph: could not find ${message.file} anywhere in this project.`)
+          return
+        }
         const at = Math.max((message.line ?? 1) - 1, 0)
         void vscode.window.showTextDocument(target, {
           viewColumn: vscode.ViewColumn.Beside,
@@ -149,6 +155,40 @@ export class WaveViewProvider implements vscode.CustomTextEditorProvider {
       }
     })
     await send()
+  }
+
+  /**
+   * Where a cited file actually is.
+   *
+   * The report sits in `waveform/`, so `signals` name their file from there
+   * (`../uart_receiver.v`), but an agent writing prose cites the project's own
+   * spelling — `uart_receiver.v:79`, the way it appears in the code. Resolved
+   * beside the report, that is `waveform/uart_receiver.v`, which does not
+   * exist, and the click did nothing at all: no editor, no error, nothing to
+   * tell a reader the link was not simply ignored. So the obvious places are
+   * tried in turn, nearest first, and if none of them has it that is said out
+   * loud rather than swallowed.
+   */
+  private async locate(document: vscode.TextDocument, file: string): Promise<vscode.Uri | undefined> {
+    const beside = vscode.Uri.joinPath(document.uri, '..')
+    const folder = vscode.workspace.getWorkspaceFolder(document.uri)?.uri
+    const candidates = [
+      vscode.Uri.joinPath(beside, file),          // as written, next to the report
+      vscode.Uri.joinPath(beside, '..', file),    // the project the report is about
+      ...(folder ? [vscode.Uri.joinPath(folder, file)] : []),
+    ]
+    for (const candidate of candidates) {
+      try {
+        await vscode.workspace.fs.stat(candidate)
+        return candidate
+      } catch {
+        // not there; try the next one
+      }
+    }
+    // Still nothing: the citation may name a file deeper in the tree than the
+    // report can see from where it sits (`base/DFF.v` written as `DFF.v`).
+    const found = await vscode.workspace.findFiles(`**/${file.split('/').pop()}`, '**/node_modules/**', 2)
+    return found.length === 1 ? found[0] : undefined
   }
 
   /**
@@ -205,8 +245,18 @@ export class WaveViewProvider implements vscode.CustomTextEditorProvider {
       if (stored?.stimulus) Object.assign(window, { stimulus: stored.stimulus })
     }
     const view = buildView(wave, facts, 20, lang)
+    // Which bench this was: `tb/given/` is the one the work is marked with, and
+    // that is worth one word on screen rather than a folder layout.
+    if (report.source?.bench) {
+      Object.assign(view, {
+        bench: report.source.bench,
+        ...(/(^|\/)given\//.test(report.source.bench) ? { marking: wordsIn(lang).markedWith } : {}),
+      })
+    }
     for (const trace of view.traces) {
-      const place = report.signals?.[trace.name]
+      // Keyed by path since the index learned to tell two `bit_counter`s apart;
+      // a report written before that is keyed by name, and still opens.
+      const place = report.signals?.[trace.path] ?? report.signals?.[trace.name]
       if (place) Object.assign(trace, { source: place })
     }
     await this.explain(document, view)

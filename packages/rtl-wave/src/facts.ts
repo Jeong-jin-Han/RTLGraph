@@ -232,9 +232,13 @@ function handshakeFacts(wave: Waveform, clock: ClockFacts | undefined): Handshak
   const period = clock.period ?? 1
   const out: HandshakeFacts[] = []
   for (const signal of wave.signals) {
-    if (!signal.name.endsWith('_valid') || signal.scope.length !== 1) continue
-    const base = signal.name.slice(0, -'_valid'.length)
-    const readyPath = [...signal.scope, `${base}_ready`].join('/')
+    // `data_out_valid`, and also `data_out_valid1` — a bench that instantiates
+    // the design twice numbers its wires, and the marking bench for a UART does
+    // exactly that. Without the trailing index every transfer went unseen.
+    const named = /^(.*)_valid(\d*)$/.exec(signal.name)
+    if (!named || signal.scope.length !== 1) continue
+    const [, base, index] = named
+    const readyPath = [...signal.scope, `${base}_ready${index}`].join('/')
     if (!wave.signals.some(s => s.path === readyPath)) continue
     const valid = seriesOf(wave, signal.path)
     const ready = seriesOf(wave, readyPath)

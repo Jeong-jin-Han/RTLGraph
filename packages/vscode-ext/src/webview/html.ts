@@ -103,6 +103,7 @@ body.editing #stage g.wire { cursor: pointer; }
 #problems summary { cursor: pointer; font-family: system-ui, sans-serif; font-weight: 600; }
 #problems .error { color: #b91c1c; }
 /* The waveform view: places to go on the left, traces on the right. */
+#toolbar .marking { margin-right: 8px; padding: 1px 6px; border-radius: 10px; background: #fee2e2; color: #991b1b; font: 600 11px system-ui, sans-serif; }
 #wave-rail { width: 260px; overflow: auto; border-right: 1px solid #e5e7eb; background: #fbfdff; padding: 6px; }
 #wave-rail .wave-place { padding: 6px 8px; border: 1px solid transparent; border-radius: 6px; cursor: pointer; }
 #wave-rail .wave-place:hover { background: #eef2ff; }
@@ -128,16 +129,40 @@ body.editing #stage g.wire { cursor: pointer; }
 #wave-rail .why:hover { border-color: #93c5fd; color: #1d4ed8; }
 #wave-rail .ask { margin-top: 5px; font: 11px system-ui, sans-serif; padding: 1px 6px; border: 1px dashed #d1d5db; border-radius: 4px; background: none; color: #9ca3af; cursor: pointer; }
 #wave-rail .ask:hover { border-color: #f59e0b; border-style: solid; color: #b45309; background: #fffbeb; }
-#wave-rail .prose { margin-top: 4px; padding: 6px 8px; border-left: 2px solid #bfdbfe; background: #ffffff; color: #374151; }
-#wave-rail .prose p { margin: 0 0 6px; }
-#wave-rail .prose p:last-child { margin-bottom: 0; }
-#wave-rail .cite { font: 11px ui-monospace, monospace; padding: 0 3px; border: 0; border-radius: 3px; background: #eff6ff; color: #1d4ed8; cursor: pointer; }
-#wave-rail .cite:hover { background: #dbeafe; }
 #wave-rail .wave-note { margin-top: 8px; padding: 6px 8px; border-top: 1px solid #e5e7eb; }
+#wave-rail .note-open { display: block; width: 100%; text-align: left; border: 0; background: none; padding: 0; font: inherit; font-weight: 600; color: #111827; cursor: pointer; }
+#wave-rail .note-open:hover { color: #5b21b6; }
+/* The written explanation, beside the traces rather than on top of the list of
+   them: the argument is read against the signals it is about. */
+#wave-why { width: 380px; flex: none; overflow: auto; border-left: 1px solid #e5e7eb; background: #ffffff; padding: 8px 10px; }
+#wave-why .why-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 6px; border-bottom: 1px solid #e5e7eb; padding-bottom: 6px; }
+#wave-why .why-title { flex: 1; font-weight: 700; color: #111827; }
+#wave-why .why-close { border: 0; background: none; font-size: 15px; line-height: 1; color: #6b7280; cursor: pointer; }
+#wave-why .why-close:hover { color: #111827; }
+#wave-why .prose { color: #1f2937; }
+#wave-why .prose p { margin: 0 0 8px; }
+#wave-why .prose p:last-child { margin-bottom: 0; }
+/* A citation is the way back into the code, so it reads as a control: dark
+   enough against the page to be seen, and not the blue everything else uses. */
+#wave-why .cite, #wave-rail .cite { font: 11px ui-monospace, monospace; padding: 0 4px; border: 1px solid #ddd6fe; border-radius: 3px; background: #f5f3ff; color: #5b21b6; font-weight: 600; cursor: pointer; }
+#wave-why .cite:hover, #wave-rail .cite:hover { background: #ede9fe; border-color: #a78bfa; color: #4c1d95; }
+/* 목적 · 방식 · 결과 — the three fields every section is written in. */
+#wave-why .prose .field { margin: 0 0 4px; display: flex; gap: 6px; }
+#wave-why .prose .field-name { flex: none; width: 34px; font: 600 10px system-ui, sans-serif; letter-spacing: 0.03em; text-transform: uppercase; color: #6d28d9; padding-top: 3px; }
+#wave-why .prose .field-more { margin: 0 0 4px 40px; }
+/* The writer's own aside: there, but not in the way of the verdict. */
+#wave-why .aside { margin: 6px 0; border-top: 1px solid #ede9fe; padding-top: 5px; }
+#wave-why .aside > summary { cursor: pointer; font: 600 11px system-ui, sans-serif; color: #5b21b6; }
+#wave-why .md-table { border-collapse: collapse; width: 100%; margin: 0 0 8px; }
+#wave-why .md-table th, #wave-why .md-table td { border: 1px solid #e5e7eb; padding: 3px 6px; text-align: left; vertical-align: top; }
+#wave-why .md-table th { background: #f9fafb; font-weight: 600; color: #111827; }
 #wave-canvas { flex: 1; display: flex; min-width: 0; overflow: auto; }
 #wave-labels { width: 190px; flex: none; border-right: 1px solid #e5e7eb; background: #ffffff; }
 #wave-labels .wave-label { height: 26px; display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 0 8px; border-bottom: 1px solid #f3f4f6; font-family: ui-monospace, monospace; color: #374151; overflow: hidden; }
 #wave-labels .wave-label.axis { height: 22px; font-family: system-ui, sans-serif; color: #6b7280; border-bottom: 1px solid #e5e7eb; }
+/* Which module the rows under it belong to — read off the line of RTL that
+   drives each signal, so a name never has to be traced by hand. */
+#wave-labels .wave-label.group { font: 600 10px system-ui, sans-serif; letter-spacing: 0.04em; text-transform: uppercase; color: #4c1d95; background: #f5f3ff; border-bottom: 1px solid #ddd6fe; }
 #wave-labels .wave-label.bench .name { color: #1d4ed8; }
 #wave-labels .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 /* A name that knows its line of RTL is a way in, so it looks like one. */
@@ -170,6 +195,9 @@ body.editing #stage g.wire { cursor: pointer; }
 #wave-plot .wave-badge-number.hot { fill: #ffffff; }
 /* The row the hand is over, in the plot and in the labels beside it. */
 #wave-plot .wave-row-hot { fill: #fef3c7; opacity: 0.45; }
+/* The lane a module heading occupies: nothing is drawn in it, and the tint is
+   what keeps the eye's place across to the labels. */
+#wave-plot .wave-row-group { fill: #faf5ff; }
 #wave-plot .wave-line.hot { stroke: #b45309; stroke-width: 2.2; }
 [hidden] { display: none !important; }
 `
