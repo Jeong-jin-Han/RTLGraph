@@ -7,6 +7,12 @@
 // the files follow the folders the code already has · waveform → a simulation
 // that already ran becomes an explanation of why it behaved that way.
 export const PROMPT_KINDS = ['spec', 'rtl', 'refactor', 'rtlgraph', 'assignment', 'waveform'] as const
+
+// …and the chains: one paste that walks an agent through several of the six in
+// order, stopping where a person has to look. The day the marking bench arrives
+// is a sequence, not a prompt, and keeping that sequence in someone's head is
+// how a step gets skipped.
+export const PROMPT_CHAINS = ['run-assignment', 'run-marking-day', 'run-read-code'] as const
 export const PROMPT_LANGUAGES = ['korean', 'english'] as const
 
 // Everything this extension writes lives under its own name inside the shared
@@ -66,7 +72,7 @@ export function filesFor(options: {
   const languages = options.languages ?? PROMPT_LANGUAGES
   const primitives = options.primitives ?? BASE_MODULES
   return AGENT_FILES.filter(file => {
-    const language = /\.prompt\/rtlgraph\/(?:[a-z]+\/)?(korean|english|README\.korean|README)\.md$/.exec(file.to)
+    const language = /\.prompt\/rtlgraph\/(?:[a-z-]+\/)?(korean|english|README\.korean|README)\.md$/.exec(file.to)
     if (language) {
       const wanted = language[1].includes('korean') ? 'korean' : 'english'
       return languages.includes(wanted as (typeof PROMPT_LANGUAGES)[number])
@@ -94,7 +100,7 @@ export const AGENT_FILES: readonly BundledFile[] = [
     from: `assets/prompt/README${language === 'english' ? '' : `.${language}`}.md`,
     to: `${PROMPT_DIR}/README${language === 'english' ? '' : `.${language}`}.md`,
   })),
-  ...PROMPT_KINDS.flatMap(kind =>
+  ...[...PROMPT_KINDS, ...PROMPT_CHAINS].flatMap(kind =>
     PROMPT_LANGUAGES.map(language => ({ from: `assets/prompt/${kind}/${language}.md`, to: `${PROMPT_DIR}/${kind}/${language}.md` })),
   ),
   ...BASE_MODULES.map(module => ({ from: `assets/base/${module}.v`, to: `.base/${module}.v` })),

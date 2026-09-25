@@ -117,6 +117,13 @@ was fully defined at release and what remains is the bench's own variables",
 **2. One section per check** — one for each stretch in `windows`, same three
 fields.
 
+**When `windows` is empty** — the bench printed no `[%0t]`, which a handed-out
+bench often does not — there are no stretches. Head the sections with **the
+printed lines that carry a verdict** instead, and **say in the opening paragraph
+that those headings name printed lines, not moments.** Do not invent times for
+them, and do not edit the bench to add `[%0t]`: it is not yours. Lean on what the
+dump does know by itself — the handshakes and when each transfer was taken.
+
 **3. What the waveform shows that no check asserts.** Held times, wait times,
 the gap between two frames, a signal that never moved. These are the facts a
 passing test does not mention, and they are often the interesting ones.

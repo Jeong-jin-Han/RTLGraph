@@ -35,6 +35,10 @@ const PROMPT_ABOUT: Record<string, string> = {
   refactor: 'existing RTL → restructured RTL',
   rtlgraph: 'existing RTL → RTLGraph, your own project',
   assignment: 'existing RTL → RTLGraph, code that may not be touched',
+  // The chains run several of the above in order, stopping where you have to look.
+  'run-assignment': 'a whole assignment: draw, test, explain, check the submission',
+  'run-marking-day': 'the marking bench arrived: run it, dump it, explain it',
+  'run-read-code': "someone else's RTL: draw it, run it, explain it",
 }
 
 async function promptsIn(folder: vscode.Uri): Promise<{ label: string; description: string; uri: vscode.Uri }[]> {

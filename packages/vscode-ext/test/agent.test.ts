@@ -5,7 +5,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 
 import { tmpdir } from 'node:os'
 import { basename, join, relative } from 'node:path'
 import { BASE_REGISTRY } from '@rtlgraph/registry'
-import { AGENT_FILES, BASE_MODULES, filesFor, MAKE_SUBMISSION, PROMPT_KINDS, PROMPT_LANGUAGES, RUN_TB, VALIDATOR_BUNDLE } from '../src/agent/files.ts'
+import { AGENT_FILES, BASE_MODULES, filesFor, MAKE_SUBMISSION, PROMPT_CHAINS, PROMPT_KINDS, PROMPT_LANGUAGES, RUN_TB, VALIDATOR_BUNDLE } from '../src/agent/files.ts'
 import { buildEnvironmentReport } from '../src/agent/environment.ts'
 
 const ROOT = join(import.meta.dirname, '..')
@@ -17,7 +17,8 @@ const spec = read('assets/agent/RTLGRAPH_SPEC.md')
 test('every file the command copies exists in the extension', () => {
   for (const { from } of AGENT_FILES) assert.ok(existsSync(join(ROOT, from)), from)
   // a prompt per kind per language, plus the guide that says which to reach for
-  assert.equal(AGENT_FILES.filter(f => /^\.prompt\/rtlgraph\/[a-z]+\//.test(f.to)).length, PROMPT_KINDS.length * PROMPT_LANGUAGES.length)
+  assert.equal(AGENT_FILES.filter(f => /^\.prompt\/rtlgraph\/[a-z-]+\//.test(f.to)).length,
+    (PROMPT_KINDS.length + PROMPT_CHAINS.length) * PROMPT_LANGUAGES.length)
   assert.deepEqual(AGENT_FILES.filter(f => /README/.test(f.to) && f.to.startsWith('.prompt/')).map(f => f.to).sort(),
     ['.prompt/rtlgraph/README.korean.md', '.prompt/rtlgraph/README.md'])
   // Everything this extension writes is under its own name: nothing of ours
@@ -61,6 +62,39 @@ test('prompts: every kind in two languages, each pointing at a workflow the spec
   }
   assert.ok(flat(read('assets/prompt/rtlgraph/korean.md')).includes('절대 수정하지 마'))
   assert.ok(read('assets/prompt/rtl/english.md').includes('REQUEST ='))
+})
+
+// A chain is one paste that walks an agent through several prompts in order.
+// Its whole value is that the order and the stopping points are written down
+// rather than remembered, so what it names has to keep existing.
+test('every chain names real prompts, real scripts, and where to stop', () => {
+  for (const chain of PROMPT_CHAINS) {
+    for (const language of PROMPT_LANGUAGES) {
+      const text = read(`assets/prompt/${chain}/${language}.md`)
+      assert.match(text, /<PROJECT_ROOT_ABSOLUTE_PATH>/, `${chain}/${language} asks for the project`)
+      // every prompt it chains is a prompt that exists, in the same language
+      const named = [...text.matchAll(/\.prompt\/rtlgraph\/([a-z-]+)\/(korean|english)\.md/g)]
+      const scripts = [...text.matchAll(/\.agent\/rtlgraph\/([a-z-]+\.sh)/g)]
+      // A chain is worth its own file only if it joins steps: marking day is one
+      // prompt and two script runs, which is still a sequence nobody should have
+      // to remember.
+      assert.ok(named.length >= 1 && scripts.length >= 1 && named.length + scripts.length >= 3,
+        `${chain}/${language} joins prompts and scripts: ${named.length} + ${scripts.length}`)
+      for (const [, kind, said] of named) {
+        assert.ok((PROMPT_KINDS as readonly string[]).includes(kind), `${chain} names prompt ${kind}`)
+        assert.equal(said, language, `${chain}/${language} stays in one language`)
+      }
+      // and every script it runs is one the copy command actually writes
+      for (const [, script] of text.matchAll(/\.agent\/rtlgraph\/([a-z-]+\.sh)/g)) {
+        assert.ok(AGENT_FILES.some(f => f.to.endsWith(script)), `${chain} runs ${script}, which is shipped`)
+      }
+      // a chain that never stops is a chain that hands back 30 minutes of work
+      assert.ok(text.includes('⏸'), `${chain}/${language} marks where to stop`)
+      // …and one that carries on past a failure explains a run that did not pass
+      assert.match(text, language === 'korean' ? /실패하면/ : /If a step fails/,
+        `${chain}/${language} says what a failed step means`)
+    }
+  }
 })
 
 // The two things this extension produces that are prose rather than data — the
@@ -227,8 +261,9 @@ test('only the language asked for, and only the primitives the code uses', () =>
   const korean = filesFor({ languages: ['korean'] })
   const prompts = korean.filter(f => f.to.startsWith('.prompt/')).map(f => f.to)
   assert.equal(prompts.some(to => /\/english\.md$|\/README\.md$/.test(to)), false, `no English prompts: ${prompts}`)
-  assert.equal(korean.filter(f => f.to.startsWith('.prompt/')).length, PROMPT_KINDS.length + 1,
-    'one per branch, plus the guide')
+  assert.equal(korean.filter(f => f.to.startsWith('.prompt/')).length,
+    PROMPT_KINDS.length + PROMPT_CHAINS.length + 1,
+    'one per branch, one per chain, plus the guide')
   assert.ok(korean.some(f => f.to.endsWith('README.korean.md')), 'and the guide is the Korean one')
 
   const one = filesFor({ primitives: ['DFF'] })
