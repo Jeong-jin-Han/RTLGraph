@@ -1,11 +1,14 @@
 # Changelog
 
-## 0.1.4
+## 0.2.0
 
-0.1.2 and 0.1.3 were published while this work was still moving, so the
-number that goes out next is 0.1.4. The notes below cover everything
-since 0.1.1 — those two releases were interim builds of the same work,
-and this one supersedes both.
+A minor number rather than a patch: what began as a fix on top of 0.1.1
+turned into a second thing the extension does. A simulation now opens as
+a drawing you can read — places to go, the measurements at each, and the
+argument an agent wrote about them beside the traces — and the prompts
+grew a shelf of chains that run several of them in order. 0.1.2 and
+0.1.3 went out while that was still moving and are superseded; the notes
+below cover everything since 0.1.1.
 
 Everything in this release came from driving a real assignment through the
 extension, so each line is something that broke once.
