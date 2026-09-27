@@ -30,7 +30,7 @@ from. Prefer to draw it yourself? Write the JSON by hand and use the same canvas
 **Getting there takes four steps:**
 1. Build the extension and press **F5** (see [Installation](#installation) — it is not on the Marketplace yet)
 2. Right-click your RTL folder and run `RTLGraph: Copy Agent Spec to Workspace`
-3. Paste the generated `.prompt/rtlgraph/rtlgraph/english.md` (or `korean.md`) into your agent, filling in the project path
+3. Paste the generated `.prompt/rtlgraph/components/rtlgraph/english.md` (or `korean.md`) into your agent, filling in the project path
 4. Open the finished `<top>.rtlgraph.json`
 
 ---
@@ -118,13 +118,16 @@ click rather than a memory test.
 > .agent/rtlgraph/make-submission.sh   collects the .v files to hand in, checks them, zips them
 > .agent/rtlgraph/wave.mjs             reads a simulation's dump and says what it measured
 >
-> .prompt/rtlgraph/rtlgraph/korean.md    existing RTL → RTLGraph
-> .prompt/rtlgraph/assignment/korean.md  the same, for a skeleton that may not be touched
-> .prompt/rtlgraph/rtl/korean.md         spec → RTL in the three-layer layout, then RTLGraph
-> .prompt/rtlgraph/refactor/korean.md    existing RTL → restructured RTL, then RTLGraph
-> .prompt/rtlgraph/spec/korean.md        an idea → SPEC.md
-> .prompt/rtlgraph/waveform/korean.md    a run that happened → why it happened
-> .prompt/rtlgraph/README.korean.md      which of the six to reach for — for you, not the agent
+> .prompt/rtlgraph/components/rtlgraph/korean.md    existing RTL → RTLGraph
+> .prompt/rtlgraph/components/assignment/korean.md  the same, for a skeleton that may not be touched
+> .prompt/rtlgraph/components/rtl/korean.md         spec → RTL in the three-layer layout, then RTLGraph
+> .prompt/rtlgraph/components/refactor/korean.md    existing RTL → restructured RTL, then RTLGraph
+> .prompt/rtlgraph/components/spec/korean.md        an idea → SPEC.md
+> .prompt/rtlgraph/components/waveform/korean.md    a run that happened → why it happened
+> .prompt/rtlgraph/recipe/assignment/korean.md    a whole handout: draw, test, explain, check the submission
+> .prompt/rtlgraph/recipe/marking-day/korean.md   the marking bench arrived: run it, dump it, explain it
+> .prompt/rtlgraph/recipe/read-code/korean.md     someone else's RTL: draw it, run it, explain it
+> .prompt/rtlgraph/README.korean.md               which to reach for — for you, not the agent
 > .base/DFF.v                            the primitives this design instantiates, plus a note
 > ```
 >
@@ -134,13 +137,13 @@ click rather than a memory test.
 > folder with no RTL in it yet gets the lot, since there is nothing to go on.
 >
 > Those are the tools. What a run produces belongs to the project, not to them:
-> `waveform/<bench>.waveform.json` (opens as a waveform) and the `.vcd` beside it — plus
+> `waveform/<given|mine>/<bench>.waveform.json` (opens as a waveform) and the `.vcd` beside it — plus
 > `.waveform.md` if you asked for `--report`. The compiler's scratch goes in `.rtlgraph-build/`,
 > which is removed again when the bench passes (`--keep-build` keeps it).
 >
 > `.agent/rtlgraph/run-tb.sh --wave` closes the loop the other way. It dumps a waveform — adding a
 > module that calls `$dumpvars`, so no testbench is edited, the handed-out one included — and
-> `wave.mjs` turns the dump into `waveform/<bench>.waveform.json`: clock period and whether it wobbles, when the reset
+> `wave.mjs` turns the dump into `waveform/<given|mine>/<bench>.waveform.json`: clock period and whether it wobbles, when the reset
 > let go and what was **still undefined afterwards**, when each valid/ready transfer was taken and
 > how long it waited, and the run cut into one stretch per check the bench printed. Measurements
 > only. The reading of *why* is a separate job, for `.prompt/rtlgraph/waveform/*.md`, which is told
@@ -153,7 +156,7 @@ click rather than a memory test.
 > Matching every instant of a waveform to code is hopeless; matching a check and a signal is not,
 > and those two jumps are what a reader actually asks for.
 >
-> And when an agent has written the other half — `waveform/<bench>.waveform-analysis.md`, from the
+> And when an agent has written the other half — `waveform/<given|mine>/<bench>.waveform-analysis.md`, from the
 > `waveform` prompt — the view reads it back and puts each section beside the check it explains,
 > **in a panel to the right of the traces** so the signals it is about stay on screen: **the
 > measurements are the claim, that is the argument**, one click away, with every `file.v:line` in it
@@ -220,7 +223,7 @@ Key rules the spec holds the agent to:
 ### Example prompt
 
 After running `RTLGraph: Copy Agent Spec to Workspace` on your project folder, paste this in — the same
-text is written out as `.prompt/rtlgraph/rtlgraph/english.md`, so you can hand the agent that path instead.
+text is written out as `.prompt/rtlgraph/components/rtlgraph/english.md`, so you can hand the agent that path instead.
 
 ```
 PROJECT_FOLDER = <ABSOLUTE PATH TO THE RTL PROJECT>

@@ -1,6 +1,6 @@
 PROJECT_ROOT_ABSOLUTE_PATH = <PROJECT_ROOT_ABSOLUTE_PATH>
 PROJECT_FOLDER = PROJECT_ROOT_ABSOLUTE_PATH
-WAVEFORM = <leave empty to read every waveform/*.waveform.json in the project, or name one>
+WAVEFORM = <leave empty to read every waveform/**/*.waveform.json in the project, or name one>
 SPEC_DOCUMENT = <leave empty, or the path of the brief this design was asked for>
 
 A simulation has run and something measured it. Your job is the half a machine
@@ -12,7 +12,7 @@ read both, and follow "Workflow W — Waveform → why it passed".
 
 If no report exists yet, make one: `.agent/rtlgraph/run-tb.sh --wave` runs the
 benches, dumps a waveform without editing any testbench, and writes
-`waveform/<bench>.vcd` and `waveform/<bench>.waveform.json` — the measurements you
+`waveform/<given|mine>/<bench>.vcd` and `waveform/<given|mine>/<bench>.waveform.json` — the measurements you
 read below. Do not edit a testbench to make it dump — the runner adds a module that
 does it.
 
@@ -45,7 +45,7 @@ that one check alone — cheaper when you only care about the one that surprised
 you, dearer if you end up asking for every check that way. Both append to the
 same file and are matched by the same headings, so they mix freely.
 
-## Write `waveform/<bench>.waveform-analysis.md`, beside the report you read
+## Write `waveform/<given|mine>/<bench>.waveform-analysis.md`, beside the report you read
 
 **Use the check's own printed line as the section heading** (`## ok: cleared once
 taken`), and `## Coming up` — or the same words in your language — for the

@@ -401,8 +401,9 @@ test('the report says whether NodeGraph is installed, and what that allows', () 
 
 // The handout and we are both allowed to call a bench `tb_uart.v`, and the
 // reports are named after the bench: the second run overwrote the first, and
-// since the marking one runs first, the report that survived was ours.
-test('two benches of the same name keep their own waveform reports', t => {
+// since the marking one runs first, the report that survived was ours. So
+// waveform/ mirrors tb/ — where a result came from is structural.
+test('waveform/ mirrors tb/, so two benches of one name keep their reports', t => {
   const script = join(ROOT, 'assets/agent/run-tb.sh')
   const reader = join(ROOT, VALIDATOR_BUNDLE.replace('rtlgraph-validate', 'rtlgraph-wave'))
   if (spawnSync('iverilog', ['-V']).status !== 0) return t.skip('iverilog not installed')
@@ -424,9 +425,12 @@ test('two benches of the same name keep their own waveform reports', t => {
 
   const run = spawnSync('bash', [join(dir, '.agent/rtlgraph/run-tb.sh'), '--project', dir, '--wave'], { encoding: 'utf8' })
   assert.equal(run.status, 0, run.stdout)
-  for (const name of ['given-tb_hw', 'mine-tb_hw']) {
-    assert.ok(existsSync(join(dir, `waveform/${name}.waveform.json`)), `${name} kept its own report`)
+  for (const side of ['given', 'mine']) {
+    assert.ok(existsSync(join(dir, `waveform/${side}/tb_hw.waveform.json`)), `${side} kept its own report`)
+    assert.ok(existsSync(join(dir, `waveform/${side}/tb_hw.vcd`)), `${side} kept its own dump`)
   }
-  // …and a name used by only one folder is left as it is
-  assert.equal(existsSync(join(dir, 'waveform/tb_hw.waveform.json')), false)
+  assert.equal(existsSync(join(dir, 'waveform/tb_hw.waveform.json')), false, 'nothing lands loose')
+  // the report still finds what it cites, one level further down
+  const report = JSON.parse(readFileSync(join(dir, 'waveform/given/tb_hw.waveform.json'), 'utf8'))
+  assert.match(report.source.bench, /^\.\.\/\.\.\/tb\/given\/tb_hw\.v$/)
 })

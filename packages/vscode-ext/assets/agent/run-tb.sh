@@ -24,7 +24,8 @@
 #   --sim NAME      iverilog | vivado  (default: whichever is installed)
 #   --out DIR       where build scratch goes (default: <project>/.rtlgraph-build)
 #   --top NAME      the bench's top module, when the file holds more than one
-#   --wave          also dump a waveform and read it: waveform/<bench>.vcd and
+#   --wave          also dump a waveform and read it, under the same folder the
+#                   bench came from: waveform/given/<bench>.vcd and
 #                   <bench>.waveform.json, which is what the viewer opens
 #   --report        with --wave, also write <bench>.waveform.md — the same
 #                   measurements as prose, for reading without the editor
@@ -37,7 +38,7 @@
 #
 # With --wave the bench is never edited to make it dump: a small module beside
 # it calls $dumpvars, and .agent/rtlgraph/wave.mjs turns the dump into
-# <project>/waveform/<bench>.waveform.{json,md} — measurements only, kept with
+# <project>/waveform/<given|mine>/<bench>.waveform.{json,md} — measurements only, kept with
 # the project rather than among the tools. The "why did this pass?" reading is a
 # separate job, for .prompt/rtlgraph/components/waveform/*.md.
 #
@@ -290,23 +291,17 @@ for bench in "${benches[@]}"; do
   if [ "$wave" = 1 ] && [ -f "$work/wave.vcd" ]; then
     # The dump and what was read off it belong to the project, beside the code,
     # not inside the folder the tools were copied into.
-    waves="$project/waveform"
+    # waveform/ mirrors tb/: what a run produced sits under the same name as the
+    # bench that produced it. Which side a result came from is then structural —
+    # no prefix to invent, and no way for the handout's report and ours to land
+    # on the same file when both benches are called tb_uart.v.
+    case "$bench" in
+      */tb/given/*) waves="$project/waveform/given" ;;
+      */tb/mine/*) waves="$project/waveform/mine" ;;
+      *) waves="$project/waveform" ;;  # a bench left lying with the code
+    esac
     mkdir -p "$waves"
-    # Named after the bench — but the handout and we are allowed to use the same
-    # file name, and then the second run silently overwrote the first's report.
-    # The one that decides the mark ran first, so it was ours that survived.
     stem=$(basename -- "${bench%.*}")
-    twin=0
-    for known in "${bench_names[@]}"; do
-      [ "$known" = "$(basename -- "$bench")" ] && twin=$((twin + 1))
-    done
-    # It appears once per folder it is in, plus once for this run's own list.
-    if [ "$twin" -gt 2 ]; then
-      case "$bench" in
-        */tb/given/*) stem="given-$stem" ;;
-        */tb/mine/*) stem="mine-$stem" ;;
-      esac
-    fi
     mv -f "$work/wave.vcd" "$waves/$stem.vcd"
     reader="$here/wave.mjs"
     if [ -f "$reader" ] && command -v node >/dev/null 2>&1; then

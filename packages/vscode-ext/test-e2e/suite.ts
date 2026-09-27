@@ -104,7 +104,7 @@ export async function run(): Promise<void> {
   // The waveform view: a report opens as a drawing, and the drawing knows the
   // places worth going to — how it came up, then a marker per check.
   const waveReport = join(dirname(dirname(graphFile)),
-    `uart-p01/waveform/${process.env.RTLGRAPH_SHOT_BENCH ?? 'tb_uart_corner'}.waveform.json`)
+    `uart-p01/waveform/mine/${process.env.RTLGRAPH_SHOT_BENCH ?? 'tb_uart_corner'}.waveform.json`)
   if (existsSync(waveReport)) {
     // RTLGRAPH_SHOT_LANG lets a screenshot show the other language without
     // restarting VS Code in a different locale.

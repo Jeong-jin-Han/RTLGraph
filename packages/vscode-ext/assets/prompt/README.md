@@ -122,7 +122,7 @@ Needs a simulator; `.agent/rtlgraph/ENVIRONMENT.md` says which ones this machine
 
 The only prompt that starts from a simulation rather than from code. Run
 `.agent/rtlgraph/run-tb.sh --wave` first: it dumps a waveform without editing any
-testbench and writes `waveform/<bench>.vcd` and `<bench>.waveform.json` (for the
+testbench and writes `waveform/<given|mine>/<bench>.vcd` and `<bench>.waveform.json` (for the
 agent, and for the viewer). Add `--report` if you also want the same numbers as
 prose in `<bench>.waveform.md` —
 clock period, when the reset let go, what was still undefined afterwards, when

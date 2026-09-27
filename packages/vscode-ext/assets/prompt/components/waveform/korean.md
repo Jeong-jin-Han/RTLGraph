@@ -1,6 +1,6 @@
 PROJECT_ROOT_ABSOLUTE_PATH = <PROJECT_ROOT_ABSOLUTE_PATH>
 PROJECT_FOLDER = PROJECT_ROOT_ABSOLUTE_PATH
-WAVEFORM = <비워 두면 프로젝트의 waveform/*.waveform.json 전부, 아니면 하나만 지정>
+WAVEFORM = <비워 두면 프로젝트의 waveform/**/*.waveform.json 전부, 아니면 하나만 지정>
 SPEC_DOCUMENT = <비워 두거나, 이 설계가 요구된 명세 문서 경로>
 
 시뮬레이션이 돌았고 누군가 그걸 측정해 뒀어. 네가 할 일은 기계가 못 하는 쪽이야 —
@@ -11,8 +11,8 @@ PROJECT_FOLDER/.agent/rtlgraph/ENVIRONMENT.md 는 이미 준비돼 있어 — �
 "Workflow W — Waveform → why it passed" 를 따라줘.
 
 아직 측정값이 없으면 먼저 만들어: `.agent/rtlgraph/run-tb.sh --wave` 가 벤치를 돌리고,
-**어떤 테스트벤치도 고치지 않고** 파형을 덤프해서 `waveform/<벤치>.vcd` 와
-`waveform/<벤치>.waveform.json`(네가 아래에서 읽을 측정값)을 쓴다. 덤프를 위해 벤치를
+**어떤 테스트벤치도 고치지 않고** 파형을 덤프해서 `waveform/<given|mine>/<벤치>.vcd` 와
+`waveform/<given|mine>/<벤치>.waveform.json`(네가 아래에서 읽을 측정값)을 쓴다. 덤프를 위해 벤치를
 고치지 마 — 실행기가 덤프 전용 모듈을 따로 붙인다.
 
 ## 무엇을 받았고, 그걸로 무엇을 하면 안 되는가
@@ -39,7 +39,7 @@ PROJECT_FOLDER/.agent/rtlgraph/ENVIRONMENT.md 는 이미 준비돼 있어 — �
 요청**을 클립보드에 담아 준다 — 궁금한 게 한둘일 때 싸고, 결국 전부 물어볼 거라면 더
 비싸다. 둘 다 같은 파일에 같은 제목 규칙으로 덧붙으니 섞어 써도 된다.
 
-## 읽은 보고서 옆, `waveform/<벤치>.waveform-analysis.md` 를 써
+## 읽은 보고서 옆, `waveform/<given|mine>/<벤치>.waveform-analysis.md` 를 써
 
 **절 제목은 벤치가 찍은 줄 그대로** 써줘(`## ok: cleared once taken`). 첫 절은
 `## 깨어나는 과정`(또는 영어면 `Coming up`). 파형 뷰가 이 파일을 다시 읽어서 각 절을

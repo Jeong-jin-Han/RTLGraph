@@ -38,7 +38,7 @@ line of the design you think is behind it — and **change nothing.**
 PROJECT_FOLDER/.agent/rtlgraph/run-tb.sh given --wave
 ```
 
-That writes `waveform/<bench>.vcd` and `<bench>.waveform.json`. No testbench is
+That writes `waveform/<given|mine>/<bench>.vcd` and `<bench>.waveform.json`. No testbench is
 edited to make it dump; the runner adds a module that does it.
 
 **4. Write why it behaved that way.** Read

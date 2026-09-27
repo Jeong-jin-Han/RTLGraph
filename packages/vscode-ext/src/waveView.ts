@@ -212,8 +212,9 @@ export class WaveViewProvider implements vscode.CustomTextEditorProvider {
     const beside = vscode.Uri.joinPath(document.uri, '..')
     const folder = vscode.workspace.getWorkspaceFolder(document.uri)?.uri
     const candidates = [
-      vscode.Uri.joinPath(beside, file),          // as written, next to the report
-      vscode.Uri.joinPath(beside, '..', file),    // the project the report is about
+      vscode.Uri.joinPath(beside, file),                // as written, next to the report
+      vscode.Uri.joinPath(beside, '..', file),          // waveform/, for a bench of no folder
+      vscode.Uri.joinPath(beside, '..', '..', file),    // the project: waveform/ mirrors tb/
       ...(folder ? [vscode.Uri.joinPath(folder, file)] : []),
     ]
     for (const candidate of candidates) {

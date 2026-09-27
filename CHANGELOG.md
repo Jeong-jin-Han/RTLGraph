@@ -174,6 +174,14 @@ extension, so each line is something that broke once.
   primitives when the design instantiates one. The copy now follows the setting
   (`auto` still writes both) and scans the RTL for instantiations, carrying the
   lot only when there is no RTL yet to go on.
+- **`waveform/` mirrors `tb/`.** A run's dump and measurements land under the
+  folder its bench came from — `waveform/given/`, `waveform/mine/` — so which
+  side a result belongs to is structural rather than a guess at the file name.
+  It had to be: the handout and you are both allowed to call a bench
+  `tb_uart.v`, the reports are named after the bench, and the marking one runs
+  first — so the report that survived the overwrite was yours. A project with
+  files in the old flat place keeps them; the next `--wave` writes to the new
+  one.
 - **A run leaves the waveform, not a pile.** `--wave` writes the dump and the
   measurements; `<bench>.waveform.md` — the same numbers as prose, which nothing
   but a person reads — is now `--report`. The compiler's scratch moved into

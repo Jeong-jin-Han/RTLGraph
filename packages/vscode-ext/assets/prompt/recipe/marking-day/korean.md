@@ -36,7 +36,7 @@ PROJECT_FOLDER/.agent/rtlgraph/run-tb.sh given
 PROJECT_FOLDER/.agent/rtlgraph/run-tb.sh given --wave
 ```
 
-`waveform/<벤치>.vcd` 와 `<벤치>.waveform.json` 이 생긴다. 벤치는 고쳐지지 않는다 —
+`waveform/<given|mine>/<벤치>.vcd` 와 `<벤치>.waveform.json` 이 생긴다. 벤치는 고쳐지지 않는다 —
 실행기가 덤프 전용 모듈을 따로 붙인다.
 
 **4. 왜 그렇게 됐는지 쓴다.** `PROJECT_FOLDER/.prompt/rtlgraph/components/waveform/korean.md` 를

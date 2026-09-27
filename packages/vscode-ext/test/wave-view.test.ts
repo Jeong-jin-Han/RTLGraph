@@ -10,7 +10,7 @@ import { loadWebview, type Harness } from './dom.ts'
 // outside, and nothing in a unit test of the model could have caught it.
 
 const BUNDLE = join(import.meta.dirname, '../dist/wave.js')
-const DEMO = join(import.meta.dirname, '../../../demo/uart-p01/waveform')
+const DEMO = join(import.meta.dirname, '../../../demo/uart-p01/waveform/mine')
 
 /**
  * What the host sends, built the way waveView.ts builds it: the view from the
