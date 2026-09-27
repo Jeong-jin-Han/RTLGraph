@@ -145,6 +145,61 @@ first — they are where the misunderstandings are — then hand the result to `
 
 ---
 
+## The three chains, one at a time
+
+A chain is one paste that walks an agent through several of the six, in order,
+running the scripts in between. What it buys you is not typing: it is that the
+**order and the stopping points are written down** rather than remembered at the
+moment you can least afford to get them wrong.
+
+Every chain obeys three rules. A failed step stops it — a document explaining
+why a run passed is worthless when it FAILed. **⏸ marks where it stops for you**:
+right after a verdict, and before any code would change. The variables at the
+top are filled once and handed down to every prompt it opens.
+
+### `recipe/marking-day` — the bench that decides the mark just arrived
+
+```
+tb/given/ has a bench?  →  run-tb.sh given  →  ⏸ verdict  →  run-tb.sh given --wave
+                                                          →  components/waveform
+```
+
+The one to reach for when the email lands. It refuses to invent a bench if
+`tb/given/` is empty, quotes the verdict before anything else, and stops there —
+if it FAILed you decide what to do, and it changes nothing meanwhile. Then it
+dumps that run and writes the analysis for **the marking bench only**: the rest
+can wait, that one cannot.
+
+### `recipe/assignment` — a handout, from nothing to ready to submit
+
+```
+components/assignment  →  run-tb.sh mine  →  ⏸ verdicts + validator
+                       →  run-tb.sh --wave  →  components/waveform
+                       →  make-submission.sh --list  →  ⏸ what would go in
+```
+
+The long one, for the day you start. It draws the schematic, writes the benches
+into `tb/mine/`, leaves `tb/given/` empty and waiting, explains every waveform,
+and shows you the submission without building it — **the zip is never made
+without you asking**. It stops twice: after the benches run (whether the bench or
+the design is wrong is your call, not the agent's) and before the submission.
+
+### `recipe/read-code` — someone else's RTL, and you have to understand it
+
+```
+components/rtlgraph  →  ⏸ validator + the one idea  →  run-tb.sh --wave
+                     →  components/waveform
+```
+
+Nothing is written but drawings and prose: the `.v` files are read-only for the
+whole chain, and anything that looks wrong goes in the final report rather than
+into the code. It stops once, on the schematic, and asks for **the one idea that
+makes the design work** in a sentence — if that sentence cannot be written, the
+rest is not worth reading yet. If the project has no testbench at all it stops
+and says so; writing one is not part of this chain.
+
+---
+
 ## Two things that change what a prompt does
 
 **The language.** Only the one `rtlgraph.language` names is copied — set to
