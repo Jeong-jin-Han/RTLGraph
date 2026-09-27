@@ -15,7 +15,7 @@ it, run it, and write down why it behaves as it does. Work from the top.
 
 ---
 
-**1. Draw it.** Read `PROJECT_FOLDER/.prompt/rtlgraph/rtlgraph/english.md` and do
+**1. Draw it.** Read `PROJECT_FOLDER/.prompt/rtlgraph/components/rtlgraph/english.md` and do
 what it says, passing RTLGRAPH_FOLDER through.
 
 ⏸ **Stop here.** Report the validator result (`0 errors` is the bar), which file
@@ -32,7 +32,7 @@ If both `tb/given/` and `tb/mine/` are empty, stop and say so — writing a benc
 from scratch is not part of this chain.
 
 **3. Write why it behaves that way.** Read
-`PROJECT_FOLDER/.prompt/rtlgraph/waveform/english.md` and do what it says, with
+`PROJECT_FOLDER/.prompt/rtlgraph/components/waveform/english.md` and do what it says, with
 WAVEFORM empty.
 
 **4. Report.** Where the schematic is, the verdicts, and **one thing that looked

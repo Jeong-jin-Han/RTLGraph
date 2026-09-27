@@ -39,7 +39,7 @@ PROJECT_FOLDER/.agent/rtlgraph/run-tb.sh given --wave
 `waveform/<벤치>.vcd` 와 `<벤치>.waveform.json` 이 생긴다. 벤치는 고쳐지지 않는다 —
 실행기가 덤프 전용 모듈을 따로 붙인다.
 
-**4. 왜 그렇게 됐는지 쓴다.** `PROJECT_FOLDER/.prompt/rtlgraph/waveform/korean.md` 를
+**4. 왜 그렇게 됐는지 쓴다.** `PROJECT_FOLDER/.prompt/rtlgraph/components/waveform/korean.md` 를
 읽고 그대로 해라. WAVEFORM 은 **방금 생긴 조교 벤치 것 하나만** 지정해라 — 오늘 급한 것은
 그것 하나다. 우리 벤치 분석이 아직 없더라도 오늘 같이 쓰지 마라. SPEC_DOCUMENT 는 위에서
 정한 값을 넘겨라.

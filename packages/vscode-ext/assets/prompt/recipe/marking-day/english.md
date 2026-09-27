@@ -42,7 +42,7 @@ That writes `waveform/<bench>.vcd` and `<bench>.waveform.json`. No testbench is
 edited to make it dump; the runner adds a module that does it.
 
 **4. Write why it behaved that way.** Read
-`PROJECT_FOLDER/.prompt/rtlgraph/waveform/english.md` and do what it says. Set
+`PROJECT_FOLDER/.prompt/rtlgraph/components/waveform/english.md` and do what it says. Set
 WAVEFORM to the report you just made — **the marking one only**, which is the one
 that matters today; do not write ours as well, even if nobody has yet. Pass
 SPEC_DOCUMENT through.

@@ -96,6 +96,14 @@ for (const part of ['standard_fonts', 'cmaps', 'wasm', 'iccs']) {
   cpSync(`${pdfjs}${part}`, `${viewer}/web/${part}`, { recursive: true })
 }
 
+// KaTeX, for the formulas an analysis writes ($$…$$). The library itself is
+// bundled into the webview by esbuild; only its stylesheet and fonts have to be
+// files, because a font cannot be inlined into a CSP-restricted webview.
+const katex = require.resolve('katex/package.json').replace(/package\.json$/, '')
+mkdirSync(`${import.meta.dirname}/dist/katex`, { recursive: true })
+cpSync(`${katex}dist/katex.min.css`, `${import.meta.dirname}/dist/katex/katex.min.css`)
+cpSync(`${katex}dist/fonts`, `${import.meta.dirname}/dist/katex/fonts`, { recursive: true })
+
 if (watch) {
   for (const config of configs) await (await esbuild.context(config)).watch()
 } else {

@@ -18,7 +18,7 @@ GIVEN_TB = <처음부터 테스트벤치를 같이 받았다면 그 경로, 아�
 
 ---
 
-**1. 회로도와 우리 벤치를 만든다.** `PROJECT_FOLDER/.prompt/rtlgraph/assignment/korean.md`
+**1. 회로도와 우리 벤치를 만든다.** `PROJECT_FOLDER/.prompt/rtlgraph/components/assignment/korean.md`
 를 읽고 그대로 해라. RTLGRAPH_FOLDER · SPEC_DOCUMENT · GIVEN_TB 는 위 값을 넘겨라.
 이 단계가 `tb/given/`(비어 있음)과 `tb/mine/`(네가 쓴 벤치)을 만든다.
 
@@ -38,7 +38,7 @@ PROJECT_FOLDER/.agent/rtlgraph/run-tb.sh mine
 PROJECT_FOLDER/.agent/rtlgraph/run-tb.sh --wave
 ```
 
-**4. 왜 통과했는지 쓴다.** `PROJECT_FOLDER/.prompt/rtlgraph/waveform/korean.md` 를 읽고
+**4. 왜 통과했는지 쓴다.** `PROJECT_FOLDER/.prompt/rtlgraph/components/waveform/korean.md` 를 읽고
 그대로 해라. WAVEFORM 은 비워 둬서 방금 생긴 것 전부를 다뤄라.
 
 **5. 제출물을 확인만 한다.**

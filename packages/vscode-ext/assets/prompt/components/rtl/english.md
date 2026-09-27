@@ -7,7 +7,7 @@ REQUEST = <only when SPEC_DOC is empty: what to build>
 PROJECT_FOLDER/.agent/rtlgraph/SPEC.md and PROJECT_FOLDER/.agent/rtlgraph/ENVIRONMENT.md
 are already prepared for you — read both in full. Follow "Workflow B — Spec →
 RTL" specifically and write **the RTL of a new project from scratch**. (To change
-code that already exists, use .prompt/rtlgraph/refactor/english.md instead.)
+code that already exists, use .prompt/rtlgraph/components/refactor/english.md instead.)
 
 If SPEC_DOC is given, read it in full first and follow the ports, components and
 control signal table it settles. If you have to depart from it, say why in your

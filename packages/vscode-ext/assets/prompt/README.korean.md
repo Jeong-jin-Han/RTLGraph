@@ -2,9 +2,20 @@
 
 *(English: `README.md`)*
 
-이 여섯 폴더는 AI 에이전트에게 줄 완성된 지시문이다. 내용을 고치거나 복사해
+여기 있는 것은 AI 에이전트에게 줄 완성된 지시문이다. 내용을 고치거나 복사해
 붙일 필요는 없다. 붙여 넣는 건 **그 파일의 경로**와 **작업할 프로젝트 경로**
 두 개뿐이고, 어떤 경로를 붙였느냐가 곧 무슨 일이 일어나는지를 정한다.
+
+선반은 둘이다:
+
+| | | |
+|---|---|---|
+| **`components/`** | 한 가지 일을 하는 프롬프트 여섯 | `spec` `rtl` `refactor` `rtlgraph` `assignment` `waveform` |
+| **`recipe/`** | 그 여섯을 **순서대로 엮은** 것 셋 | `assignment` `marking-day` `read-code` |
+
+무엇을 할지 이미 알면 `components/` 에서 하나를 집고, **오늘 뭘 해야 하는지가 순서
+문제**라면 `recipe/` 를 집어라 — 엮음이 프롬프트와 스크립트를 차례로 돌리고, 사람이
+봐야 하는 자리(판정 직후, 코드 수정 전)에서 멈춘다.
 
 ```
 RTLGraph: Copy Prompt Path        ← 갈래를 고르면 경로가 클립보드로
@@ -13,7 +24,7 @@ RTLGraph: Copy Prompt Path        ← 갈래를 고르면 경로가 클립보드
 그 다음 에이전트(Claude Code, Codex, Cursor…)에:
 
 ```
-/home/me/work/uart/.prompt/rtlgraph/assignment/korean.md 를 읽고 그대로 해줘.
+/home/me/work/uart/.prompt/rtlgraph/components/assignment/korean.md 를 읽고 그대로 해줘.
 PROJECT_FOLDER = /home/me/work/uart
 ```
 

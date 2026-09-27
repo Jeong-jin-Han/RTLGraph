@@ -4,6 +4,7 @@
 //
 // The host does the reading; this file only draws and navigates.
 
+import katex from 'katex'
 import type { Marker, Trace, WaveView, Words } from '@rtlgraph/wave'
 
 /** Only the phrases that are plain strings reach a webview — see waveView.ts. */
@@ -29,6 +30,15 @@ let hot: number | undefined
 let hotTrace: string | undefined
 /** Places whose written explanation is open in the panel on the right. */
 const opened = new Set<string>()
+/**
+ * Which folds inside it are open.
+ *
+ * The panel is rebuilt on every redraw — and a redraw happens when the hand
+ * passes over a trace — so a `<details>` that remembered its own state closed
+ * itself a second after it was opened. It is remembered here instead, and
+ * nothing but the reader closes it.
+ */
+const unfolded = new Set<string>()
 /** Rows a reader has asked for beyond the default screenful. */
 const alsoShow = { clock: false, variable: false, rest: false }
 
@@ -62,6 +72,9 @@ const bar: { label: string; hint: keyof Words; fallback: string; run: () => void
   { label: '−', hint: 'zoomOut', fallback: 'zoom out', run: () => zoom(1.6) },
   { label: '+', hint: 'zoomIn', fallback: 'zoom in', run: () => zoom(1 / 1.6) },
   { label: '⇔', hint: 'wholeRun', fallback: 'the whole run', run: () => { from = 0; to = view?.end ?? 1; draw() } },
+  // What everything here does, for someone who has not been told. NodeGraph
+  // puts the same button in the same corner and opens its own README.
+  { label: '?', hint: 'help', fallback: 'what this view can do', run: () => vscode.postMessage({ type: 'help' }) },
 ]
 const barButtons = bar.map(item => {
   const button = document.createElement('button')
@@ -96,7 +109,30 @@ canvas.append(labels, plot)
 const why = document.createElement('div')
 why.id = 'wave-why'
 why.hidden = true
-middle.append(rail, canvas, why)
+// …and between the list and the traces, not out at the far edge: a reader goes
+// place → what it says → the waveform, and reading left to right should be that
+// order. The grip sets its width, because how much room an argument needs is
+// not something this file can know.
+const grip = document.createElement('div')
+grip.id = 'wave-why-grip'
+grip.hidden = true
+middle.append(rail, why, grip, canvas)
+
+let sizing = false
+grip.addEventListener('pointerdown', event => {
+  sizing = true
+  grip.setPointerCapture(event.pointerId)
+  event.preventDefault()
+})
+grip.addEventListener('pointermove', event => {
+  if (!sizing) return
+  const left = why.getBoundingClientRect().left
+  why.style.width = `${Math.min(Math.max(event.clientX - left, 220), 900)}px`
+  draw()
+})
+for (const done of ['pointerup', 'pointercancel']) {
+  grip.addEventListener(done, () => { sizing = false })
+}
 document.body.append(toolbar, middle)
 
 const notice = document.createElement('div')
@@ -206,7 +242,11 @@ function draw(): void {
     `${traces.length} / ${view.traces.length + view.omitted}`
   title.append(said)
 
-  // the rail: where to go
+  // The rail is a contact sheet, not the document: a title, when, and how many
+  // instants are in it. Everything that used to be crammed in here — the
+  // statements that drove it, what the wires did, the instants themselves, the
+  // writing — opens in the panel beside the traces. Twelve places have to be
+  // scannable in one look, and eleven lines each is not scannable.
   rail.replaceChildren(...view.markers.map(marker => {
     const item = document.createElement('div')
     item.className = `wave-place ${marker.kind}${marker.id === active ? ' active' : ''}`
@@ -218,105 +258,29 @@ function draw(): void {
     when.textContent = `${atTime(marker.from)} → ${atTime(marker.to)}`
     item.append(head, when)
 
-    // A card reads in the order a reader asks: what was this for, how was it
-    // driven, what happened. The first is the line the bench printed (the title
-    // above); the second comes from the bench's own statements; the third is
-    // what was measured.
-    const part = (label: string, rows: readonly { text: string; cls?: string; title?: string }[]) => {
-      if (rows.length === 0) return
-      const group = document.createElement('div')
-      group.className = 'part'
-      const name = document.createElement('div')
-      name.className = 'part-name'
-      name.textContent = label
-      group.append(name)
-      for (const row of rows) {
-        const line = document.createElement('div')
-        line.className = row.cls ?? 'note'
-        line.textContent = row.text
-        if (row.title) line.title = row.title
-        group.append(line)
-      }
-      item.append(group)
-    }
-
-    part(say('how', 'how it was driven'),
-      (marker.stimulus ?? []).map(step => ({ text: step.text, cls: 'step', title: `:${step.line}` })))
-    part(say('outcome', 'what happened'), marker.notes.map(note => ({ text: note })))
-    // Where to look, inside the stretch: each instant is a button that puts the
-    // cursor on it, because "the transfer" is a moment, not a paragraph.
+    const tags = document.createElement('div')
+    tags.className = 'tags'
     if (marker.focus.length > 0) {
-      const moments = document.createElement('div')
-      moments.className = 'moments'
-      for (const [i, moment] of numbered(marker).entries()) {
-        const button = document.createElement('button')
-        button.className = `moment${hot === moment.at ? ' hot' : ''}`
-        const badge = document.createElement('span')
-        badge.className = 'badge'
-        badge.textContent = String(i + 1)
-        const said = document.createElement('span')
-        said.textContent = `${atTime(moment.at)} · ${moment.what}`
-        button.append(badge, said)
-        button.title = moment.signal ?? ''
-        button.addEventListener('click', event => {
-          event.stopPropagation()
-          look(marker, moment.at)
-        })
-        // Pointing at one is enough to find it: the line it marks lights up
-        // without the view moving, so a hand can sweep the list and watch.
-        button.addEventListener('mouseenter', () => {
-          if (marker.id !== active) show(marker)
-          hot = moment.at
-          if (moment.signal) hotTrace = moment.signal
-          draw()
-        })
-        button.addEventListener('mouseleave', () => { hot = undefined; hotTrace = undefined; draw() })
-        moments.append(button)
-      }
-      item.append(moments)
+      const count = document.createElement('span')
+      count.className = 'tag'
+      count.textContent = `${marker.focus.length} ${say('moments', 'instants')}`
+      tags.append(count)
     }
-    // And where it came from: the line of the testbench that printed it.
-    if (marker.source) {
-      const code = document.createElement('button')
-      code.className = 'source'
-      code.textContent = `${marker.source.file.split('/').pop()}:${marker.source.line}`
-      code.title = marker.source.text
-      code.addEventListener('click', event => {
-        event.stopPropagation()
-        vscode.postMessage({ type: 'openCode', file: marker.source!.file, line: marker.source!.line })
-      })
-      item.append(code)
-    }
-    // Nobody has written about this one yet: offer to ask, for this check
-    // alone. A run has ten of them and explaining all ten at once is a long
-    // job nobody ordered.
-    if (!marker.explain) {
-      const ask = document.createElement('button')
-      ask.className = 'ask'
-      ask.textContent = `? ${say('why', 'why it passed')}`
-      ask.title = say('askWhy', 'ask why')
-      ask.addEventListener('click', event => {
-        event.stopPropagation()
-        vscode.postMessage({ type: 'askAnalysis', id: marker.id })
-      })
-      item.append(ask)
-    }
-    // What an agent made of it, folded away until asked for: the measurements
-    // are the claim, this is the argument, and a reader wants one at a time.
-    if (marker.explain) {
-      const toggle = document.createElement('button')
-      toggle.className = 'why'
-      toggle.textContent = `${opened.has(marker.id) ? '▾' : '▸'} ${say('why', 'why it passed')}`
-      toggle.addEventListener('click', event => {
-        event.stopPropagation()
-        const already = opened.has(marker.id)
-        opened.clear()
-        if (!already) opened.add(marker.id)
-        draw()
-      })
-      item.append(toggle)
-    }
-    item.addEventListener('click', () => show(marker))
+    // Written about or not is the one thing worth seeing without opening it:
+    // it says where there is an argument to read and where one can be asked for.
+    const mark = document.createElement('span')
+    mark.className = marker.explain ? 'tag written' : 'tag unwritten'
+    mark.textContent = marker.explain ? say('why', 'why it passed') : '?'
+    tags.append(mark)
+    item.append(tags)
+
+    item.addEventListener('click', () => {
+      show(marker)
+      opened.clear()
+      unfolded.clear()
+      opened.add(marker.id)
+      draw()
+    })
     return item
   }))
 
@@ -337,26 +301,7 @@ function draw(): void {
     rail.append(block)
   }
 
-  // …and the panel it all opens into. One at a time: two arguments side by side
-  // is two things to read and no room for the traces they are about.
-  const open = [...view.markers.map(m => ({ head: m.label, id: m.id, body: m.explain })),
-    ...(view.notes ?? []).map(n => ({ head: n.heading, id: n.heading, body: n.body }))]
-    .find(entry => entry.body && opened.has(entry.id))
-  why.hidden = open === undefined
-  if (open) {
-    const head = document.createElement('div')
-    head.className = 'why-head'
-    const name = document.createElement('div')
-    name.className = 'why-title'
-    name.textContent = open.head
-    const close = document.createElement('button')
-    close.className = 'why-close'
-    close.textContent = '×'
-    close.title = say('closePanel', 'close')
-    close.addEventListener('click', () => { opened.clear(); draw() })
-    head.append(name, close)
-    why.replaceChildren(head, prose(open.body!))
-  }
+  drawPanel()
 
   // the labels, with the value under the cursor when there is one
   const watched = new Set(view.markers.find(m => m.id === active)?.watch ?? [])
@@ -380,11 +325,20 @@ function draw(): void {
     const name = document.createElement(trace.source ? 'button' : 'span')
     name.className = trace.source ? 'name to-code' : 'name'
     name.textContent = trace.name
-    name.title = trace.source ? `${trace.source.file}:${trace.source.line}  ${trace.source.text}` : trace.path
+    name.title = trace.source
+      ? `${trace.source.file}:${trace.source.line}  ${trace.source.text}`
+      : trace.path
     if (trace.source) {
-      name.addEventListener('click', () => vscode.postMessage({
+      const open = () => vscode.postMessage({
         type: 'openCode', file: trace.source!.file, line: trace.source!.line,
-      }))
+      })
+      name.addEventListener('click', open)
+      // Right-click too, on the whole row: a schematic box opens its code that
+      // way, and a reader who learned it there tries it here.
+      row.addEventListener('contextmenu', event => {
+        event.preventDefault()
+        open()
+      })
     }
     row.append(name)
     if (cursor !== undefined) {
@@ -551,30 +505,93 @@ function table(block: string): HTMLElement {
  */
 const FIELD = /^\s*(목적|방식|결과|Purpose|How|Outcome)\s*(?:—|-|:)\s*/
 
-function prose(text: string): HTMLElement {
+/**
+ * `$…$` and `$$…$$`, the way NodeGraph writes them.
+ *
+ * A timing argument is full of arithmetic — 125 MHz / 115200 baud = 1085 — and
+ * the same writer moves between the two tools, so the syntax is the same in
+ * both. KaTeX is bundled; a formula it cannot parse is left as written rather
+ * than replaced with a red error.
+ */
+function math(text: string, display: boolean): HTMLElement {
+  const node = document.createElement(display ? 'div' : 'span')
+  node.className = display ? 'math block' : 'math'
+  try {
+    node.innerHTML = katex.renderToString(text, { displayMode: display, throwOnError: false, output: 'html' })
+  } catch {
+    node.textContent = display ? `$$${text}$$` : `$${text}$`
+  }
+  return node
+}
+
+/** `- one` / `1. one`, which is how an analysis lists what it found. */
+const BULLET = /^\s*(?:[-*•]|\d+[.)])\s+/
+
+function list(block: string): HTMLElement {
+  const numbered = /^\s*\d+[.)]\s/.test(block)
+  const out = document.createElement(numbered ? 'ol' : 'ul')
+  out.className = 'md-list'
+  let item: HTMLElement | undefined
+  for (const line of block.split('\n')) {
+    if (BULLET.test(line)) {
+      item = document.createElement('li')
+      item.append(...inline(line.replace(BULLET, '')))
+      out.append(item)
+    } else if (item && line.trim()) {
+      // a wrapped line belongs to the bullet above it, not to a new one
+      item.append(...inline(` ${line.trim()}`))
+    }
+  }
+  return out
+}
+
+function prose(text: string, inner = false): HTMLElement {
   const block = document.createElement('div')
-  block.className = 'prose'
+  // The fold's own body is prose too, but it is one block's inside rather than
+  // another block: naming them the same made three of them out of one.
+  block.className = inner ? 'prose inside' : 'prose'
   // Everything from the first `###` is the writer's own aside: shown folded, so
   // the verdict stays on one screen and the working is still there to open.
   const [body, ...more] = text.split(/^###\s+/m)
   if (more.length > 0) {
-    block.append(prose(body))
-    for (const aside of more) {
+    block.append(prose(body, true))
+    for (const [at, aside] of more.entries()) {
       const [heading, ...rest] = aside.split('\n')
       const fold = document.createElement('details')
       fold.className = 'aside'
+      const key = `${heading.trim()}#${at}`
+      if (unfolded.has(key)) fold.setAttribute('open', '')
+      fold.addEventListener('toggle', () => {
+        if (fold.hasAttribute('open')) unfolded.add(key)
+        else unfolded.delete(key)
+      })
       const summary = document.createElement('summary')
       summary.textContent = heading.trim()
-      fold.append(summary, prose(rest.join('\n').trim()))
+      fold.append(summary, prose(rest.join('\n').trim(), true))
       block.append(fold)
     }
     return block
   }
   for (const paragraph of text.split(/\n{2,}/)) {
+    // `---` between sections is the writer separating them, and the panel shows
+    // one section at a time: drawn, it is a stray dash at the end of every one.
+    if (/^\s*(?:-{3,}|\*{3,}|_{3,})\s*$/.test(paragraph)) continue
     // A table written as markdown was being poured into a paragraph, pipes and
     // all, which is unreadable and hides the numbers it was drawn for.
     if (isTable(paragraph)) {
       block.append(table(paragraph))
+      continue
+    }
+    // A run of bullets is a list, not one long sentence with dashes in it —
+    // which is what it looked like, and it is how an analysis lists findings.
+    if (paragraph.split('\n').filter(line => BULLET.test(line)).length >= 1 && BULLET.test(paragraph.trimStart())) {
+      block.append(list(paragraph))
+      continue
+    }
+    // `$$…$$` on its own is a formula, not a paragraph that happens to have one.
+    const displayed = /^\s*\$\$([\s\S]+)\$\$\s*$/.exec(paragraph)
+    if (displayed) {
+      block.append(math(displayed[1].trim(), true))
       continue
     }
     // The three fields, one per line, are the shape the prompt asks for: keep
@@ -603,30 +620,230 @@ function prose(text: string): HTMLElement {
   return block
 }
 
-/** One run of text: what it says, with every `file.v:line` in it a way in. */
+/**
+ * One run of text: what it says, with the marks that carry meaning kept.
+ *
+ * `file.v:line` becomes a button, `$…$` becomes a formula, `**bold**` is bold
+ * and `` `code` `` is code — the same four an analysis is written with, and the
+ * same set NodeGraph renders, so one writer can move between them. Everything
+ * else is text: this is not a markdown engine and should not grow into one.
+ */
+const CITATION_ONE = /^([\w./-]+\.(?:v|sv|json|md)):(\d+)(?:-\d+)?$/
+
+const MARKUP = new RegExp([
+  /([\w./-]+\.(?:v|sv|json|md)):(\d+)(?:-\d+)?/.source, // 1,2 a citation
+  /([\w./-]+\.pdf)\s*,?\s*p\.?\s*(\d+)/.source,        // 3,4 a page of the brief
+  /\$\$([^$]+)\$\$/.source,                              // 3 display math
+  /\$([^$\n]+)\$/.source,                                 // 4 inline math
+  /\*\*([^*]+)\*\*/.source,                               // 5 bold
+  /`([^`]+)`/.source,                                      // 6 code
+].map(part => `(?:${part})`).join('|'), 'g')
+
+/** The sentence this citation is for: the quotation just before it, if any. */
+function quotedNear(text: string, at: number): string | undefined {
+  const before = text.slice(0, at)
+  const quoted = [...before.matchAll(/["“]([^"”]{8,})["”]/g)].at(-1)
+  return quoted?.[1]
+}
+
 function inline(text: string): HTMLElement[] {
   const out: HTMLElement[] = []
   let at = 0
   const words = (said: string) => {
     if (!said) return
     const span = document.createElement('span')
-    span.textContent = said.replace(/[`*]/g, '')
+    span.textContent = said
     out.push(span)
   }
-  for (const match of text.matchAll(CITATION)) {
+  for (const match of text.matchAll(MARKUP)) {
     words(text.slice(at, match.index))
-    const link = document.createElement('button')
-    link.className = 'cite'
-    link.textContent = match[0]
-    link.addEventListener('click', event => {
-      event.stopPropagation()
-      vscode.postMessage({ type: 'openCode', file: match[1], line: Number(match[2]) })
-    })
-    out.push(link)
     at = match.index + match[0].length
+    const [, cite, citeLine, brief, page, display, formula, bold, quoted] = match
+    let file = cite
+    let line = citeLine
+    let code: string | undefined = quoted
+    // A citation is nearly always written inside backticks — `uart_receiver.v:79`
+    // — and the code branch would swallow it, turning the one thing a reader
+    // clicks into grey text.
+    if (code !== undefined) {
+      const cited = CITATION_ONE.exec(code)
+      if (cited) {
+        [, file, line] = cited
+        code = undefined
+      }
+    }
+    if (file) {
+      const link = document.createElement('button')
+      link.className = 'cite'
+      link.textContent = `${file}:${line}`
+      link.addEventListener('click', event => {
+        event.stopPropagation()
+        vscode.postMessage({ type: 'openCode', file, line: Number(line) })
+      })
+      out.push(link)
+    } else if (brief) {
+      // The sentence a check exists for lives in the handout. The reader has a
+      // viewer for it already — the one a schematic box opens — so this opens
+      // the same one, at the page, with the quoted sentence highlighted.
+      const link = document.createElement('button')
+      link.className = 'cite brief'
+      link.textContent = `${brief.split('/').pop()} p.${page}`
+      const quote = quotedNear(text, match.index)
+      link.addEventListener('click', event => {
+        event.stopPropagation()
+        vscode.postMessage({ type: 'openBrief', file: brief, page: Number(page), ...(quote ? { quote } : {}) })
+      })
+      out.push(link)
+    } else if (display !== undefined) {
+      out.push(math(display, true))
+    } else if (formula !== undefined) {
+      out.push(math(formula, false))
+    } else if (bold !== undefined) {
+      const strong = document.createElement('strong')
+      strong.textContent = bold
+      out.push(strong)
+    } else if (code !== undefined) {
+      const mono = document.createElement('code')
+      mono.textContent = code
+      out.push(mono)
+    }
   }
   words(text.slice(at))
   return out
+}
+
+/**
+ * The panel: one place, in full.
+ *
+ * Everything here used to live in the rail, where twelve places of it could not
+ * be scanned. A place is now a thumbnail; this is what opening one shows — what
+ * the check was for, how it was driven, what was measured, the instants as
+ * buttons, and the argument an agent wrote about it.
+ */
+function drawPanel(): void {
+  if (!view) return
+  const place = view.markers.find(marker => opened.has(marker.id))
+  const note = (view.notes ?? []).find(entry => opened.has(entry.heading))
+  why.hidden = place === undefined && note === undefined
+  grip.hidden = why.hidden
+  // Emptied, not merely hidden: a panel that keeps the last place's argument
+  // behind `hidden` shows it again the moment anything unhides it.
+  if (why.hidden) {
+    why.replaceChildren()
+    return
+  }
+
+  const head = document.createElement('div')
+  head.className = 'why-head'
+  const name = document.createElement('div')
+  name.className = 'why-title'
+  name.textContent = place?.label ?? note?.heading ?? ''
+  const close = document.createElement('button')
+  close.className = 'why-close'
+  close.textContent = '×'
+  close.title = say('closePanel', 'close')
+  close.addEventListener('click', () => { opened.clear(); draw() })
+  head.append(name, close)
+  why.replaceChildren(head)
+
+  if (note) {
+    why.append(prose(note.body))
+    return
+  }
+  if (!place) return
+
+  const when = document.createElement('div')
+  when.className = 'why-when'
+  when.textContent = `${atTime(place.from)} → ${atTime(place.to)}`
+  why.append(when)
+
+  const part = (label: string, build: (into: HTMLElement) => boolean) => {
+    const group = document.createElement('div')
+    group.className = 'part'
+    const said = document.createElement('div')
+    said.className = 'part-name'
+    said.textContent = label
+    const body = document.createElement('div')
+    if (!build(body)) return
+    group.append(said, body)
+    why.append(group)
+  }
+
+  // 방식 — the bench's own statements, which the dump cannot know.
+  part(say('how', 'how it was driven'), body => {
+    for (const step of place.stimulus ?? []) {
+      const line = document.createElement('div')
+      line.className = 'step'
+      line.textContent = step.text
+      line.title = `:${step.line}`
+      body.append(line)
+    }
+    return (place.stimulus ?? []).length > 0
+  })
+
+  // 결과 — what was measured here.
+  part(say('outcome', 'what happened'), body => {
+    for (const said of place.notes) {
+      const line = document.createElement('div')
+      line.className = 'note'
+      line.textContent = said
+      body.append(line)
+    }
+    return place.notes.length > 0
+  })
+
+  // The instants, as buttons: "the transfer" is a moment, not a paragraph.
+  if (place.focus.length > 0) {
+    const moments = document.createElement('div')
+    moments.className = 'moments'
+    for (const [i, moment] of numbered(place).entries()) {
+      const button = document.createElement('button')
+      button.className = `moment${hot === moment.at ? ' hot' : ''}`
+      const badge = document.createElement('span')
+      badge.className = 'badge'
+      badge.textContent = String(i + 1)
+      const said = document.createElement('span')
+      said.textContent = `${atTime(moment.at)} · ${moment.what}`
+      button.append(badge, said)
+      button.title = moment.signal ?? ''
+      button.addEventListener('click', () => look(place, moment.at))
+      button.addEventListener('mouseenter', () => {
+        hot = moment.at
+        if (moment.signal) hotTrace = moment.signal
+        draw()
+      })
+      button.addEventListener('mouseleave', () => { hot = undefined; hotTrace = undefined; draw() })
+      moments.append(button)
+    }
+    why.append(moments)
+  }
+
+  // Where it came from: the line of the testbench that printed it.
+  if (place.source) {
+    const code = document.createElement('button')
+    code.className = 'source'
+    code.textContent = `${place.source.file.split('/').pop()}:${place.source.line}`
+    code.title = place.source.text
+    code.addEventListener('click', () => vscode.postMessage({
+      type: 'openCode', file: place.source!.file, line: place.source!.line,
+    }))
+    why.append(code)
+  }
+
+  // …and the argument, if anyone has written one. If not, the way to ask.
+  if (place.explain) {
+    const written = document.createElement('div')
+    written.className = 'part-name written'
+    written.textContent = say('why', 'why it passed')
+    why.append(written, prose(place.explain))
+  } else {
+    const ask = document.createElement('button')
+    ask.className = 'ask'
+    ask.textContent = `? ${say('why', 'why it passed')}`
+    ask.title = say('askWhy', 'ask why')
+    ask.addEventListener('click', () => vscode.postMessage({ type: 'askAnalysis', id: place.id }))
+    why.append(ask)
+  }
 }
 
 /** A place's instants in time order — the order their badges are numbered in. */
@@ -739,15 +956,32 @@ window.addEventListener('keydown', event => {
 window.addEventListener('resize', () => draw())
 
 window.addEventListener('message', event => {
-  const message = event.data as { type?: string; view?: WaveView; words?: Said; message?: string }
+  const message = event.data as { type?: string; view?: WaveView; words?: Said; message?: string; at?: number }
   if (message?.type === 'wave' && message.view) {
     view = message.view
     words = message.words
     retitleBar()
     notice.hidden = true
+    // A new report is a new document: whatever was open in the panel belonged
+    // to the last one, and holding it over shows an argument about a run that
+    // is no longer on screen.
+    opened.clear()
     const first = view.markers[0]
     if (first) show(first)
     else { from = 0; to = view.end; draw() }
+  } else if (message?.type === 'openPlace' && view) {
+    // Past the last place are the sections that belong to no check, in the
+    // order the rail lists them — the test photographs those too.
+    const at = Number(message.at) || 0
+    const place = view.markers[at]
+    const note = (view.notes ?? [])[at - view.markers.length]
+    const id = place?.id ?? note?.heading
+    if (id) {
+      if (place) show(place)
+      opened.clear()
+      opened.add(id)
+      draw()
+    }
   } else if (message?.type === 'waveError') {
     notice.hidden = false
     notice.textContent = message.message ?? 'nothing to draw'

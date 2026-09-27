@@ -441,3 +441,24 @@ test('a bench that numbers its wires still has handshakes, and one that times no
   // …and they are never passed off as checks the bench made
   assert.equal(view.markers.some(m => m.kind === 'check'), false)
 })
+
+// `###` is the fold inside a section, not a section: cutting there left six
+// places in the rail all called "더 보기" and took the evidence away from the
+// check it belonged to.
+test('a section is an ## — the ### fold stays inside it', () => {
+  const parsed = parseAnalysis([
+    '# tb — why it passed',
+    '',
+    '## ok: a byte arrived',
+    '결과 — 41 이 돌아왔다.',
+    '',
+    '### 더 보기',
+    '표와 곁가지.',
+    '',
+    '## 아직 증명되지 않은 것',
+    '정지 비트의 값.',
+  ].join('\n'))
+  assert.deepEqual(parsed.sections.map(s => s.heading), ['ok: a byte arrived', '아직 증명되지 않은 것'])
+  assert.match(parsed.sections[0].body, /### 더 보기/)
+  assert.match(parsed.sections[0].body, /표와 곁가지/)
+})

@@ -5,7 +5,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 
 import { tmpdir } from 'node:os'
 import { basename, join, relative } from 'node:path'
 import { BASE_REGISTRY } from '@rtlgraph/registry'
-import { AGENT_FILES, BASE_MODULES, filesFor, MAKE_SUBMISSION, PROMPT_CHAINS, PROMPT_KINDS, PROMPT_LANGUAGES, RUN_TB, VALIDATOR_BUNDLE } from '../src/agent/files.ts'
+import { AGENT_FILES, BASE_MODULES, COMPONENT_DIR, filesFor, MAKE_SUBMISSION, PROMPT_CHAINS, PROMPT_KINDS, PROMPT_LANGUAGES, RECIPE_DIR, RUN_TB, VALIDATOR_BUNDLE } from '../src/agent/files.ts'
 import { buildEnvironmentReport } from '../src/agent/environment.ts'
 
 const ROOT = join(import.meta.dirname, '..')
@@ -17,8 +17,11 @@ const spec = read('assets/agent/RTLGRAPH_SPEC.md')
 test('every file the command copies exists in the extension', () => {
   for (const { from } of AGENT_FILES) assert.ok(existsSync(join(ROOT, from)), from)
   // a prompt per kind per language, plus the guide that says which to reach for
-  assert.equal(AGENT_FILES.filter(f => /^\.prompt\/rtlgraph\/[a-z-]+\//.test(f.to)).length,
-    (PROMPT_KINDS.length + PROMPT_CHAINS.length) * PROMPT_LANGUAGES.length)
+  // Two shelves: one prompt per job under components/, the chains under recipe/.
+  assert.equal(AGENT_FILES.filter(f => f.to.startsWith(`.prompt/rtlgraph/${COMPONENT_DIR}/`)).length,
+    PROMPT_KINDS.length * PROMPT_LANGUAGES.length)
+  assert.equal(AGENT_FILES.filter(f => f.to.startsWith(`.prompt/rtlgraph/${RECIPE_DIR}/`)).length,
+    PROMPT_CHAINS.length * PROMPT_LANGUAGES.length)
   assert.deepEqual(AGENT_FILES.filter(f => /README/.test(f.to) && f.to.startsWith('.prompt/')).map(f => f.to).sort(),
     ['.prompt/rtlgraph/README.korean.md', '.prompt/rtlgraph/README.md'])
   // Everything this extension writes is under its own name: nothing of ours
@@ -42,7 +45,7 @@ test('prompts: every kind in two languages, each pointing at a workflow the spec
   }
   for (const kind of PROMPT_KINDS) {
     for (const language of PROMPT_LANGUAGES) {
-      const prompt = flat(read(`assets/prompt/${kind}/${language}.md`))
+      const prompt = flat(read(`assets/prompt/${COMPONENT_DIR}/${kind}/${language}.md`))
       assert.ok(prompt.includes(`"${expected[kind]}"`), `${kind}/${language} names "${expected[kind]}"`)
       // Code that may not be touched: the prompt has to say so, and say where the files go.
       if (kind === 'assignment') {
@@ -60,8 +63,8 @@ test('prompts: every kind in two languages, each pointing at a workflow the spec
       }
     }
   }
-  assert.ok(flat(read('assets/prompt/rtlgraph/korean.md')).includes('절대 수정하지 마'))
-  assert.ok(read('assets/prompt/rtl/english.md').includes('REQUEST ='))
+  assert.ok(flat(read(`assets/prompt/${COMPONENT_DIR}/rtlgraph/korean.md`)).includes('절대 수정하지 마'))
+  assert.ok(read(`assets/prompt/${COMPONENT_DIR}/rtl/english.md`).includes('REQUEST ='))
 })
 
 // A chain is one paste that walks an agent through several prompts in order.
@@ -70,10 +73,10 @@ test('prompts: every kind in two languages, each pointing at a workflow the spec
 test('every chain names real prompts, real scripts, and where to stop', () => {
   for (const chain of PROMPT_CHAINS) {
     for (const language of PROMPT_LANGUAGES) {
-      const text = read(`assets/prompt/${chain}/${language}.md`)
+      const text = read(`assets/prompt/${RECIPE_DIR}/${chain}/${language}.md`)
       assert.match(text, /<PROJECT_ROOT_ABSOLUTE_PATH>/, `${chain}/${language} asks for the project`)
       // every prompt it chains is a prompt that exists, in the same language
-      const named = [...text.matchAll(/\.prompt\/rtlgraph\/([a-z-]+)\/(korean|english)\.md/g)]
+      const named = [...text.matchAll(/\.prompt\/rtlgraph\/components\/([a-z-]+)\/(korean|english)\.md/g)]
       const scripts = [...text.matchAll(/\.agent\/rtlgraph\/([a-z-]+\.sh)/g)]
       // A chain is worth its own file only if it joins steps: marking day is one
       // prompt and two script runs, which is still a sequence nobody should have
@@ -110,7 +113,7 @@ test('the prompts that write prose point at the writing principles', () => {
 
   for (const kind of ['rtl', 'refactor', 'assignment', 'waveform'] as const) {
     for (const language of PROMPT_LANGUAGES) {
-      assert.ok(flat(read(`assets/prompt/${kind}/${language}.md`)).includes(heading),
+      assert.ok(flat(read(`assets/prompt/${COMPONENT_DIR}/${kind}/${language}.md`)).includes(heading),
         `${kind}/${language} points at "${heading}"`)
     }
   }

@@ -13,7 +13,7 @@ RTLGRAPH_FOLDER = <비워 두면 각 파일을 코드 옆에, 폴더 이름을 �
 
 ---
 
-**1. 회로도를 만든다.** `PROJECT_FOLDER/.prompt/rtlgraph/rtlgraph/korean.md` 를 읽고
+**1. 회로도를 만든다.** `PROJECT_FOLDER/.prompt/rtlgraph/components/rtlgraph/korean.md` 를 읽고
 그대로 해라. RTLGRAPH_FOLDER 는 위 값을 넘겨라.
 
 ⏸ **여기서 멈춘다.** 검증기 결과(`0 errors` 여야 한다)와, 어떤 파일을 열면 회로도가
@@ -28,7 +28,7 @@ PROJECT_FOLDER/.agent/rtlgraph/run-tb.sh --wave
 벤치가 하나도 없으면(`tb/given/` 과 `tb/mine/` 이 둘 다 비었으면) 여기서 멈추고 그렇게
 말해라 — 벤치를 새로 쓰는 것은 이 순서의 일이 아니다.
 
-**3. 왜 그렇게 도는지 쓴다.** `PROJECT_FOLDER/.prompt/rtlgraph/waveform/korean.md` 를
+**3. 왜 그렇게 도는지 쓴다.** `PROJECT_FOLDER/.prompt/rtlgraph/components/waveform/korean.md` 를
 읽고 그대로 해라. WAVEFORM 은 비워 둬라.
 
 **4. 보고한다.** 회로도 파일 경로, 벤치 판정, 그리고 **읽으면서 의심스러웠던 것 하나** —

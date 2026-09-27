@@ -87,6 +87,8 @@ export interface Words {
   showVariables: string
   showRest: string
   parameters: string
+  moments: string
+  help: string
   activity: string
   noChecks: string
   moved: (names: string) => string
@@ -185,6 +187,8 @@ const EN: Words = {
   showVariables: "show the bench's own variables — counters and parameters, not hardware",
   showRest: 'show every signal — the view opens on the first screenful',
   parameters: 'parameters and bench variables',
+  moments: 'instants',
+  help: 'what this view can do — opens the guide beside it',
   activity: 'stretch',
   noChecks: 'this bench prints no times, so the stretches below are where the dump moved — not checks it claimed',
   moved: (names: string) => `moved: ${names}`,
@@ -283,6 +287,8 @@ const KO: Words = {
   showVariables: '벤치 변수 보이기 — 카운터와 파라미터, 하드웨어가 아니다',
   showRest: '신호 전부 보이기 — 처음에는 한 화면 분량만 나온다',
   parameters: '파라미터와 벤치 변수',
+  moments: '순간',
+  help: '이 화면으로 무엇을 할 수 있나 — 안내서를 옆에 연다',
   activity: '구간',
   noChecks: '이 벤치는 시각을 찍지 않는다 — 아래 구간은 덤프가 움직인 자리이지, 벤치가 주장한 체크가 아니다',
   moved: (names: string) => `움직인 것: ${names}`,

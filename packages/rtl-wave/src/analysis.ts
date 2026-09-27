@@ -22,13 +22,21 @@ export interface Analysis {
   sections: readonly AnalysisSection[]
 }
 
+/**
+ * A section is an `##`, and only an `##`.
+ *
+ * `###` is the writer's own aside inside a section — the part the view folds
+ * away — and cutting the file there turned every "더 보기" into a section of its
+ * own: six of them in the rail, named the same thing, belonging to no check,
+ * with the evidence they held missing from the section they came from.
+ */
 export function parseAnalysis(markdown: string): Analysis {
   const lines = markdown.split('\n')
   const sections: AnalysisSection[] = []
   const preamble: string[] = []
   let current: { heading: string; body: string[] } | undefined
   for (const line of lines) {
-    const heading = /^#{2,6}\s+(.*\S)\s*$/.exec(line)
+    const heading = /^##\s+(.*\S)\s*$/.exec(line)
     if (heading) {
       if (current) sections.push({ heading: current.heading, body: current.body.join('\n').trim() })
       current = { heading: heading[1], body: [] }

@@ -68,8 +68,15 @@ test('a report draws: the places on the left, a row per signal', { skip: !exists
   assert.ok(places.length >= 3, 'the rail lists somewhere to go')
   assert.equal(places[0].children[0].textContent, '깨어나는 과정', 'and it opens on how the design came up')
 
-  // every check that could be traced offers its line of the testbench
-  const sources = rail.find(child => child.attributes.get('class') === 'source')
+  // The rail is a contact sheet: a title, a time, and how many instants — the
+  // detail is one click away, in the panel.
+  const card = places[1]
+  assert.equal(card.find(n => n.attributes.get('class') === 'source'), undefined, 'no code button on a thumbnail')
+  assert.ok(card.findAll(n => n.attributes.get('class')?.startsWith('tag') === true).length >= 1, 'but it says what is in it')
+  card.dispatch('click', {})
+  const panel = view.byId('wave-why')!
+  assert.equal(panel.hidden, false, 'clicking a place opens it')
+  const sources = panel.find(child => child.attributes.get('class') === 'source')
   assert.match(sources?.textContent ?? '', /tb_uart_corner\.v:\d+/)
 
   const labels = view.byId('wave-labels')!
@@ -134,13 +141,13 @@ test('the badges that mark instants never sit on top of one another', { skip: !e
   }
 
   // pointing at a badge is the other way in: the plot stays wordless and the
-  // entry that names it lights up in the rail
+  // entry that names it lights up in the panel
   badges[0].dispatch('mouseenter', {})
   const after = view.byId('wave-plot')!
   assert.equal(after.findAll(n => n.attributes.get('class')?.includes('wave-moment-label') === true).length, 0,
     'no words appear over the traces')
   assert.equal(after.findAll(n => n.attributes.get('class') === 'wave-badge hot').length, 1, 'the badge itself lights')
-  assert.ok(view.byId('wave-rail')!.findAll(n => n.attributes.get('class') === 'moment hot').length === 1,
+  assert.ok(view.byId('wave-why')!.findAll(n => n.attributes.get('class') === 'moment hot').length === 1,
     'and so does the line that spells it out')
 })
 
@@ -153,7 +160,9 @@ test('pointing at a moment, or at a signal, lights up what it refers to', { skip
 
   const hotLines = () => view.byId('wave-plot')!.findAll(n => n.attributes.get('class') === 'wave-moment hot').length
   // `.moments` is the row that holds them; the pills themselves are buttons.
-  const pill = view.byId('wave-rail')!.find(n => n.tag === 'button' && n.attributes.get('class')?.startsWith('moment') === true)!
+  // the instants are in the panel now, which opens when a place is clicked
+  view.byId('wave-rail')!.children.filter(c => c.attributes.get('class')?.includes('wave-place'))[0].dispatch('click', {})
+  const pill = view.byId('wave-why')!.find(n => n.tag === 'button' && n.attributes.get('class')?.startsWith('moment') === true)!
   assert.equal(hotLines(), 0, 'nothing is lit before the hand arrives')
   pill.dispatch('mouseenter', {})
   assert.equal(hotLines(), 1, 'the instant the pill names is lit')
@@ -207,17 +216,18 @@ test('what an agent wrote about a check unfolds beside it, citations and all', {
   view.send(payload('tb_uart_corner'))
   const rail = () => view.byId('wave-rail')!
 
-  const fold = rail().find(n => n.attributes.get('class') === 'why')!
-  assert.match(fold.textContent, /왜 통과했나/)
+  const cards = () => rail().children.filter(c => c.attributes.get('class')?.includes('wave-place'))
+  const written = cards().find(card => card.findAll(n => n.attributes.get('class') === 'tag written').length > 0)!
+  assert.ok(written, 'a place with writing says so on its thumbnail')
   // It opens in the panel on the right, not under the card: a reader reads the
   // argument against the signals, and unfolding pushed those off the screen.
   const panel = () => view.byId('wave-why')!
-  const written = () => panel().findAll(n => n.attributes.get('class') === 'prose')
-  assert.equal(written().length, 0, 'nothing is open to begin with')
+  const prose = () => panel().findAll(n => n.attributes.get('class') === 'prose')
+  assert.equal(prose().length, 0, 'nothing is open to begin with')
   assert.equal(panel().hidden, true, 'and the panel takes no room until asked for')
 
-  fold.dispatch('click', {})
-  assert.equal(written().length, 1, 'and only the one that was asked for')
+  written.dispatch('click', {})
+  assert.equal(prose().length, 1, 'and only the one that was asked for')
   assert.equal(panel().hidden, false)
   assert.equal(rail().findAll(n => n.attributes.get('class') === 'prose').length, 0,
     'the list of places keeps its place')
@@ -275,7 +285,7 @@ test('the three fields read as fields, and the aside folds', { skip: !existsSync
       + '### 더 보기\n레지스터마다 어디서 정의되는지.',
   })
   view.send(sent)
-  view.byId('wave-rail')!.find(n => n.attributes.get('class') === 'why')!.dispatch('click', {})
+  view.byId('wave-rail')!.children.filter(c => c.attributes.get('class')?.includes('wave-place'))[0].dispatch('click', {})
   const panel = view.byId('wave-why')!
 
   const fields = panel.findAll(n => n.attributes.get('class') === 'field-name').map(n => n.textContent)
@@ -297,7 +307,7 @@ test('a table in the writing is drawn as a table', { skip: !existsSync(BUNDLE) &
     explain: '앞말\n\n| 레지스터 | 정의하는 줄 |\n|---|---|\n| `has_byte` | `uart_receiver.v:120` |\n| `rx_shift` | `uart_receiver.v:111` |\n\n뒷말',
   })
   view.send(sent)
-  view.byId('wave-rail')!.find(n => n.attributes.get('class') === 'why')!.dispatch('click', {})
+  view.byId('wave-rail')!.children.filter(c => c.attributes.get('class')?.includes('wave-place'))[0].dispatch('click', {})
 
   const table = view.byId('wave-why')!.find(n => n.tag === 'table')
   assert.ok(table, 'the rows are a table, not a paragraph of pipes')
@@ -315,8 +325,13 @@ test('a check with nothing written offers to ask, one check at a time', { skip: 
   const view = await webview()
   // as a project looks before anyone has written a word about the run
   view.send(payload('tb_uart_loop', false))
-  const asks = view.byId('wave-rail')!.findAll(n => n.attributes.get('class') === 'ask')
-  assert.ok(asks.length >= 3, 'every place without writing offers it')
+  const cards = view.byId('wave-rail')!.children.filter(c => c.attributes.get('class')?.includes('wave-place'))
+  assert.ok(cards.every(card => card.findAll(n => n.attributes.get('class') === 'tag unwritten').length === 1),
+    'every thumbnail says nobody has written about it')
+  // …and opening one offers to ask, for that check alone
+  cards[0].dispatch('click', {})
+  const asks = view.byId('wave-why')!.findAll(n => n.attributes.get('class') === 'ask')
+  assert.equal(asks.length, 1, 'the panel offers it')
   asks[0].dispatch('click', {})
   const posted = view.posted.at(-1) as { type: string; id: string }
   assert.equal(posted.type, 'askAnalysis')
@@ -329,13 +344,22 @@ test('a check with nothing written offers to ask, one check at a time', { skip: 
 test('a card says how the stretch was driven, not only what came of it', { skip: !existsSync(BUNDLE) && 'run `npm run build -w rtlgraph`' }, async t => {
   if (!existsSync(join(DEMO, 'tb_uart_corner.waveform.json'))) return t.skip('demo/uart-p01 is not here')
   const view = await webview()
-  view.send(payload('tb_uart_corner'))
+  const message = payload('tb_uart_corner')
+  view.send(message)
   const rail = view.byId('wave-rail')!
-  const names = rail.findAll(n => n.attributes.get('class') === 'part-name').map(n => n.textContent)
-  assert.ok(names.includes('방식'), `the card shows how it was driven — got ${names.join(', ')}`)
+  // the thumbnail carries none of this; opening the place does
+  assert.equal(rail.findAll(n => n.attributes.get('class') === 'part-name').length, 0)
+  const at = message.view.markers.findIndex(m => (m.stimulus ?? []).length > 0)
+  assert.ok(at >= 0, 'this report has a check whose driving statements were found')
+  view.byId('wave-rail')!.children
+    .filter(c => c.attributes.get('class')?.includes('wave-place'))[at].dispatch('click', {})
+  const panel = view.byId('wave-why')!
+  const names = panel.findAll(n => n.attributes.get('class') === 'part-name').map(n => n.textContent)
+  assert.ok(names.includes('방식'), `the panel shows how it was driven — got ${names.join(', ')}`)
   assert.ok(names.includes('결과'))
-  const steps = rail.findAll(n => n.attributes.get('class') === 'step').map(n => n.textContent)
-  assert.ok(steps.some(step => step.includes('frame(')), `the driving statements are there — got ${steps.slice(0, 4).join(' | ')}`)
+  const steps = panel.findAll(n => n.attributes.get('class') === 'step').map(n => n.textContent)
+  assert.ok(steps.length > 0 && steps.some(step => /\w+\(|=/.test(step)),
+    `the driving statements are there — got ${steps.slice(0, 4).join(' | ')}`)
 })
 
 // Dragging pans. If the browser is allowed to treat it as a text selection, the
@@ -394,4 +418,87 @@ test('the signals past the first screenful are a button away too', { skip: !exis
   for (const name of rest) assert.ok(named().includes(name), `${name} is reachable`)
   click('⋯')
   assert.equal(rest.some(name => named().includes(name)), false, 'and the screenful comes back')
+})
+
+// The analysis is written in the same small syntax NodeGraph uses — lists,
+// tables, `**bold**`, and KaTeX — because the same person writes both and
+// should not have to remember which tool takes which.
+test('the panel renders what an analysis is written in: lists, bold, code, math', { skip: !existsSync(BUNDLE) && 'run `npm run build -w rtlgraph`' }, async t => {
+  if (!existsSync(join(DEMO, 'tb_uart_corner.waveform.json'))) return t.skip('demo/uart-p01 is not here')
+  const view = await webview()
+  const sent = payload('tb_uart_corner')
+  Object.assign(sent.view.markers.find(m => m.id === 'init')!, {
+    explain: [
+      '결과 — **모두 정의됐다**, `serial_in_d` 를 빼고.',
+      '',
+      '- 첫째, 리셋이 40 ns 에 풀렸다 (`uart_receiver.v:84`).',
+      '- 둘째, 한 심볼은 $$\\frac{125\\,\\text{MHz}}{115200} = 1085$$ 클럭이다.',
+      '',
+      '한가운데는 $542$ 클럭이다.',
+    ].join('\n'),
+  })
+  view.send(sent)
+  view.byId('wave-rail')!.children.filter(c => c.attributes.get('class')?.includes('wave-place'))[0].dispatch('click', {})
+  const panel = view.byId('wave-why')!
+
+  const items = panel.findAll(n => n.tag === 'li')
+  assert.equal(items.length, 2, 'a run of bullets is a list, not one long sentence')
+  // the citation inside a bullet is still the way into the code
+  assert.ok(items[0].findAll(n => n.attributes.get('class') === 'cite').length === 1)
+  assert.equal(panel.findAll(n => n.tag === 'strong').length, 1, '**bold** is bold')
+  assert.ok(panel.findAll(n => n.tag === 'code').length >= 1, '`code` is code, not stripped')
+  const math = panel.findAll(n => n.attributes.get('class')?.startsWith('math') === true)
+  assert.equal(math.length, 2, 'both the display formula and the inline one are rendered')
+  assert.ok(math.some(n => n.attributes.get('class') === 'math block'), 'and $$…$$ stands on its own line')
+})
+
+// Nobody is told what a toolbar of symbols does, so the last one says.
+test('the help button opens the guide, and right-click opens a signal', { skip: !existsSync(BUNDLE) && 'run `npm run build -w rtlgraph`' }, async t => {
+  if (!existsSync(join(DEMO, 'tb_uart_corner.waveform.json'))) return t.skip('demo/uart-p01 is not here')
+  const view = await webview()
+  view.send(payload('tb_uart_corner'))
+
+  const help = view.byId('toolbar')!.find(n => n.tag === 'button' && n.textContent === '?')!
+  assert.ok(help, 'the toolbar ends with a way to ask what it does')
+  help.dispatch('click', {})
+  assert.equal((view.posted.at(-1) as { type: string }).type, 'help')
+
+  // …and a signal's own way into the code is the right button, on the row
+  const rows = view.byId('wave-labels')!.children.filter(r => {
+    const kind = r.attributes.get('class') ?? ''
+    return kind.includes('wave-label') && !kind.includes('axis') && !kind.includes('group')
+  })
+  const row = rows.find(r => r.find(n => n.attributes.get('class')?.includes('to-code') === true))!
+  row.dispatch('contextmenu', { preventDefault: () => {} })
+  const asked = view.posted.at(-1) as { type: string; file: string; line: number }
+  assert.equal(asked.type, 'openCode')
+  assert.match(asked.file, /\.v$/)
+})
+
+// A check exists because the handout asked for something. The sentence is
+// quoted in the analysis; the page it came from should be one click, into the
+// same reader a schematic box opens.
+test('a page of the brief is a link, and a stray rule is not drawn', { skip: !existsSync(BUNDLE) && 'run `npm run build -w rtlgraph`' }, async t => {
+  if (!existsSync(join(DEMO, 'tb_uart_corner.waveform.json'))) return t.skip('demo/uart-p01 is not here')
+  const view = await webview()
+  const sent = payload('tb_uart_corner')
+  Object.assign(sent.view.markers.find(m => m.id === 'init')!, {
+    explain: '결과 — "data_out_ready : signal indicating that reception is possible"'
+      + ' (PDF_P01_UART_Controller.pdf p.6)\n\n---\n',
+  })
+  view.send(sent)
+  view.byId('wave-rail')!.children.filter(c => c.attributes.get('class')?.includes('wave-place'))[0].dispatch('click', {})
+  const panel = view.byId('wave-why')!
+
+  const brief = panel.find(n => n.attributes.get('class') === 'cite brief')!
+  assert.ok(brief, 'the handout is a link like any other citation')
+  assert.match(brief.textContent, /PDF_P01_UART_Controller\.pdf p\.6/)
+  brief.dispatch('click', {})
+  const asked = view.posted.at(-1) as { type: string; file: string; page: number; quote?: string }
+  assert.equal(asked.type, 'openBrief')
+  assert.equal(asked.page, 6)
+  assert.match(asked.quote ?? '', /reception is possible/, 'and it carries the sentence, to highlight it')
+
+  // the `---` the writer put between sections is a separator, not a dash to draw
+  assert.equal(panel.findAll(n => n.textContent.trim() === '---').length, 0)
 })

@@ -70,6 +70,11 @@ Follow the eight principles in **"Writing a reader can follow"** in
   `data_out_ready`" can be, so it does.
 - **One name per thing, the code's own.** `bit_counter` is `bit_counter`
   everywhere — never "the counter" in the next sentence.
+- **Mark little.** Spelling a name as the code does is not the same as wrapping
+  it in backticks. Backticks on the first mention in a section and where the
+  sentence turns on it; bold on the one phrase carrying the point. Two or three
+  citations to a field — a list of five belongs under `### More`. A paragraph
+  with forty marked words has no emphasis left.
 - **Make a shortening pass when you think you are done.** Cut run-ups, cut what an
   earlier section already said, keep one example rather than three. But **move
   evidence under `### More` rather than deleting it.**
@@ -94,6 +99,13 @@ that made it so**.
 Side observations, follow-up questions, tables. This part folds away, so it can
 run long.
 ```
+
+**What you may write with** is what NodeGraph takes: `- ` lists, markdown
+tables, `**bold**`, `` `code` ``, and KaTeX (`$...$`, and `$$...$$` on its own
+line). Write formulas as KaTeX rather than Unicode symbols (`×`, `≥`, `α`). The
+view draws those five and nothing else — any other markdown shows as the
+characters you typed. Arithmetic a reader has to trust reads better as a
+formula: `$$\frac{125\,\text{MHz}}{115200} = 1085$$`.
 
 One or two sentences per field. Anything longer belongs under `### More`, which
 the view shows folded — what is folded cannot get in the way of the verdict. An

@@ -48,7 +48,7 @@ export async function run(): Promise<void> {
   for (const file of expected) assert.ok(existsSync(join(folder, file)), file)
   assert.match(readFileSync(join(folder, ENVIRONMENT_FILE), 'utf8'), /^# RTLGraph — Agent Environment Report/)
   assert.equal(ENVIRONMENT_FILE, '.agent/rtlgraph/ENVIRONMENT.md') // a folder of our own, not a name others also write
-  const prompts = expected.filter(f => /^\.prompt\/rtlgraph\/[a-z]+\//.test(f)).length
+  const prompts = expected.filter(f => /^\.prompt\/rtlgraph\/(components|recipe)\//.test(f)).length
   const guides = expected.filter(f => /^\.prompt\/rtlgraph\/README/.test(f)).length
   const primitives = expected.filter(f => f.startsWith('.base/') && f.endsWith('.v')).length
   // The primitives are copied, not referenced: a project that instantiates DFF
@@ -58,7 +58,7 @@ export async function run(): Promise<void> {
     'the copied library is the one the demos use')
   log(`Copy Agent Spec wrote ${expected.length} files: spec, validator, environment report, `
     + `${prompts} prompts and ${guides} guides to choosing one, ${primitives} primitives in .base/`)
-  const assignment = readFileSync(join(folder, '.prompt/rtlgraph/assignment/korean.md'), 'utf8')
+  const assignment = readFileSync(join(folder, '.prompt/rtlgraph/components/assignment/korean.md'), 'utf8')
   assert.match(assignment, /Follow the code/)
 
   // The report used to be .agent/ENVIRONMENT.md, which NodeGraph writes too.
@@ -79,10 +79,10 @@ export async function run(): Promise<void> {
   // leaves a project that no longer elaborates.
   const adapted = readFileSync(join(folder, '.base/DFF.v'), 'utf8').replace(/\bBW\b/g, 'BITWIDTH')
   writeFileSync(join(folder, '.base/DFF.v'), adapted)
-  writeFileSync(join(folder, '.prompt/rtlgraph/assignment/korean.md'), 'edited by hand\n')
+  writeFileSync(join(folder, '.prompt/rtlgraph/components/assignment/korean.md'), 'edited by hand\n')
   await vscode.commands.executeCommand<string[]>('rtlgraph.copyAgentSpec', vscode.Uri.file(folder))
   assert.equal(readFileSync(join(folder, '.base/DFF.v'), 'utf8'), adapted, '.base/DFF.v kept as the project adapted it')
-  assert.match(readFileSync(join(folder, '.prompt/rtlgraph/assignment/korean.md'), 'utf8'), /Follow the code/, 'prompts are refreshed')
+  assert.match(readFileSync(join(folder, '.prompt/rtlgraph/components/assignment/korean.md'), 'utf8'), /Follow the code/, 'prompts are refreshed')
   log('a second Copy Agent Spec refreshes the prompts and leaves the adapted .base/DFF.v alone')
 
   // The runner ships with them, and it has to be executable to be of any use.
@@ -97,9 +97,9 @@ export async function run(): Promise<void> {
   // Korean, because that is the only one copied here — the picker offers what is
   // in the folder, so a reader set to one language never has to pass the other by.
   const copied = await vscode.commands.executeCommand<string>('rtlgraph.copyPromptPath', { kind: 'assignment', folder })
-  assert.equal(copied, join(folder, PROMPT_DIR, 'assignment/korean.md'))
+  assert.equal(copied, join(folder, PROMPT_DIR, 'components/assignment/korean.md'))
   assert.equal(await vscode.env.clipboard.readText(), copied)
-  log(`Copy Prompt Path puts ${PROMPT_DIR}/assignment/korean.md on the clipboard`)
+  log(`Copy Prompt Path puts ${PROMPT_DIR}/components/assignment/korean.md on the clipboard`)
 
   // The waveform view: a report opens as a drawing, and the drawing knows the
   // places worth going to — how it came up, then a marker per check.
@@ -119,8 +119,14 @@ export async function run(): Promise<void> {
     assert.equal((tab?.input as { viewType?: string })?.viewType?.endsWith('rtlgraph.waveform'), true,
       'and it opens as the waveform view rather than as JSON')
     // RTLGRAPH_SHOT=<file>: photograph the view rather than describing it.
+    // RTLGRAPH_SHOT_PLACE=<n> clicks the nth place first, so the shot shows the
+    // panel a reader sees rather than the list on its own.
     if (process.env.RTLGRAPH_SHOT) {
-      await sleep(2500)
+      await sleep(2000)
+      if (process.env.RTLGRAPH_SHOT_PLACE) {
+        await vscode.commands.executeCommand('rtlgraph._waveOpenPlace', Number(process.env.RTLGRAPH_SHOT_PLACE))
+        await sleep(1200)
+      }
       spawnSync('import', ['-window', 'root', process.env.RTLGRAPH_SHOT])
     }
     await vscode.commands.executeCommand('workbench.action.closeActiveEditor')

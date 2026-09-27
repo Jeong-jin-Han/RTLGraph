@@ -20,7 +20,7 @@ The whole way through a handed-out assignment, in order. Work through the steps
 ---
 
 **1. Draw it, and write our benches.** Read
-`PROJECT_FOLDER/.prompt/rtlgraph/assignment/english.md` and do what it says,
+`PROJECT_FOLDER/.prompt/rtlgraph/components/assignment/english.md` and do what it says,
 passing RTLGRAPH_FOLDER, SPEC_DOCUMENT and GIVEN_TB through. This is what
 creates `tb/given/` (empty, waiting) and `tb/mine/`.
 
@@ -41,7 +41,7 @@ PROJECT_FOLDER/.agent/rtlgraph/run-tb.sh --wave
 ```
 
 **4. Write why it passed.** Read
-`PROJECT_FOLDER/.prompt/rtlgraph/waveform/english.md` and do what it says, with
+`PROJECT_FOLDER/.prompt/rtlgraph/components/waveform/english.md` and do what it says, with
 WAVEFORM empty so it covers every report you just made.
 
 **5. Look at the submission, do not build it.**

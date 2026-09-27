@@ -2,10 +2,22 @@
 
 *(한국어: `README.korean.md`)*
 
-These six folders are ready-made instructions for an AI agent. You do not edit
-them and you do not paste their contents: you paste **their path**, plus the path
-of the project you want worked on. Which one you paste decides what happens —
-that is the whole interface.
+These are ready-made instructions for an AI agent. You do not edit them and you
+do not paste their contents: you paste **their path**, plus the path of the
+project you want worked on. Which one you paste decides what happens — that is
+the whole interface.
+
+Two shelves:
+
+| | | |
+|---|---|---|
+| **`components/`** | six prompts, one job each | `spec` `rtl` `refactor` `rtlgraph` `assignment` `waveform` |
+| **`recipe/`** | three that run several of them **in order** | `assignment` `marking-day` `read-code` |
+
+Reach into `components/` when you know which job you want; reach for a `recipe/`
+when the question is what to do today, in what order — a chain runs the prompts
+and the scripts in turn and stops where a person has to look (right after a
+verdict, before any code changes).
 
 ```
 RTLGraph: Copy Prompt Path        ← pick a branch; the path lands on the clipboard
@@ -14,7 +26,7 @@ RTLGraph: Copy Prompt Path        ← pick a branch; the path lands on the clipb
 then, in your agent (Claude Code, Codex, Cursor…):
 
 ```
-/home/me/work/uart/.prompt/rtlgraph/assignment/korean.md 를 읽고 그대로 해줘.
+/home/me/work/uart/.prompt/rtlgraph/components/assignment/korean.md 를 읽고 그대로 해줘.
 PROJECT_FOLDER = /home/me/work/uart
 ```
 

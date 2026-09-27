@@ -32,4 +32,4 @@ identifiers that the code can use as they are.
 
 When done, tell me the document path, a summary of the component structure, and
 what is in "Decisions" and "Open questions". If the document looks right, the
-next step is .prompt/rtlgraph/rtl/english.md.
+next step is .prompt/rtlgraph/components/rtl/english.md.

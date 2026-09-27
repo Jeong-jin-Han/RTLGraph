@@ -14,7 +14,9 @@
     "package": "npm run build -w rtlgraph --silent && cp README.md LICENSE CHANGELOG.md packages/vscode-ext/ && mkdir -p releases && cd packages/vscode-ext && npx --yes @vscode/vsce package --no-dependencies --baseContentUrl https://github.com/Jeong-jin-Han/RTLGraph/blob/main --baseImagesUrl https://raw.githubusercontent.com/Jeong-jin-Han/RTLGraph/main --out ../../releases/"
   },
   "devDependencies": {
+    "@types/katex": "^0.16.8",
     "@types/node": "^22.20.2",
+    "katex": "^0.16.11",
     "typescript": "~5.9.3"
   },
   "engines": {

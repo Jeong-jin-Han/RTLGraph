@@ -28,4 +28,4 @@ source.spec 으로 기록되고, 네가 옮겨 적은 문장들이 상자가 인
 있게 해줘. 기술 용어는 처음 등장할 때 영어 표현을 괄호로 병기해.
 
 다 되면 만든 문서 경로, 컴포넌트 구성 요약, 그리고 "Decisions"(정한 것)과 "Open questions"(확인이 필요한 것) 을
-알려줘. 이 문서가 마음에 들면 다음 단계로 .prompt/rtlgraph/rtl/korean.md 를 쓸 거야.
+알려줘. 이 문서가 마음에 들면 다음 단계로 .prompt/rtlgraph/components/rtl/korean.md 를 쓸 거야.

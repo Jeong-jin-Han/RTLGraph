@@ -36,31 +36,38 @@ const PROMPT_ABOUT: Record<string, string> = {
   rtlgraph: 'existing RTL → RTLGraph, your own project',
   assignment: 'existing RTL → RTLGraph, code that may not be touched',
   // The chains run several of the above in order, stopping where you have to look.
-  'run-assignment': 'a whole assignment: draw, test, explain, check the submission',
-  'run-marking-day': 'the marking bench arrived: run it, dump it, explain it',
-  'run-read-code': "someone else's RTL: draw it, run it, explain it",
+  'recipe/assignment': 'a whole assignment: draw, test, explain, check the submission',
+  'recipe/marking-day': 'the marking bench arrived: run it, dump it, explain it',
+  'recipe/read-code': "someone else's RTL: draw it, run it, explain it",
 }
 
 async function promptsIn(folder: vscode.Uri): Promise<{ label: string; description: string; uri: vscode.Uri }[]> {
   const root = vscode.Uri.joinPath(folder, PROMPT_DIR)
-  let kinds: [string, vscode.FileType][] = []
   try {
-    kinds = await vscode.workspace.fs.readDirectory(root)
+    await vscode.workspace.fs.stat(root)
   } catch {
     return []
   }
   const out: { label: string; description: string; uri: vscode.Uri }[] = []
-  for (const [kind, type] of kinds) {
-    if (type !== vscode.FileType.Directory) continue
-    for (const [file, kindOfFile] of await vscode.workspace.fs.readDirectory(vscode.Uri.joinPath(root, kind))) {
-      if (kindOfFile !== vscode.FileType.File || !file.endsWith('.md')) continue
+  // Two shelves deep: `components/<kind>/<language>.md` is one job, and
+  // `recipe/<name>/<language>.md` runs several of them in order.
+  const walk = async (where: vscode.Uri, prefix: string, depth: number): Promise<void> => {
+    for (const [name, type] of await vscode.workspace.fs.readDirectory(where)) {
+      const here = vscode.Uri.joinPath(where, name)
+      if (type === vscode.FileType.Directory) {
+        if (depth < 2) await walk(here, prefix ? `${prefix}/${name}` : name, depth + 1)
+        continue
+      }
+      if (type !== vscode.FileType.File || !name.endsWith('.md') || prefix === '') continue
+      const kind = prefix.replace(/^components\//, '')
       out.push({
-        label: `${kind}/${file.replace(/\.md$/, '')}`,
+        label: `${kind}/${name.replace(/\.md$/, '')}`,
         description: PROMPT_ABOUT[kind] ?? '',
-        uri: vscode.Uri.joinPath(root, kind, file),
+        uri: here,
       })
     }
   }
+  await walk(root, '', 0)
   return out.sort((a, b) => a.label.localeCompare(b.label))
 }
 
@@ -502,6 +509,11 @@ export function activate(context: vscode.ExtensionContext): void {
       return wanted
     }),
 
+    // Test-only: the end-to-end suite photographs the panel, which opens on a
+    // click the test machine cannot make. Not contributed to the palette.
+    vscode.commands.registerCommand('rtlgraph._waveOpenPlace', (at?: unknown) => {
+      WaveViewProvider.openPlace?.(typeof at === 'number' ? at : 0)
+    }),
     vscode.commands.registerCommand('rtlgraph.copyPromptPath', async (args?: unknown) => {
       const given = (typeof args === 'object' && args !== null ? args : { kind: args }) as { kind?: unknown; folder?: unknown }
       const kind = typeof given.kind === 'string' ? given.kind : undefined

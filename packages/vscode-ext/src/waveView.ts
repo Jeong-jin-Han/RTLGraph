@@ -13,6 +13,7 @@ import {
   type Lang, type WaveView,
 } from '@rtlgraph/wave'
 import { webviewHtml } from './webview/html.ts'
+import { openRequirement } from './specView.ts'
 
 interface StoredWindow {
   label: string
@@ -46,6 +47,15 @@ function sayable(lang: Lang): Record<string, string> {
 export class WaveViewProvider implements vscode.CustomTextEditorProvider {
   static readonly viewType = 'rtlgraph.waveform'
 
+  /**
+   * Opens a place in the view that is showing, for the end-to-end test.
+   *
+   * Every visual claim here is checked by photographing the real editor, and
+   * the panel only appears once a place is clicked — which needs a pointer the
+   * test machine does not have. Set by whichever view resolved last.
+   */
+  static openPlace: ((at: number) => void) | undefined
+
   static register(context: vscode.ExtensionContext): vscode.Disposable {
     return vscode.window.registerCustomEditorProvider(
       WaveViewProvider.viewType,
@@ -75,6 +85,9 @@ export class WaveViewProvider implements vscode.CustomTextEditorProvider {
       scriptUri: script.toString(),
       cspSource: panel.webview.cspSource,
       nonce: String(Math.random()).slice(2),
+      mathUri: panel.webview
+        .asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'dist/katex/katex.min.css'))
+        .toString(),
     })
 
     const lang = langOf(vscode.workspace.getConfiguration('rtlgraph').get<string>('language') === 'korean'
@@ -99,6 +112,7 @@ export class WaveViewProvider implements vscode.CustomTextEditorProvider {
         ? { type: 'wave', view, words: sayable(lang) }
         : { type: 'waveError', message: wordsIn(lang).noDump(document.uri.path.split('/').pop() ?? '') })
     }
+    WaveViewProvider.openPlace = at => void panel.webview.postMessage({ type: 'openPlace', at })
     const watcher = vscode.workspace.onDidSaveTextDocument(saved => {
       if (saved.uri.toString() === document.uri.toString()) void send()
     })
@@ -112,7 +126,9 @@ export class WaveViewProvider implements vscode.CustomTextEditorProvider {
       watcher.dispose()
       written.dispose()
     })
-    panel.webview.onDidReceiveMessage(async (message: { type?: string; file?: string; line?: number; id?: string }) => {
+    panel.webview.onDidReceiveMessage(async (message: {
+      type?: string; file?: string; line?: number; id?: string; page?: number; quote?: string
+    }) => {
       if (message?.type === 'ready') void send()
       // One check at a time: the view asks, this composes the request with that
       // stretch's measurements in it, and the clipboard carries it to whichever
@@ -135,6 +151,29 @@ export class WaveViewProvider implements vscode.CustomTextEditorProvider {
           lang === 'ko'
             ? `RTLGraph: "${place.label}" 하나에 대한 요청을 복사했다 — 에이전트에 붙여넣으면 ${analysisPath.split('/').pop()} 에 그 절만 덧붙는다.`
             : `RTLGraph: copied a request about "${place.label}" — paste it into your agent and it appends that one section to ${analysisPath.split('/').pop()}.`)
+      }
+      // The handout, at the page a check came from — the same viewer a
+      // schematic box opens, so the sentence is highlighted rather than found.
+      if (message?.type === 'openBrief' && typeof message.file === 'string') {
+        const target = await this.locate(document, message.file)
+        if (!target) {
+          void vscode.window.showWarningMessage(lang === 'ko'
+            ? `RTLGraph: ${message.file} 을(를) 찾지 못했다.`
+            : `RTLGraph: could not find ${message.file}.`)
+          return
+        }
+        await openRequirement(this.context, {
+          uri: target,
+          ...(typeof message.page === 'number' ? { page: message.page } : {}),
+          ...(typeof message.quote === 'string' ? { quote: message.quote } : {}),
+        }, undefined)
+      }
+      // What this view can do, for someone who was never told: the guide that
+      // ships with the extension, opened beside the drawing rather than in a
+      // browser. NodeGraph's `?` does the same with its own README.
+      if (message?.type === 'help') {
+        void vscode.commands.executeCommand('markdown.showPreviewToSide',
+          vscode.Uri.joinPath(this.context.extensionUri, 'README.md'))
       }
       // A check knows the line that printed it; opening it beside the drawing is
       // the whole point of recording it.

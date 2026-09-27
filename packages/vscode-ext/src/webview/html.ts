@@ -5,10 +5,16 @@ export interface WebviewHtmlOptions {
   scriptUri: string
   cspSource: string
   nonce: string
+  /** KaTeX's stylesheet, when this view renders formulas. */
+  mathUri?: string
 }
 
 const STYLE = `
 html, body { height: 100%; margin: 0; padding: 0; }
+/* The host's own stylesheet reaches into a webview — its dark-theme styling of
+   inline code landed as black boxes on this white panel — so the tags we use
+   are given their ground back explicitly. */
+code, kbd, samp, pre { background: none; color: inherit; }
 body { display: flex; flex-direction: column; background: #ffffff; color: #111827; font: 12px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif; }
 #toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 6px 10px; border-bottom: 1px solid #e5e7eb; background: #f9fafb; }
 #toolbar .label { color: #6b7280; margin-left: 8px; }
@@ -113,6 +119,10 @@ body.editing #stage g.wire { cursor: pointer; }
 #wave-rail .when { font-family: ui-monospace, monospace; color: #6b7280; }
 #wave-rail .note { color: #6b7280; }
 /* 목적 · 방식 · 결과 — the order a reader asks in. */
+#wave-rail .tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+#wave-rail .tag { font: 10px system-ui, sans-serif; padding: 0 5px; border-radius: 8px; background: #f3f4f6; color: #6b7280; }
+#wave-rail .tag.written { background: #ede9fe; color: #5b21b6; font-weight: 600; }
+#wave-rail .tag.unwritten { border: 1px dashed #d1d5db; background: none; color: #9ca3af; }
 #wave-rail .part { margin-top: 5px; }
 #wave-rail .part-name { font-size: 10px; letter-spacing: 0.04em; text-transform: uppercase; color: #9ca3af; }
 #wave-rail .step { font-family: ui-monospace, monospace; color: #374151; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -135,43 +145,88 @@ body.editing #stage g.wire { cursor: pointer; }
 /* The written explanation, beside the traces rather than on top of the list of
    them: the argument is read against the signals it is about. */
 #wave-why { width: 380px; flex: none; overflow: auto; border-left: 1px solid #e5e7eb; background: #ffffff; padding: 8px 10px; }
+/* Drag to decide how much room the argument gets. */
+#wave-why-grip { flex: none; width: 5px; cursor: col-resize; background: #eef2f7; border-right: 1px solid #e5e7eb; }
+#wave-why-grip:hover { background: #ddd6fe; }
+#wave-why .why-when { font-family: ui-monospace, monospace; color: #6b7280; margin-bottom: 6px; }
+#wave-why .part { margin-top: 8px; }
+#wave-why .part-name { font-size: 10px; letter-spacing: 0.04em; text-transform: uppercase; color: #6d28d9; font-weight: 600; margin-bottom: 2px; }
+#wave-why .part-name.written { margin-top: 10px; border-top: 1px solid #ede9fe; padding-top: 8px; }
+#wave-why .step { font-family: ui-monospace, monospace; color: #0f172a; white-space: pre-wrap; word-break: break-word; }
+#wave-why .note { color: #1f2937; }
+#wave-why .moments { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 8px; }
+#wave-why .moment { display: inline-flex; align-items: center; gap: 5px; font: 11px ui-monospace, monospace; padding: 1px 6px 1px 2px; border: 1px solid #e5e7eb; border-radius: 10px; background: #ffffff; color: #b45309; cursor: pointer; }
+#wave-why .moment .badge { display: inline-flex; align-items: center; justify-content: center; width: 15px; height: 15px; border-radius: 4px; background: #fef3c7; color: #92400e; font-weight: 600; }
+#wave-why .moment.hot .badge { background: #f59e0b; color: #ffffff; }
+#wave-why .moment:hover, #wave-why .moment.hot { border-color: #f59e0b; background: #fffbeb; }
+#wave-why .source { margin-top: 8px; font: 11px ui-monospace, monospace; padding: 1px 6px; border: 1px solid #dbeafe; border-radius: 4px; background: #eff6ff; color: #1d4ed8; cursor: pointer; }
+#wave-why .ask { margin-top: 10px; font: 11px system-ui, sans-serif; padding: 2px 8px; border: 1px dashed #d1d5db; border-radius: 4px; background: none; color: #9ca3af; cursor: pointer; }
+#wave-why .ask:hover { border-color: #f59e0b; border-style: solid; color: #b45309; background: #fffbeb; }
 #wave-why .why-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 6px; border-bottom: 1px solid #e5e7eb; padding-bottom: 6px; }
 #wave-why .why-title { flex: 1; font-weight: 700; color: #111827; }
 #wave-why .why-close { border: 0; background: none; font-size: 15px; line-height: 1; color: #6b7280; cursor: pointer; }
 #wave-why .why-close:hover { color: #111827; }
-#wave-why .prose { color: #1f2937; }
+#wave-why .prose { color: #111827; line-height: 1.6; }
 #wave-why .prose p { margin: 0 0 8px; }
 #wave-why .prose p:last-child { margin-bottom: 0; }
 /* A citation is the way back into the code, so it reads as a control: dark
    enough against the page to be seen, and not the blue everything else uses. */
-#wave-why .cite, #wave-rail .cite { font: 11px ui-monospace, monospace; padding: 0 4px; border: 1px solid #ddd6fe; border-radius: 3px; background: #f5f3ff; color: #5b21b6; font-weight: 600; cursor: pointer; }
-#wave-why .cite:hover, #wave-rail .cite:hover { background: #ede9fe; border-color: #a78bfa; color: #4c1d95; }
+/* A citation is a link in a sentence: coloured and underlined, not a button
+   with walls. Five of them in one clause were five boxes to read around. */
+#wave-why .cite, #wave-rail .cite { display: inline; white-space: nowrap; font: 11px ui-monospace, monospace; padding: 0; border: 0; background: none; color: #6d28d9; text-decoration: underline dotted #c4b5fd; text-underline-offset: 2px; cursor: pointer; }
+#wave-why .cite:hover, #wave-rail .cite:hover { color: #4c1d95; text-decoration-style: solid; }
+/* The handout, not the code: a different place to land, so a different colour. */
+#wave-why .cite.brief { color: #b45309; text-decoration-color: #fcd34d; font-family: system-ui, sans-serif; }
+#wave-why .cite.brief:hover { color: #92400e; }
 /* 목적 · 방식 · 결과 — the three fields every section is written in. */
-#wave-why .prose .field { margin: 0 0 4px; display: flex; gap: 6px; }
-#wave-why .prose .field-name { flex: none; width: 34px; font: 600 10px system-ui, sans-serif; letter-spacing: 0.03em; text-transform: uppercase; color: #6d28d9; padding-top: 3px; }
-#wave-why .prose .field-more { margin: 0 0 4px 40px; }
+/* Text, not columns: as a flex row every span and every citation became its own
+   column, and a sentence came out one word wide. */
+#wave-why .prose .field { margin: 0 0 8px; }
+#wave-why .prose .field-name { display: inline-block; margin-right: 6px; font: 600 10px system-ui, sans-serif; letter-spacing: 0.03em; text-transform: uppercase; color: #6d28d9; }
+#wave-why .prose .field-more { margin: 0 0 6px; }
 /* The writer's own aside: there, but not in the way of the verdict. */
 #wave-why .aside { margin: 6px 0; border-top: 1px solid #ede9fe; padding-top: 5px; }
 #wave-why .aside > summary { cursor: pointer; font: 600 11px system-ui, sans-serif; color: #5b21b6; }
+#wave-why .md-list { margin: 0 0 8px; padding-left: 18px; }
+#wave-why .md-list li { margin: 2px 0; }
+/* A name from the code is a word in the sentence, not a control. Boxed and
+   tinted, forty of them in a paragraph turned the text into a wall of chips
+   with no hierarchy left: everything emphasised is nothing emphasised. The
+   monospace face alone says it comes from the code. */
+#wave-why code { font-family: ui-monospace, monospace; font-size: 11.5px; color: #0f172a; background: none; border: 0; padding: 0; }
+#wave-why strong { font-weight: 700; color: #111827; }
+#wave-why .math.block { margin: 8px 0; overflow-x: auto; }
 #wave-why .md-table { border-collapse: collapse; width: 100%; margin: 0 0 8px; }
 #wave-why .md-table th, #wave-why .md-table td { border: 1px solid #e5e7eb; padding: 3px 6px; text-align: left; vertical-align: top; }
 #wave-why .md-table th { background: #f9fafb; font-weight: 600; color: #111827; }
 #wave-canvas { flex: 1; display: flex; min-width: 0; overflow: auto; }
 #wave-labels { width: 190px; flex: none; border-right: 1px solid #e5e7eb; background: #ffffff; }
-#wave-labels .wave-label { height: 26px; display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 0 8px; border-bottom: 1px solid #f3f4f6; font-family: ui-monospace, monospace; color: #374151; overflow: hidden; }
-#wave-labels .wave-label.axis { height: 22px; font-family: system-ui, sans-serif; color: #6b7280; border-bottom: 1px solid #e5e7eb; }
+/* A signal belongs to a module, and the eye should not have to work that out:
+   the rows are indented under their heading and share a tinted spine. */
+#wave-labels .wave-label { height: 26px; display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 0 8px 0 16px; border-bottom: 1px solid #f3f4f6; border-left: 3px solid #ede9fe; font-family: ui-monospace, monospace; color: #374151; overflow: hidden; }
+#wave-labels .wave-label:hover { background: #faf5ff; }
+#wave-labels .wave-label.axis { border-left: 0; height: 22px; font-family: system-ui, sans-serif; color: #6b7280; border-bottom: 1px solid #e5e7eb; }
 /* Which module the rows under it belong to — read off the line of RTL that
    drives each signal, so a name never has to be traced by hand. */
-#wave-labels .wave-label.group { font: 600 10px system-ui, sans-serif; letter-spacing: 0.04em; text-transform: uppercase; color: #4c1d95; background: #f5f3ff; border-bottom: 1px solid #ddd6fe; }
-#wave-labels .wave-label.bench .name { color: #1d4ed8; }
+#wave-labels .wave-label.group { padding-left: 8px; border-left: 3px solid #a78bfa; font: 600 10px system-ui, sans-serif; letter-spacing: 0.04em; text-transform: uppercase; color: #4c1d95; background: #f5f3ff; border-bottom: 1px solid #ddd6fe; }
+#wave-labels .wave-label.bench .name { color: #1e3a8a; }
 #wave-labels .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 /* A name that knows its line of RTL is a way in, so it looks like one. */
-#wave-labels button.name { font: inherit; padding: 0; border: 0; background: none; color: #1d4ed8; cursor: pointer; text-align: left; text-decoration: underline dotted #93c5fd; text-underline-offset: 2px; }
-#wave-labels button.name:hover { color: #1e40af; text-decoration-style: solid; }
+/* A name is read far more often than it is clicked, so it is dark first and
+   underlined only under the hand: the dotted line on every row at once was
+   noise, and the pale blue made the whole column hard to read. */
+#wave-labels button.name { font: inherit; padding: 0; border: 0; background: none; color: #1f2937; cursor: pointer; text-align: left; text-decoration: none; }
+#wave-labels button.name:hover { color: #4c1d95; text-decoration: underline; text-underline-offset: 2px; }
 #wave-labels .value { color: #b45309; }
 /* Signals that did not move in the chosen stretch: still drawn, but out of the way. */
-#wave-labels .wave-label.aside { opacity: 0.45; }
+/* Not part of what this check watches — set back, but still legible: at 0.45
+   the name could not be read at all, which is not "out of the way", it is gone. */
+#wave-labels .wave-label.aside { opacity: 0.72; }
+#wave-labels .wave-label.aside .name { color: #6b7280; }
 #wave-labels .wave-label.hot { background: #fffbeb; opacity: 1; }
+/* What a signal is, under the hand: where it lives, how wide, and the line of
+   RTL that drives it. A native title tooltip takes a second to appear and
+   cannot show the code line, and this is what a reader asks most often. */
 /* Dragging pans the view; without this the browser treats it as a text
    selection and sweeps up every value and tick label on the way. The rail keeps
    its selection — the writing there is meant to be copied. */
@@ -202,12 +257,14 @@ body.editing #stage g.wire { cursor: pointer; }
 [hidden] { display: none !important; }
 `
 
-export function webviewHtml({ scriptUri, cspSource, nonce }: WebviewHtmlOptions): string {
+export function webviewHtml({ scriptUri, cspSource, nonce, mathUri }: WebviewHtmlOptions): string {
   const csp = [
     "default-src 'none'",
     `img-src ${cspSource} data: blob:`, // blob: — PNG export draws the SVG through an <img>
-
-    `style-src 'nonce-${nonce}'`,
+    // KaTeX ships its own stylesheet and fonts; both are files under dist/, so
+    // they are allowed by source rather than by nonce.
+    `font-src ${cspSource}`,
+    `style-src 'nonce-${nonce}'${mathUri ? ` ${cspSource}` : ''}`,
     `script-src 'nonce-${nonce}'`,
   ].join('; ')
   return `<!DOCTYPE html>
@@ -217,6 +274,7 @@ export function webviewHtml({ scriptUri, cspSource, nonce }: WebviewHtmlOptions)
 <meta http-equiv="Content-Security-Policy" content="${csp}">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>RTLGraph</title>
+${mathUri ? `<link rel="stylesheet" href="${mathUri}">` : ''}
 <style nonce="${nonce}">${STYLE}</style>
 </head>
 <body>

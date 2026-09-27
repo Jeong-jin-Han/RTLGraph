@@ -7,7 +7,7 @@ REQUEST = <SPEC_DOC 가 없을 때만: 무엇을 만들지>
 PROJECT_FOLDER/.agent/rtlgraph/SPEC.md 와 PROJECT_FOLDER/.agent/rtlgraph/ENVIRONMENT.md
 파일은 이미 준비돼 있어 — 둘 다 끝까지 꼼꼼히 읽어줘. 그 중에서 "Workflow B — Spec →
 RTL" 을 따라서 **새 프로젝트의 RTL 을 처음부터** 만들어줘. (이미 있는 코드를 고치는
-경우라면 이 프롬프트가 아니라 .prompt/rtlgraph/refactor/korean.md 를 써야 해.)
+경우라면 이 프롬프트가 아니라 .prompt/rtlgraph/components/refactor/korean.md 를 써야 해.)
 
 SPEC_DOC 이 있으면 그 문서를 먼저 끝까지 읽고, 그 문서가 정한 포트·컴포넌트·제어 신호
 표를 그대로 따라줘. 문서와 다르게 만들어야 할 이유가 생기면 그 이유를 보고에 적어줘.
