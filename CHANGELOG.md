@@ -73,6 +73,27 @@ extension, so each line is something that broke once.
   `waveform/uart_receiver.v`, which does not exist, and the click did nothing at
   all — no editor, no error. The obvious places are tried in turn now, and a
   file that is genuinely not there is said out loud.
+- **The rail is a contact sheet, and the reading opens beside it.** A place had
+  eleven lines on it and there are a dozen places, so none of it could be
+  scanned: a card is now its title, its times, how many instants it holds and
+  whether anyone has written about it. Everything else — the statements that
+  drove the stretch, what the wires did, the instants, the argument — opens in a
+  panel **between the list and the traces**, where a reader goes place → what it
+  says → the waveform, with a grip to set its width. A fold inside it stays open
+  until the reader closes it, rather than closing itself on the next redraw.
+- **The writing renders as what it is written in**: `- ` lists, markdown tables,
+  `**bold**`, `` `code` `` and KaTeX (`$…$`, `$$…$$`), the same five NodeGraph
+  takes, because the same person writes for both. Forty boxed chips in a
+  paragraph is no emphasis at all, so a name from the code is monospace and
+  nothing more, and a citation is an underlined link rather than a button with
+  walls — the spec says this as principle 6b. A `---` between sections is a
+  separator, not a dash to draw.
+- **The brief is a link too.** `PDF_P01_UART_Controller.pdf p.6` in an analysis
+  opens the handout at that page, in the reader a schematic box opens, with the
+  quoted sentence highlighted.
+- **`?` in the toolbar** opens the guide beside the view, and **right-clicking a
+  signal** opens the line of RTL that drives it — the jump a schematic box
+  already had.
 - **A check with nothing written about it offers to ask.** The `?` on such a
   place copies a request about that one stretch — its measured instants, what
   each signal did, the line that printed it, and the rule that no number may be
@@ -139,6 +160,23 @@ extension, so each line is something that broke once.
   translates the simulator cannot be checked against it.
 - Our own benches now print `[%0t]` before each line, which is what lets a check
   and a stretch of waveform be put beside each other.
+
+### Prompts that know what comes next
+
+- **Two shelves.** `.prompt/rtlgraph/components/` holds the six prompts that each
+  do one job; `.prompt/rtlgraph/recipe/` holds three that run several of them in
+  order — `assignment`, `marking-day`, `read-code`. Which prompt to reach for
+  when was a thing you had to know, and the day the marking bench arrives is a
+  sequence: put it in `tb/given/`, run it, read the verdict, dump the waveform,
+  explain it. A sequence kept in someone's head is how a step gets skipped at
+  the worst moment.
+- A chain needs no code of its own — the picker lists whatever is in the folder
+  — and obeys three rules: a failed step stops it (a document explaining why a
+  run passed is worthless when it FAILed), **⏸ marks where a person has to look**
+  before it goes on, and the variables are filled once at the top. Driven for
+  real: a fresh agent ran `recipe/assignment` against a bare two-file skeleton
+  and came back with five benches, a schematic, `0 errors`, five waveforms, five
+  analyses and a submission list, with the handout untouched.
 
 ### Comments are part of the deliverable
 
