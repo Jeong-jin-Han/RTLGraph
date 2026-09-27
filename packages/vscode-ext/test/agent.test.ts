@@ -398,3 +398,35 @@ test('the report says whether NodeGraph is installed, and what that allows', () 
   assert.match(with_, /read its own spec first: `\/x\/\.agent\/NODEGRAPH_SPEC\.md`/)
   assert.match(with_, /- \*\*Explain the verification\*\* in a `\*\.nodegraph\.json`/)
 })
+
+// The handout and we are both allowed to call a bench `tb_uart.v`, and the
+// reports are named after the bench: the second run overwrote the first, and
+// since the marking one runs first, the report that survived was ours.
+test('two benches of the same name keep their own waveform reports', t => {
+  const script = join(ROOT, 'assets/agent/run-tb.sh')
+  const reader = join(ROOT, VALIDATOR_BUNDLE.replace('rtlgraph-validate', 'rtlgraph-wave'))
+  if (spawnSync('iverilog', ['-V']).status !== 0) return t.skip('iverilog not installed')
+  if (!existsSync(reader)) return t.skip('run `npm run build -w rtlgraph` first')
+
+  const dir = mkdtempSync(join(tmpdir(), 'rtlgraph-twin-'))
+  const demo = join(ROOT, '../../demo/hw')
+  for (const file of ['hw_top.v', 'counter.v']) writeFileSync(join(dir, file), readFileSync(join(demo, file)))
+  mkdirSync(join(dir, 'tb/given'), { recursive: true })
+  mkdirSync(join(dir, 'tb/mine'), { recursive: true })
+  for (const where of ['tb/given', 'tb/mine']) {
+    writeFileSync(join(dir, where, 'tb_hw.v'), readFileSync(join(demo, 'tb_hw.v')))
+  }
+  // Run it the way it ships — from the project's own .agent/rtlgraph — since
+  // that is how it finds wave.mjs beside itself.
+  mkdirSync(join(dir, '.agent/rtlgraph'), { recursive: true })
+  writeFileSync(join(dir, '.agent/rtlgraph/wave.mjs'), readFileSync(reader))
+  writeFileSync(join(dir, '.agent/rtlgraph/run-tb.sh'), readFileSync(script))
+
+  const run = spawnSync('bash', [join(dir, '.agent/rtlgraph/run-tb.sh'), '--project', dir, '--wave'], { encoding: 'utf8' })
+  assert.equal(run.status, 0, run.stdout)
+  for (const name of ['given-tb_hw', 'mine-tb_hw']) {
+    assert.ok(existsSync(join(dir, `waveform/${name}.waveform.json`)), `${name} kept its own report`)
+  }
+  // …and a name used by only one folder is left as it is
+  assert.equal(existsSync(join(dir, 'waveform/tb_hw.waveform.json')), false)
+})

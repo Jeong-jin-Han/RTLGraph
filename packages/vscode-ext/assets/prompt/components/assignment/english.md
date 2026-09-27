@@ -7,7 +7,12 @@ GIVEN_TB = <leave empty, or the path of the testbench that came with the assignm
 This is an assignment: the skeleton was handed out and must stay exactly as it
 is. Do not modify, move, rename or reformat any .v/.sv file, do not change a
 single signal, module or port name, and do not create folders for the code.
-Everything you write is RTLGraph JSON, and nothing else changes.
+
+**There are exactly two places you write Verilog**: the bodies the skeleton left
+empty for you (the ones marked `// Write your code from here` or similar), which
+you fill and comment around, and the testbenches in `tb/mine/`. Every other line
+stays as it arrived, the handout's own comments included. If the skeleton left no
+body to fill, the `.v` files are read-only.
 
 PROJECT_FOLDER/.agent/rtlgraph/SPEC.md and PROJECT_FOLDER/.agent/rtlgraph/ENVIRONMENT.md
 are already prepared for you — read both in full. Follow "Workflow A — RTL →
@@ -58,6 +63,14 @@ that they are there. Which folder a file is in says who owns it:
 tb/given/   what was handed out, byte for byte. Never edited, often still empty.
 tb/mine/    what you write. Additional evidence.
 ```
+
+**Name a bench for what it catches, and stay off the names a handout would
+use.** `tb_<design>_<case>.v` — `tb_uart_corner.v`, `tb_uart_loop.v`. The marking
+bench usually arrives as something generic (`tb_<design>.v`, `TB_<design>_test.v`),
+so leave those names free. File name and the module inside it match — a hyphen is
+not a Verilog identifier, which is why the case name does this work rather than a
+`mine-` prefix. The runner splits the waveform reports into `given-…`/`mine-…`
+when two benches do share a name, but that is a safety net, not the rule.
 
 Put every bench you write in `tb/mine/`. `tb/given/` is the user's to fill: the
 marking bench usually arrives after you are done, and they drop it in then. If

@@ -108,7 +108,7 @@ const EN: Words = {
   title: 'What the waveform says',
   measuredFrom: (vcd, simulator) => `Measured from \`${vcd}\`${simulator ? ` (${simulator})` : ''}.`,
   measuredOnly: 'Every number here was read off the dump. Nothing here explains *why* —',
-  askThePrompt: 'for that, hand this file and the code to `.prompt/rtlgraph/waveform/english.md`.',
+  askThePrompt: 'for that, hand this file and the code to `.prompt/rtlgraph/components/waveform/english.md`.',
   ranTo: (end, changes, signals) => `Simulated to **${end}** — ${changes} value changes across ${signals} signals.`,
 
   comingUp: 'Coming up',
@@ -208,7 +208,7 @@ const KO: Words = {
   title: '파형이 말하는 것',
   measuredFrom: (vcd, simulator) => `\`${vcd}\` 에서 측정했다${simulator ? ` (${simulator})` : ''}.`,
   measuredOnly: '여기 있는 숫자는 전부 덤프에서 읽은 것이다. **왜** 그런지는 여기 없다 —',
-  askThePrompt: '그건 이 파일과 코드를 `.prompt/rtlgraph/waveform/korean.md` 에 주면 된다.',
+  askThePrompt: '그건 이 파일과 코드를 `.prompt/rtlgraph/components/waveform/korean.md` 에 주면 된다.',
   ranTo: (end, changes, signals) => `**${end}** 까지 시뮬레이션 — 신호 ${signals}개에 값 변화 ${changes}회.`,
 
   comingUp: '깨어나는 과정',

@@ -1,7 +1,7 @@
 // The measurements, written out twice: once for a person
 // (`<bench>.waveform.md`) and once for an agent and the viewer
 // (`<bench>.waveform.json`). Neither says why anything happened —
-// that is what `.prompt/rtlgraph/waveform/*.md` asks an agent to add, against
+// that is what `.prompt/rtlgraph/components/waveform/*.md` asks an agent to add, against
 // the code, with line numbers.
 
 import { asValue, atTime, type BenchLine, type WaveFacts } from './facts.ts'

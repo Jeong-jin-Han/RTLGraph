@@ -1,6 +1,6 @@
 // Reading back what an agent wrote about a waveform.
 //
-// `.prompt/rtlgraph/waveform/*.md` asks for `<bench>.waveform-analysis.md`: one
+// `.prompt/rtlgraph/components/waveform/*.md` asks for `<bench>.waveform-analysis.md`: one
 // section on how the design comes up, then one per check, each explaining — from
 // the code, with line numbers — why the measurements look the way they do. That
 // file is written for a person, and stays a file a person can read; this reads

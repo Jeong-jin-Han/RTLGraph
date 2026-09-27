@@ -5,8 +5,9 @@
 > first.** Also read `.agent/rtlgraph/ENVIRONMENT.md` (which simulators and tools exist on this machine).
 > Validate what you write with `node .agent/rtlgraph/validate.mjs <top>.rtlgraph.json`.
 >
-> Beside this file, the same command wrote `.prompt/` (a ready-made prompt per kind of job, with a
-> `README.md` for the person choosing between them — not for you) and
+> Beside this file, the same command wrote `.prompt/` — ready-made prompts, one per kind of job
+> under `components/` and one per chain of them under `recipe/`, in whichever language
+> `rtlgraph.language` names, with a `README` for the person choosing between them (not for you) — and
 > `.base/` (the six primitives RTLGraph draws with symbols — `DFF INC ADD SUB MUX2 CMP_EQ` — with a
 > note of their own). `.base/` is there so a project that instantiates them can be simulated and
 > elaborated on its own; see "Primitive definitions" below.
@@ -149,11 +150,11 @@ and set `source.contractCheck` to `"pass"` (none), `"partial"` (only C3/C4/C5/C7
     `library-adapted` diagnostic. RTLGraph keeps drawing it as a register and keeps checking its
     ports; the width then comes from the nets, and it says so (`registry-params`).
 - **A `reg` node's `rstKind`, `rstPriority` and `rstValue`** describe the flip-flop it instantiates, so
-  for a registry primitive they come from that primitive's own definition (`base/DFF.v`: synchronous,
+  for a registry primitive they come from that primitive's own definition (`.base/DFF.v`: synchronous,
   `RST` beats `EN`, clears to 0). Reading them there is not invention.
 - **Code that does not compile** (missing `;`, trailing commas, undeclared names): still extract what
   the code clearly means, and add one `error` diagnostic with `code` `"syntax"`, `file` and `line` per
-  problem. If RTLGRAPH_ENVIRONMENT.md lists a compiler, run it to find them. Put this first in your final
+  problem. If `.agent/rtlgraph/ENVIRONMENT.md` lists a compiler, run it to find them. Put this first in your final
   report — the user's RTL is broken, not the graph.
 - A module that clearly plays the data-path or control-path role maps as in Step 4a even outside the
   contract folders (the folder problem is already a C3 diagnostic); no `inferred` diagnostic for it.
@@ -196,7 +197,11 @@ ids stay stable when the code is edited:
 `<scope>` is the instance path of the module containing the code; omit it (no leading dot) in the
 top. For each inferred node add `{ "severity": "info", "code": "inferred", "msg": "...", "node": id,
 "file": ..., "line": ... }`. An inferred registry node gets `params: { "BW": <width - 1> }` from the
-declared width of the net it drives (`[5:0]` → `{ "BW": 5 }`).
+declared width of the net it drives (`[5:0]` → `{ "BW": 5 }`) — **except where the result is
+narrower than what it works on**: a `CMP_EQ` drives one bit however wide its operands are, so take
+its `BW` from the operands (`cnt_q == LIMIT`, both `[3:0]` → `{ "BW": 3 }`). Taken from the output
+it would be `{ "BW": 0 }`, and the validator would then report a width error against the operands
+it was inferred from.
 
 ### Step 5 — Nets (`signals`)
 - One entry per electrical net. Key = the name in the component top; a net that exists only inside a
@@ -317,7 +322,7 @@ The codes you are most likely to see, and what each means:
 | `registry-params` | a registry primitive is given a parameter the registry does not know (a project's own `DFF #(.BITWIDTH(4))`), so its width is read from the nets instead |
 | `source-root`, `source-lib` | **none** of the files are where `source.root` (or `source.lib`) points — usually the JSON sits in a folder of its own and the root was left as `"."`; the message says what it should be |
 | `source-missing` | one named file is not there, while the rest are |
-| `registry-*`, `width` | a primitive's ports or widths do not match `base/` |
+| `registry-*`, `width` | a primitive's ports or widths do not match `.base/` |
 | `hierarchy-missing`, `hierarchy-ports` | a `ref` that resolves nowhere, or a box whose ports differ from its schematic |
 | `fsm-missing`, `fsm-state`, `fsm-when`, `fsm-style`… | the machine file is missing, or its states and transitions do not hold together |
 | `spec-quote`, `spec-file` | a `spec` with nothing quoted, or naming no document |
@@ -414,7 +419,7 @@ use Workflow C.
 6. **Check it**: compile and elaborate (`iverilog -g2005 -o /tmp/top.vvp <files>`, or `xvlog` then
    `xelab <top>`), lint drivers (`verilator --lint-only -Wall <files>`), simulate, and for a refactor
    `diff` against the baseline.
-7. **Shared primitives** stay in the shared library (`base/`). Move a project module there only when a
+7. **Shared primitives** stay in the shared library (`.base/`). Move a project module there only when a
    *different* project needs the same thing with the same meaning; repetition inside one project is
    not a reason.
 8. **Run Workflow A** to produce or refresh the root and the schematics, and validate the root.

@@ -45,8 +45,11 @@ mean. Same for the testbenches, and there especially for any constant that makes
 the test cheap: say what was shrunk and why it is still a fair test. Point first,
 one name per thing, each explanation where it is needed, and a shortening pass at
 the end. Keep contracts C1–C7 and confirm compile, elaboration and simulation with a
-simulator listed in RTLGRAPH_ENVIRONMENT.md. Put testbenches in tb/, driving inputs on the
-falling edge and checking on the rising edge.
+simulator listed in `.agent/rtlgraph/ENVIRONMENT.md`. Put testbenches in **`tb/mine/`** —
+`tb/given/` is left empty, for whatever someone else hands you later — driving
+inputs on the falling edge and checking on the rising edge. Name each for what it
+catches: `tb_<design>_<case>.v`, with the file name and the module inside it the
+same.
 
 Finally build the RTLGraph files with Workflow A: the root <top>.rtlgraph.json,
 one <name>.rtlgraph-schematic.json per component, and — where a component holds

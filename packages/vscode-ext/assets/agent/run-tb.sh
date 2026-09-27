@@ -39,7 +39,7 @@
 # it calls $dumpvars, and .agent/rtlgraph/wave.mjs turns the dump into
 # <project>/waveform/<bench>.waveform.{json,md} — measurements only, kept with
 # the project rather than among the tools. The "why did this pass?" reading is a
-# separate job, for .prompt/rtlgraph/waveform/*.md.
+# separate job, for .prompt/rtlgraph/components/waveform/*.md.
 #
 # Exit status is 0 only when every bench that ran reported PASS.
 
@@ -292,10 +292,25 @@ for bench in "${benches[@]}"; do
     # not inside the folder the tools were copied into.
     waves="$project/waveform"
     mkdir -p "$waves"
-    mv -f "$work/wave.vcd" "$waves/$(basename -- "${bench%.*}").vcd"
+    # Named after the bench — but the handout and we are allowed to use the same
+    # file name, and then the second run silently overwrote the first's report.
+    # The one that decides the mark ran first, so it was ours that survived.
+    stem=$(basename -- "${bench%.*}")
+    twin=0
+    for known in "${bench_names[@]}"; do
+      [ "$known" = "$(basename -- "$bench")" ] && twin=$((twin + 1))
+    done
+    # It appears once per folder it is in, plus once for this run's own list.
+    if [ "$twin" -gt 2 ]; then
+      case "$bench" in
+        */tb/given/*) stem="given-$stem" ;;
+        */tb/mine/*) stem="mine-$stem" ;;
+      esac
+    fi
+    mv -f "$work/wave.vcd" "$waves/$stem.vcd"
     reader="$here/wave.mjs"
     if [ -f "$reader" ] && command -v node >/dev/null 2>&1; then
-      node "$reader" "$waves/$(basename -- "${bench%.*}").vcd" --log "$log" --bench "$bench" \
+      node "$reader" "$waves/$stem.vcd" --log "$log" --bench "$bench" \
         --project "$project" $([ "$report" = 1 ] && printf -- --report) \
         ${RTLGRAPH_LANG:+--lang "$RTLGRAPH_LANG"} | sed 's/^/   /'
     else

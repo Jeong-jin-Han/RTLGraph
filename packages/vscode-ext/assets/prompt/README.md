@@ -147,7 +147,8 @@ first — they are where the misunderstandings are — then hand the result to `
 
 ## Two things that change what a prompt does
 
-**The language.** Every folder has `korean.md` and `english.md`. They ask for the
+**The language.** Only the one `rtlgraph.language` names is copied — set to
+english, each folder holds `english.md` alone; on `auto` both arrive. They ask for the
 same work; they differ in what language the agent writes `meaning`, labels and its
 report in. Names from the code are never translated either way.
 

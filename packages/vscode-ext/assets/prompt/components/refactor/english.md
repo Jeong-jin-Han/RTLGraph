@@ -26,7 +26,7 @@ C1–C7 it breaks, and what has to change to fit REQUEST in. Then do the work.
 - If MAIN_COMPONENT is filled in, use that name. If it is empty, choose one and
   tell me why.
 - Keep contracts C1–C7 and confirm compile, elaboration and simulation with a
-  simulator listed in RTLGRAPH_ENVIRONMENT.md.
+  simulator listed in `.agent/rtlgraph/ENVIRONMENT.md`.
 
 Finally rebuild the RTLGraph files with Workflow A: the root
 <top>.rtlgraph.json, one <name>.rtlgraph-schematic.json per component, and —

@@ -13,7 +13,7 @@
 // editor tabs say which is which — the same habit as *.rtlgraph.json.
 //
 // It measures; it never explains. The explanation is the job of
-// .prompt/rtlgraph/waveform/*.md, which reads the .waveform.json and the code.
+// .prompt/rtlgraph/components/waveform/*.md, which reads the .waveform.json and the code.
 
 import { readdirSync, readFileSync, statSync, writeFileSync, mkdirSync } from 'node:fs'
 import { basename, dirname, extname, join, relative, resolve } from 'node:path'
