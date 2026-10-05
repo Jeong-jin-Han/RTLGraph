@@ -41,7 +41,12 @@ PROJECT_FOLDER/.agent/rtlgraph/run-tb.sh --wave
 **4. 왜 통과했는지 쓴다.** `PROJECT_FOLDER/.prompt/rtlgraph/components/waveform/korean.md` 를 읽고
 그대로 해라. WAVEFORM 은 비워 둬서 방금 생긴 것 전부를 다뤄라.
 
-**5. 제출물을 확인만 한다.**
+**5. 이해한 것을 글로 남긴다.** `PROJECT_FOLDER/.prompt/rtlgraph/components/codespec/korean.md`
+를 읽고 그대로 해라. SPEC_FOLDER 는 `me`, SPEC_DOCUMENT 는 위에서 정한 핸드아웃. 채점 당일에
+설계를 다시 읽을 시간은 없고, 이 문서가 그 자리를 대신한다. 특히 **`[미정]` 목록** — 핸드아웃이
+말하지 않아 코드가 알아서 정한 것들 — 이 조교 벤치가 건드릴 수 있는 자리다.
+
+**6. 제출물을 확인만 한다.**
 
 ```
 PROJECT_FOLDER/.agent/rtlgraph/make-submission.sh --list
@@ -50,5 +55,5 @@ PROJECT_FOLDER/.agent/rtlgraph/make-submission.sh --list
 ⏸ **여기서 멈춘다.** 들어갈 파일 목록과, 설계가 elaborate 하는 데 필요해서 따라 들어간
 파일이 있으면 그것을 보고해라. **zip 은 내가 말할 때 만든다.**
 
-**6. 보고한다.** 만든 파일 경로, 벤치 판정, 검증기 줄, 그리고 조교 벤치가 오는 날 할
+**7. 보고한다.** 만든 파일 경로, 벤치 판정, 검증기 줄, 그리고 조교 벤치가 오는 날 할
 일이 `run-tb.sh given` 하나뿐인지 — 아니라면 무엇이 더 필요한지.

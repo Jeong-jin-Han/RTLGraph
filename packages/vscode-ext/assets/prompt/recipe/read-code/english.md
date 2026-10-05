@@ -22,7 +22,14 @@ what it says, passing RTLGRAPH_FOLDER through.
 to open to see the schematic, and **the one idea that makes this design work**,
 in a sentence.
 
-**2. Run the testbenches, if there are any.**
+**2. Write it down.** Read `PROJECT_FOLDER/.prompt/rtlgraph/components/codespec/english.md` and
+do what it says, with SPEC_FOLDER = `me`. The schematic showed the shape; this is where the
+behaviour gets written — six depths, every number with its provenance, and `[undecided]` on
+everything the brief never settled.
+
+⏸ **Stop here.** Report the most dangerous `[undecided]` and any number you could not measure.
+
+**3. Run the testbenches, if there are any.**
 
 ```
 PROJECT_FOLDER/.agent/rtlgraph/run-tb.sh --wave
@@ -31,9 +38,9 @@ PROJECT_FOLDER/.agent/rtlgraph/run-tb.sh --wave
 If both `tb/given/` and `tb/mine/` are empty, stop and say so — writing a bench
 from scratch is not part of this chain.
 
-**3. Write why it behaves that way.** Read
+**4. Write why it behaves that way.** Read
 `PROJECT_FOLDER/.prompt/rtlgraph/components/waveform/english.md` and do what it says, with
 WAVEFORM empty.
 
-**4. Report.** Where the schematic is, the verdicts, and **one thing that looked
+**5. Report.** Where the schematic is, where the specification is, the verdicts, and **one thing that looked
 wrong while you read** — not fixed, just which line and why.

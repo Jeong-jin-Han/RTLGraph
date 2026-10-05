@@ -44,7 +44,13 @@ PROJECT_FOLDER/.agent/rtlgraph/run-tb.sh --wave
 `PROJECT_FOLDER/.prompt/rtlgraph/components/waveform/english.md` and do what it says, with
 WAVEFORM empty so it covers every report you just made.
 
-**5. Look at the submission, do not build it.**
+**5. Write down what you understood.** Read
+`PROJECT_FOLDER/.prompt/rtlgraph/components/codespec/english.md` and do what it says, with
+SPEC_FOLDER = `me` and SPEC_DOCUMENT as set above. On marking day there is no time to read the
+design again and this document stands in for it — above all the **`[undecided]` list**, since
+what the brief never settled is exactly where a marking bench can land.
+
+**6. Look at the submission, do not build it.**
 
 ```
 PROJECT_FOLDER/.agent/rtlgraph/make-submission.sh --list
@@ -53,5 +59,5 @@ PROJECT_FOLDER/.agent/rtlgraph/make-submission.sh --list
 ⏸ **Stop here.** Report what would go in, and anything pulled in because the
 design does not elaborate without it. **The zip is made when I say so.**
 
-**6. Report.** The files you wrote, the verdicts, the validator line, and whether
+**7. Report.** The files you wrote, the verdicts, the validator line, and whether
 the day the marking bench arrives is one command — if not, what else it needs.

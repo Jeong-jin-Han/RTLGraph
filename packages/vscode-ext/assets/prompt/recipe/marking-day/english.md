@@ -47,5 +47,11 @@ WAVEFORM to the report you just made — **the marking one only**, which is the 
 that matters today; do not write ours as well, even if nobody has yet. Pass
 SPEC_DOCUMENT through.
 
-**5. Report.** Three things only: the verdict, one thing the waveform shows that
+**5. Update the specification, if there is one.** If `PROJECT_FOLDER/<SPEC_FOLDER>/spec/` already
+exists, amend **only the scenarios the marking bench touched**, in the format
+`components/codespec/english.md` sets: what rose to `measured`, what behaved differently than
+written, and any `[undecided]` this run exposed. If there is no such folder, **do not start one
+today** — say so and move on. Writing it is not a marking-day job.
+
+**6. Report.** Three things only: the verdict, one thing the waveform shows that
 no check asserts, and one thing that is still unproven.

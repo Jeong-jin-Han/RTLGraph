@@ -161,7 +161,7 @@ zip 으로 만든다(무엇이 들어가는지 먼저 보려면 `--list`).
 
 ```
 tb/given/ 에 벤치가 있나?  →  run-tb.sh given  →  ⏸ 판정  →  run-tb.sh given --wave
-                                                          →  components/waveform
+                          →  components/waveform  →  명세가 있으면 그 부분만 갱신
 ```
 
 메일이 왔을 때 집는 것. `tb/given/` 이 비어 있으면 **가짜 벤치를 만들지 않고** 멈추고,
@@ -174,6 +174,7 @@ tb/given/ 에 벤치가 있나?  →  run-tb.sh given  →  ⏸ 판정  →  run
 ```
 components/assignment  →  run-tb.sh mine  →  ⏸ 판정 + 검증기
                        →  run-tb.sh --wave  →  components/waveform
+                       →  components/codespec   (채점 당일 다시 읽을 시간은 없다)
                        →  make-submission.sh --list  →  ⏸ 무엇이 들어가는지
 ```
 
@@ -185,8 +186,8 @@ components/assignment  →  run-tb.sh mine  →  ⏸ 판정 + 검증기
 ### `recipe/read-code` — 남의 RTL 을 이해해야 한다
 
 ```
-components/rtlgraph  →  ⏸ 검증기 + 하나의 생각  →  run-tb.sh --wave
-                     →  components/waveform
+components/rtlgraph  →  ⏸ 검증기 + 하나의 생각  →  components/codespec  →  ⏸ 위험한 [미정]
+                     →  run-tb.sh --wave  →  components/waveform
 ```
 
 그림과 글만 쓴다 — `.v` 는 이 엮음 내내 읽기 전용이고, 이상해 보이는 것은 코드가 아니라

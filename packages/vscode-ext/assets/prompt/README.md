@@ -176,7 +176,7 @@ top are filled once and handed down to every prompt it opens.
 
 ```
 tb/given/ has a bench?  →  run-tb.sh given  →  ⏸ verdict  →  run-tb.sh given --wave
-                                                          →  components/waveform
+                        →  components/waveform  →  update the spec, if there is one
 ```
 
 The one to reach for when the email lands. It refuses to invent a bench if
@@ -190,6 +190,7 @@ can wait, that one cannot.
 ```
 components/assignment  →  run-tb.sh mine  →  ⏸ verdicts + validator
                        →  run-tb.sh --wave  →  components/waveform
+                       →  components/codespec   (no time to re-read the design on the day)
                        →  make-submission.sh --list  →  ⏸ what would go in
 ```
 
@@ -202,8 +203,8 @@ the design is wrong is your call, not the agent's) and before the submission.
 ### `recipe/read-code` — someone else's RTL, and you have to understand it
 
 ```
-components/rtlgraph  →  ⏸ validator + the one idea  →  run-tb.sh --wave
-                     →  components/waveform
+components/rtlgraph  →  ⏸ validator + the one idea  →  components/codespec  →  ⏸ the worst [undecided]
+                     →  run-tb.sh --wave  →  components/waveform
 ```
 
 Nothing is written but drawings and prose: the `.v` files are read-only for the
