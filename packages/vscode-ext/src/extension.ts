@@ -35,6 +35,7 @@ const PROMPT_ABOUT: Record<string, string> = {
   refactor: 'existing RTL → restructured RTL',
   rtlgraph: 'existing RTL → RTLGraph, your own project',
   assignment: 'existing RTL → RTLGraph, code that may not be touched',
+  codespec: 'existing RTL → a written specification, layered so you can stop early',
   // The chains run several of the above in order, stopping where you have to look.
   'recipe/assignment': 'a whole assignment: draw, test, explain, check the submission',
   'recipe/marking-day': 'the marking bench arrived: run it, dump it, explain it',

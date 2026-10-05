@@ -11,7 +11,7 @@ Two shelves:
 
 | | | |
 |---|---|---|
-| **`components/`** | six prompts, one job each | `spec` `rtl` `refactor` `rtlgraph` `assignment` `waveform` |
+| **`components/`** | seven prompts, one job each | `spec` `rtl` `refactor` `rtlgraph` `assignment` `waveform` `codespec` |
 | **`recipe/`** | three that run several of them **in order** | `assignment` `marking-day` `read-code` |
 
 Reach into `components/` when you know which job you want; reach for a `recipe/`
@@ -44,6 +44,7 @@ path, the brief's path if there is one — and leave the rest alone.
 | RTL that works but is a mess, and you are allowed to restructure it | **`refactor`** | the code rearranged into the three-layer layout, then drawn |
 | A specification, and no code yet | **`rtl`** | new RTL written to that spec, simulated, then drawn |
 | An idea, and not even a specification | **`spec`** | a `SPEC.md` you can read, argue with, and then feed to `rtl` |
+| Code and nothing else, and you have to write down **what it does** | **`codespec`** | a specification in six depths, benches that measured its numbers, and a working log |
 | A simulation that already ran, and you want to know **why** it behaved that way | **`waveform`** | `waveform-analysis.md`: the dump's numbers explained against the code, check by check |
 
 If two of them look right, the question to ask is **"may the code change?"** —
@@ -135,6 +136,20 @@ wrong for it to fail. The agent is told to take every number from the dump and
 cite code for every claim, so the analysis can be checked rather than believed.
 It is the answer to "do I really have to open Vivado and stare at this?" — for
 reading, usually not; for debugging a failure, still yes.
+
+### `codespec` — code → a specification you can read
+
+For code nobody documented, or a skeleton you were handed: **write down what it does**, one file
+per module under `<folder>/spec/`, without touching a line of the code. The point is that the
+**depths do not mix** — someone who reads section 1 (what it does, no signal names) and stops is
+left with less, never with something wrong, while section 6 has every signal, every use and every
+side effect.
+
+Numbers carry where they came from (`measured` / `derived` / `read`) and statements carry whose
+they are (`[PDF]` / `[code]` / `[undecided]`). **`[undecided]` is the valuable one** — the brief
+was silent and the code chose, which is the list of decisions nobody signed off. `sim/` holds
+benches that judge nothing and print cycle numbers, so "valid at cycle 10851" is a measurement
+rather than arithmetic.
 
 ### `spec` — an idea → `SPEC.md`
 

@@ -5,8 +5,9 @@
 // refactor → existing RTL is restructured and extended · rtlgraph → RTL becomes a
 // schematic · assignment → the same, for code that may not be touched at all, so
 // the files follow the folders the code already has · waveform → a simulation
-// that already ran becomes an explanation of why it behaved that way.
-export const PROMPT_KINDS = ['spec', 'rtl', 'refactor', 'rtlgraph', 'assignment', 'waveform'] as const
+// that already ran becomes an explanation of why it behaved that way · codespec
+// → code nobody documented becomes a specification a person can read fast.
+export const PROMPT_KINDS = ['spec', 'rtl', 'refactor', 'rtlgraph', 'assignment', 'waveform', 'codespec'] as const
 
 // …and the chains: one paste that walks an agent through several of the six in
 // order, stopping where a person has to look. The day the marking bench arrives

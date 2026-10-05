@@ -513,6 +513,77 @@ Write `<bench>.waveform-analysis.md` beside the report you read, in `waveform/`.
 
 ---
 
+## Workflow R — Code → a specification someone can read fast
+
+Use when the code is the only description there is — a handed-out skeleton, a repository nobody
+documented — and the job is to **write down what it does**, in prose, so the next reader does not
+have to re-derive it from the source. The output is a folder of Markdown beside the project; not
+one line of `.v` changes.
+
+> **What makes this hard is not the writing, it is the stopping.** A specification of real RTL can
+> always be one level more detailed, and a reader who has to take all six levels to learn one thing
+> stops reading. So the document is **layered**: each section is a complete, true picture of the
+> design at its own depth, and a reader who stops after section 1 is left with less, never with
+> something wrong.
+
+```
+<folder>/
+├── README.md     what this folder is, and the one caveat about line numbers
+├── spec/
+│   ├── 00-format.md              the rules below, as they were settled for this project
+│   ├── 01-overview.md            the whole thing on one page; read this first
+│   ├── 10-<module>.md            one file per module, in instantiation order
+│   └── 90-<across>.md            what no single module closes over
+├── sim/          throwaway benches that print cycle numbers, so the document's numbers are measured
+└── log/<date>.md what was asked, what was decided, and what is still open
+```
+
+**A module file runs from what it does to how it does it, in six sections.** Depths 1–3 are for
+everyone, 4–5 for the reader chasing a case, 6 for whoever is changing the code.
+
+| § | Section | What goes in it | Keep it to |
+|---|---------|-----------------|-----------|
+| 1 | **What it does** | numbered steps, in the reader's words, **no signal names** | 10 lines |
+| 2 | **What that needs** | one row per step: *to do this → you need → so this signal exists* | a table, plus the names that mislead |
+| 3 | **Ports** | direction, width, one line each | a table |
+| 4 | **Scenarios, one line each** | event → outcome → how well it is confirmed | a table |
+| 5 | **The path, by cycle** | one table per scenario: cycle · the condition that became true · the assignment that ran | 10 rows each |
+| 6 | **Detail** | every signal, every use, the side effects, and the *why* | no limit |
+
+Rules that keep the layers honest:
+
+1. **Section 2 is not a list of signals.** It says why each one had to exist, in the order of
+   section 1's steps. A signal that no step asks for means section 1 is missing a step.
+2. **Paths are in cycle order, not line order.** Everything in an `always` block is evaluated in
+   the same cycle, so a path that walks the file top to bottom invents an order the hardware does
+   not have. For each cycle, ask what *else* became true in it: that question is what finds the
+   shift that still happens in a cancelled frame.
+3. **Only section 6 says "why".** If a path table needs a sentence, the sentence belongs in 6.
+4. **Every number says where it came from.** `시뮬 / measured` — a bench in `sim/` printed it;
+   `계산 / derived` — worked out from the code; `읽기만 / read` — read off the source. Never let a
+   derived number be read as a measured one.
+5. **Every statement says whose it is.** `[PDF]` the brief asked for it · `[코드]` the code does it
+   · `[미정]` the brief is silent and the code chose. The third tag is the valuable one: it is the
+   list of decisions nobody signed off.
+6. **Line numbers are dated.** Record a hash of each file the numbers refer to, and print the code
+   fragment beside every citation — one comment moves them all.
+7. **Say a thing once.** Shared machinery goes in the overview; a scenario lives in the file of the
+   module whose port the event arrives at; anything crossing modules goes in the across-file and
+   refers to the others by scenario number (`TX-N1`, `RX-E7`), never by repeating their paths.
+
+`sim/` holds benches that **print and judge nothing** — `$display` of the cycle a thing happened —
+because their job is to make the document's numbers measurements rather than arithmetic. They are
+not the project's testbenches and do not belong in `tb/`.
+
+`log/<date>.md` is the record the rules themselves come from: what was asked, what was decided and
+why, **what the agent interpreted rather than was told** (marked as interpretation), what was found
+while writing, and what is still open. Write it as you go, not at the end.
+
+And write all of it the way "Writing a reader can follow" says — one named reader, claims that
+could be false, one name per thing, the shortening pass at the end.
+
+---
+
 ## Registry — primitives the extension draws as symbols
 
 `BW` is the **most significant bit index**: a port of width `BW` is `BW+1` bits (`DFF #(5)` holds 6
