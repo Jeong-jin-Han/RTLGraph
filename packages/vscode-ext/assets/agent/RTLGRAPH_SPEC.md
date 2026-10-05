@@ -538,6 +538,12 @@ one line of `.v` changes.
 └── log/<date>.md what was asked, what was decided, and what is still open
 ```
 
+**One file per module, not one per scenario** — the file someone opens to change the design is the
+module's, so that is where its behaviour belongs. Grouping does not cause repetition; saying a
+thing twice does, which rule 7 below prevents. The exception is a design where almost nothing
+closes inside one module (a pipeline): there, module files stop at section 3 and the paths live in
+the across-file. Whichever it is, the format file says why.
+
 **A module file runs from what it does to how it does it, in six sections.** Depths 1–3 are for
 everyone, 4–5 for the reader chasing a case, 6 for whoever is changing the code.
 

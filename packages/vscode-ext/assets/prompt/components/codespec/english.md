@@ -27,6 +27,24 @@ PROJECT_FOLDER/<SPEC_FOLDER>/
 └── log/<date>.md what was asked, what was decided, what is still open
 ```
 
+## Why group by module rather than by scenario
+
+The same material could be grouped **by scenario** — one file for "send a byte", another for
+"reset lands mid-frame". Module files are the default for one reason: **the file you open to
+change something is the module's**, and if that module's behaviour closes inside one file you do
+not have to open any other.
+
+In a communication design, where transmitter and receiver mirror each other, the worry is
+repetition. Repetition comes from *saying a thing twice*, not from how the files are grouped, and
+rule 7 is what stops it: machinery the two share goes in `01-overview.md` once, and a module file
+carries only **how that module uses it**. (In a real UART spec written this way, the transmitter
+and receiver files shared 3 lines out of 98 and 159.)
+
+**When not to group by module**: when almost no scenario closes inside one module — a pipeline
+where every event crosses every stage. Then keep the module files to sections 1–3 (what it does,
+what that needs, ports) and put the scenarios and paths in the `90-` file. Either way, **say in
+`00-format.md` why it was grouped that way**, so the next person can judge whether to flip it.
+
 ## The one thing that matters most — do not mix depths
 
 A specification of real RTL can always be one level more detailed, and a document where learning
