@@ -93,6 +93,17 @@ Scenario numbers: module abbreviation − kind (`N` normal / `E` exceptional) + 
 **Numbering**: components take the tens — 10, 20, 30 — and the modules inside one take the units
 (`20-pulse_top`, `21-pulse_fsm`, `22-pulse_dp`). Leave `90-` free however many modules there are.
 
+**Say where cycle 0 is, per scenario.** Two people measuring the same design get 10850 and 10851
+— one counted from the cycle in which the condition was true, the other from the cycle whose edge
+consumed it. Both are right, and side by side neither is believable. **Use: cycle 0 = the cycle in
+which the condition that opens the scenario is true** (the cycle `start` is 1, say). Put that one
+line above the section-4 table, in the same words in every file.
+
+**A combinational signal and a register are read at different moments.** A combinational signal
+(`start`, `sample`) is **the value the coming rising edge will consume**, so it is read *before*
+the edge; a register's result is read *after* it. Sample everything at one moment and a one-cycle
+combinational signal like `start` never appears in the trace at all.
+
 **Settle what a cycle number means before anything else.** Every number in the document stands on
 it. The definition to use is **cycle k = just after the k-th rising edge**; build the tracing macro
 that prints one row per cycle, check it prints that, and only then write section 5. The other order
