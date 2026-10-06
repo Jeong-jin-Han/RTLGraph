@@ -24,7 +24,9 @@
   ],
   "activationEvents": [
     "onCustomEditor:rtlgraph.editor",
-    "onCustomEditor:rtlgraph.waveform"
+    "onCustomEditor:rtlgraph.waveform",
+    "onLanguage:markdown",
+    "workspaceContains:**/spec/00-format.md"
   ],
   "capabilities": {
     "untrustedWorkspaces": {

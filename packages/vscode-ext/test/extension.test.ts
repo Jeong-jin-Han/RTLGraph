@@ -9,6 +9,17 @@ const ROOT = join(import.meta.dirname, '..')
 const manifest = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8'))
 const source = ['src/extension.ts', 'src/editorProvider.ts', 'src/agent/copyAgentSpec.ts'].map(f => readFileSync(join(ROOT, f), 'utf8')).join('\n')
 
+// The lens on a specification and the hover on a signal name are the only two
+// things we contribute to files we do not own. Both went out dead once: the
+// extension woke only for its own custom editors, so opening a spec or a .v
+// activated nothing and neither appeared.
+test('opening a specification is enough to wake the extension', () => {
+  const events: string[] = manifest.activationEvents
+  assert.ok(events.includes('onLanguage:markdown'), `a spec is markdown: ${events}`)
+  assert.ok(events.includes('workspaceContains:**/spec/00-format.md'),
+    `and a project with a spec wakes it even if a .v is opened first: ${events}`)
+})
+
 // NodeGraph once declared commands it never registered ("command not found").
 test('contributed commands and registered commands are the same set', () => {
   const declared = manifest.contributes.commands.map((c: { command: string }) => c.command).sort()
