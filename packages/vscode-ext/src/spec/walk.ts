@@ -35,7 +35,7 @@ async function prefixesFor(doc: vscode.TextDocument): Promise<Map<string, string
 }
 
 /** Where the step's file is: beside the spec, or up and out of `spec/`. */
-async function sourceOf(spec: vscode.Uri, file: string): Promise<vscode.Uri | undefined> {
+export async function sourceOf(spec: vscode.Uri, file: string): Promise<vscode.Uri | undefined> {
   const candidates = [
     vscode.Uri.joinPath(spec, '..', file),              // beside the document
     vscode.Uri.joinPath(spec, '..', '..', file),        // <folder>/spec/ → <folder>/

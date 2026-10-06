@@ -200,6 +200,10 @@ extension, so each line is something that broke once.
   cycle, because an editor that jumps elsewhere halfway through loses the
   reader's place — and each step replaces what is in its pane, so a walk of ten
   steps leaves two tabs behind rather than ten.
+- **Hovering a signal name** in the `.v` shows what section 6 of the
+  specification says about it: where it is made, where it is read, the range it
+  holds, and why. Every citation in the entry is a link to that line. A name no
+  specification mentions gets no hover — a guess there is worse than silence.
 
 ### Comments are part of the deliverable
 

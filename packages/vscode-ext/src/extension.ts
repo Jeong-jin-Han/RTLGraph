@@ -11,6 +11,7 @@ import { collectHierarchyFiles } from './hierarchyFiles.ts'
 import { openBeside, openCodeBeside } from './openCode.ts'
 import { MATERIAL_ICON, withRtlgraphFiles } from './explorerIcons.ts'
 import { openRequirement } from './specView.ts'
+import { SpecHover } from './spec/hover.ts'
 import { WalkLens, WalkSession } from './spec/walk.ts'
 import { fsmFileName, graphFileKind, graphName, hierarchyEntries, loadHierarchy, schematicFileName } from '@rtlgraph/ir'
 import type { FoldAction, FoldScope } from './protocol.ts'
@@ -520,6 +521,10 @@ export function activate(context: vscode.ExtensionContext): void {
     // scenario opens the current step on the right and the one before it under
     // that, with a bracket down the gutter saying how far to read.
     vscode.languages.registerCodeLensProvider({ language: 'markdown' }, new WalkLens()),
+    // And the other direction: a name in the Verilog, hovered, shows what
+    // section 6 of the specification says about it.
+    vscode.languages.registerHoverProvider(
+      [{ pattern: '**/*.v' }, { pattern: '**/*.sv' }], new SpecHover()),
     vscode.commands.registerCommand('rtlgraph.walkWorkflow', async (uri?: unknown, id?: unknown) => {
       const doc = uri instanceof vscode.Uri
         ? await vscode.workspace.openTextDocument(uri)

@@ -132,6 +132,13 @@ For that to work:
 Which means: do not leave section 5 empty or replace it with prose. That table *is* the path
 through the code.
 
+Section 6 is read too. **Hovering a name in the `.v`** shows that name's section 6 entry, the way
+a library function shows its doc comment. For that, an entry has to **start with the name**:
+`` **`clock_counter`** (`rx:58`) `reg` 11 bits. `` followed by `- made at : …` lines, or a row of
+a `| name | line | what it is |` table. Both shapes are read. A name mentioned only mid-sentence
+gets no hover. Every citation inside an entry becomes a link to that line, so **saying where a
+signal is made and where it is read, by line number**, pays for itself.
+
 ## Hunt the exceptions first
 
 The normal path falls out of reading the code. The value is in the **exceptions**, and most of

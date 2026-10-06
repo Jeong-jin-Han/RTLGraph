@@ -119,3 +119,58 @@ export function walksIn(doc: string, prefixes: Map<string, string> = new Map()):
   close()
   return out
 }
+
+/** What a specification says about one name, ready to show on hover. */
+export interface Entry {
+  name: string
+  /** The markdown as the document wrote it, minus the heading itself. */
+  text: string
+  /** Where in the spec it is, so the hover can link back. */
+  line: number
+}
+
+const BOLD_ENTRY = /^\*\*`?([A-Za-z_]\w*)`?\*\*\s*(.*)$/
+const HEAD_ENTRY = /^#{3,4}\s+`?([A-Za-z_]\w*)`?\s*(.*)$/
+const ROW_ENTRY = /^\|\s*`([A-Za-z_]\w*)`\s*\|(.+)\|\s*$/
+
+/**
+ * Section 6, read back as one entry per signal.
+ *
+ * Two shapes are in use and both are honoured: a bold name followed by `- key :
+ * value` lines, and a row of a table whose first cell is the name. Anything
+ * else in the section is left alone — a hover that guesses is worse than one
+ * that says nothing.
+ */
+export function entriesIn(doc: string): Map<string, Entry> {
+  const out = new Map<string, Entry>()
+  const lines = doc.split('\n')
+  let deep = false
+  let current: Entry | undefined
+  const close = () => {
+    if (current) {
+      current.text = current.text.trim()
+      if (current.text) out.set(current.name, current)
+    }
+    current = undefined
+  }
+  for (const [at, line] of lines.entries()) {
+    if (/^##\s+\d\./.test(line)) { close(); deep = /^##\s+6\./.test(line); continue }
+    if (!deep) continue
+    const row = ROW_ENTRY.exec(line)
+    if (row) {
+      close()
+      const cells = row[2].split('|').map(c => c.trim()).filter(Boolean)
+      out.set(row[1], { name: row[1], line: at, text: cells.join(' · ') })
+      continue
+    }
+    const named = BOLD_ENTRY.exec(line) ?? HEAD_ENTRY.exec(line)
+    if (named) {
+      close()
+      current = { name: named[1], line: at, text: named[2] ? `${named[2]}\n` : '' }
+      continue
+    }
+    if (current) current.text += `${line}\n`
+  }
+  close()
+  return out
+}

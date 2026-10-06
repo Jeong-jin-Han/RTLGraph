@@ -153,7 +153,8 @@ rather than arithmetic.
 
 Written this way, **the extension reads the document back.** Each scenario in a section 5 table
 gets a `▶ workflow` that walks the code a step at a time — the current step top right, the one
-before it underneath, the stretch to read bracketed down the gutter.
+before it underneath, the stretch to read bracketed down the gutter — and hovering a signal name
+in the `.v` shows that signal's section 6 entry.
 
 ### `spec` — an idea → `SPEC.md`
 

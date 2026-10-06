@@ -138,6 +138,39 @@ export async function run(): Promise<void> {
     await vscode.commands.executeCommand('rtlgraph.walkStop')
     await vscode.commands.executeCommand('workbench.action.closeAllEditors')
     log(`a workflow walks the code: ${ours.length} scenarios offered, two panes, ${tabs.length} tabs`)
+
+    // And the other direction: the name under the pointer, documented. Section 6
+    // of that same file describes every signal, and the hover brings its entry
+    // to the code without opening the document.
+    const source = join(dirname(dirname(dirname(specFile))), 'uart_receiver.v')
+    const code = await vscode.workspace.openTextDocument(vscode.Uri.file(source))
+    const declared = code.getText().split('\n').findIndex(l => /\breg\b.*\bclock_counter\b/.test(l))
+    assert.ok(declared >= 0, 'the receiver declares clock_counter')
+    const at = new vscode.Position(declared, code.lineAt(declared).text.indexOf('clock_counter') + 2)
+    const hovers = await vscode.commands.executeCommand<vscode.Hover[]>(
+      'vscode.executeHoverProvider', code.uri, at)
+    const said = (hovers ?? []).flatMap(h => h.contents)
+      .map(c => (typeof c === 'string' ? c : (c as vscode.MarkdownString).value))
+      .filter(v => v.includes('clock_counter'))
+    assert.ok(said.length > 0, 'hovering a signal says what the specification says about it')
+    assert.match(said.join('\n'), /0 ~ 1084/, 'the entry itself, not just its name')
+    assert.match(said.join('\n'), /30-uart_receiver\.md/, 'and a link back to where it is written')
+    // A name no section 6 mentions gets no hover of ours: a guess is worse than
+    // silence.
+    const keyword = code.getText().split('\n').findIndex(l => l.trimStart().startsWith('always'))
+    const none = await vscode.commands.executeCommand<vscode.Hover[]>('vscode.executeHoverProvider',
+      code.uri, new vscode.Position(keyword, code.lineAt(keyword).text.indexOf('always') + 2))
+    assert.equal((none ?? []).flatMap(h => h.contents)
+      .map(c => (typeof c === 'string' ? c : (c as vscode.MarkdownString).value))
+      .filter(v => v.includes('30-uart_receiver.md')).length, 0, 'nothing for a word the spec never names')
+    if (process.env.RTLGRAPH_SHOT_HOVER) {
+      await vscode.window.showTextDocument(code, { viewColumn: vscode.ViewColumn.One })
+      await vscode.window.showTextDocument(code, { selection: new vscode.Range(at, at) })
+      await vscode.commands.executeCommand('editor.action.showHover')
+      await sleep(1500)
+      spawnSync('import', ['-window', 'root', process.env.RTLGRAPH_SHOT_HOVER])
+    }
+    await vscode.commands.executeCommand('workbench.action.closeAllEditors')
     log('hovering clock_counter in uart_receiver.v shows its section 6 entry')
   }
 

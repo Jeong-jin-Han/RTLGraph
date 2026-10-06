@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { prefixesIn, walksIn } from '../src/spec/steps.ts'
+import { entriesIn, prefixesIn, walksIn } from '../src/spec/steps.ts'
 
 // A specification written by `components/codespec` carries, per scenario, a
 // table of one row per cycle with the lines each cycle ran. That table is a
@@ -131,3 +131,48 @@ test('citations a line apart merge into one stretch', () => {
   assert.deepEqual(walks[0].steps[0].spans, [{ from: 115, to: 116 }])
 })
 
+// Hovering a name in the Verilog should say what the specification says about
+// it. Two shapes of section 6 are in use, and both are read.
+test('section 6 reads back as one entry per name, in either shape', () => {
+  const entries = entriesIn(`## 5. 줄 경로
+
+| 사이클 | 조건 |
+|---|---|
+| 0 | \`rx:74\` |
+
+## 6. 세부
+
+### 신호
+
+**\`clock_counter\`** (\`rx:58\`) \`reg\` 11비트.
+- 만드는 곳 : \`rx:89\`. reset 이나 start 면 0, 아니면 +1.
+- 값의 범위 : 0 ~ 1084. 쉬는 중에도 돈다.
+
+**\`sample\`** (\`rx:54\`) \`wire\`.
+- 만드는 곳 : \`rx:70\`.
+`)
+  assert.deepEqual([...entries.keys()], ['clock_counter', 'sample'])
+  assert.match(entries.get('clock_counter')!.text, /0 ~ 1084/)
+  assert.equal(entries.get('clock_counter')!.text.includes('sample'), false, 'an entry stops at the next one')
+
+  const table = entriesIn(`## 6. 세부
+
+| 이름 | 줄 | 무엇인가 |
+|---|---|---|
+| \`running\` | 64 | \`bit_counter != 0\`. "받는 중" |
+`)
+  assert.equal(table.get('running')!.text, '64 · `bit_counter != 0`. "받는 중"')
+})
+
+test('nothing outside section 6 becomes an entry', () => {
+  const entries = entriesIn(`## 2. 그 일에 필요한 것
+
+**\`rx_shift\`** 는 여기서 설명하지 않는다.
+
+## 6. 세부
+
+**\`has_byte\`** (\`rx:60\`) \`reg\`.
+- 쓰는 곳 : \`rx:79\`.
+`)
+  assert.deepEqual([...entries.keys()], ['has_byte'])
+})
