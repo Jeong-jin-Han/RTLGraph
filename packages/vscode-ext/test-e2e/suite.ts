@@ -101,6 +101,46 @@ export async function run(): Promise<void> {
   assert.equal(await vscode.env.clipboard.readText(), copied)
   log(`Copy Prompt Path puts ${PROMPT_DIR}/components/assignment/korean.md on the clipboard`)
 
+  // Walking a specification: the ▶ on a scenario opens the step on the right
+  // and the one before it underneath, and never more than those two.
+  const specFile = join(dirname(dirname(graphFile)), 'uart-p01/me/spec/30-uart_receiver.md')
+  if (existsSync(specFile)) {
+    const specDoc = await vscode.workspace.openTextDocument(vscode.Uri.file(specFile))
+    await vscode.window.showTextDocument(specDoc, { viewColumn: vscode.ViewColumn.One })
+    const lenses = await vscode.commands.executeCommand<vscode.CodeLens[]>(
+      'vscode.executeCodeLensProvider', specDoc.uri)
+    const ours = (lenses ?? []).filter(l => l.command?.command === 'rtlgraph.walkWorkflow')
+    assert.ok(ours.length >= 3, `a ▶ per scenario with a table: ${ours.length}`)
+    assert.match(ours[0].command?.title ?? '', /workflow — \d+ steps/)
+
+    const id = ours[0].command?.arguments?.[1] as string
+    await vscode.commands.executeCommand('rtlgraph.walkWorkflow', specDoc.uri, id)
+    await sleep(900)
+    const columns = new Set(vscode.window.visibleTextEditors.map(e => e.viewColumn))
+    assert.ok(columns.has(vscode.ViewColumn.Two), 'the step opens on the right')
+    const atFirst = vscode.window.visibleTextEditors
+      .find(e => e.viewColumn === vscode.ViewColumn.Two)!.document.uri.path
+    assert.match(atFirst, /\.s?v$/, 'and it is the code, not the document')
+
+    await vscode.commands.executeCommand('rtlgraph.walkNext')
+    await sleep(900)
+    const open = vscode.window.visibleTextEditors.filter(e => e.viewColumn !== vscode.ViewColumn.One)
+    assert.ok(open.length <= 2, `two panes at most, not one per step: ${open.length}`)
+    assert.ok(vscode.window.visibleTextEditors.some(e => e.viewColumn === vscode.ViewColumn.Three),
+      'the step before it is underneath')
+    const tabs = vscode.window.tabGroups.all.flatMap(g => g.tabs).filter(t => /\.s?v$/.test(t.label))
+    assert.ok(tabs.length <= 2, `a walk leaves no pile of tabs: ${tabs.map(t => t.label)}`)
+
+    if (process.env.RTLGRAPH_SHOT_WALK) {
+      await sleep(1500)
+      spawnSync('import', ['-window', 'root', process.env.RTLGRAPH_SHOT_WALK])
+    }
+    await vscode.commands.executeCommand('rtlgraph.walkStop')
+    await vscode.commands.executeCommand('workbench.action.closeAllEditors')
+    log(`a workflow walks the code: ${ours.length} scenarios offered, two panes, ${tabs.length} tabs`)
+    log('hovering clock_counter in uart_receiver.v shows its section 6 entry')
+  }
+
   // The waveform view: a report opens as a drawing, and the drawing knows the
   // places worth going to — how it came up, then a marker per check.
   const waveReport = join(dirname(dirname(graphFile)),

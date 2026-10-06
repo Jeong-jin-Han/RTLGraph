@@ -11,6 +11,7 @@ import { collectHierarchyFiles } from './hierarchyFiles.ts'
 import { openBeside, openCodeBeside } from './openCode.ts'
 import { MATERIAL_ICON, withRtlgraphFiles } from './explorerIcons.ts'
 import { openRequirement } from './specView.ts'
+import { WalkLens, WalkSession } from './spec/walk.ts'
 import { fsmFileName, graphFileKind, graphName, hierarchyEntries, loadHierarchy, schematicFileName } from '@rtlgraph/ir'
 import type { FoldAction, FoldScope } from './protocol.ts'
 
@@ -515,6 +516,25 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand('rtlgraph._waveOpenPlace', (at?: unknown) => {
       WaveViewProvider.openPlace?.(typeof at === 'number' ? at : 0)
     }),
+    // Walking a specification's path table through the code: the ▶ above each
+    // scenario opens the current step on the right and the one before it under
+    // that, with a bracket down the gutter saying how far to read.
+    vscode.languages.registerCodeLensProvider({ language: 'markdown' }, new WalkLens()),
+    vscode.commands.registerCommand('rtlgraph.walkWorkflow', async (uri?: unknown, id?: unknown) => {
+      const doc = uri instanceof vscode.Uri
+        ? await vscode.workspace.openTextDocument(uri)
+        : vscode.window.activeTextEditor?.document
+      if (!doc) return undefined
+      if (typeof id === 'string') return WalkSession.start(doc, id)
+      const walks = await import('./spec/steps.ts').then(m => m.walksIn(doc.getText()))
+      const picked = await vscode.window.showQuickPick(
+        walks.map(w => ({ label: w.id, description: w.title, detail: `${w.steps.length} steps` })),
+        { placeHolder: 'Which scenario?' })
+      return picked ? WalkSession.start(doc, picked.label) : undefined
+    }),
+    vscode.commands.registerCommand('rtlgraph.walkNext', () => WalkSession.step(1)),
+    vscode.commands.registerCommand('rtlgraph.walkPrevious', () => WalkSession.step(-1)),
+    vscode.commands.registerCommand('rtlgraph.walkStop', () => WalkSession.stopCurrent()),
     vscode.commands.registerCommand('rtlgraph.copyPromptPath', async (args?: unknown) => {
       const given = (typeof args === 'object' && args !== null ? args : { kind: args }) as { kind?: unknown; folder?: unknown }
       const kind = typeof given.kind === 'string' ? given.kind : undefined

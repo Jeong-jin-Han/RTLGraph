@@ -44,7 +44,7 @@ path, the brief's path if there is one — and leave the rest alone.
 | RTL that works but is a mess, and you are allowed to restructure it | **`refactor`** | the code rearranged into the three-layer layout, then drawn |
 | A specification, and no code yet | **`rtl`** | new RTL written to that spec, simulated, then drawn |
 | An idea, and not even a specification | **`spec`** | a `SPEC.md` you can read, argue with, and then feed to `rtl` |
-| Code and nothing else, and you have to write down **what it does** | **`codespec`** | a specification in six depths, benches that measured its numbers, and a working log |
+| Code and nothing else, and you have to write down **what it does** | **`codespec`** | a specification in six depths, benches that measured its numbers, and the decisions it had to make |
 | A simulation that already ran, and you want to know **why** it behaved that way | **`waveform`** | `waveform-analysis.md`: the dump's numbers explained against the code, check by check |
 
 If two of them look right, the question to ask is **"may the code change?"** —
@@ -52,7 +52,7 @@ If two of them look right, the question to ask is **"may the code change?"** —
 
 ---
 
-## The six, one at a time
+## The seven, one at a time
 
 ### `rtlgraph` — existing RTL → a schematic
 
@@ -150,6 +150,10 @@ they are (`[PDF]` / `[code]` / `[undecided]`). **`[undecided]` is the valuable o
 was silent and the code chose, which is the list of decisions nobody signed off. `sim/` holds
 benches that judge nothing and print cycle numbers, so "valid at cycle 10851" is a measurement
 rather than arithmetic.
+
+Written this way, **the extension reads the document back.** Each scenario in a section 5 table
+gets a `▶ workflow` that walks the code a step at a time — the current step top right, the one
+before it underneath, the stretch to read bracketed down the gutter.
 
 ### `spec` — an idea → `SPEC.md`
 

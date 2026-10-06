@@ -166,7 +166,7 @@ extension, so each line is something that broke once.
 
 ### Prompts that know what comes next
 
-- **Two shelves.** `.prompt/rtlgraph/components/` holds the six prompts that each
+- **Two shelves.** `.prompt/rtlgraph/components/` holds the seven prompts that each
   do one job; `.prompt/rtlgraph/recipe/` holds three that run several of them in
   order — `assignment`, `marking-day`, `read-code`. Which prompt to reach for
   when was a thing you had to know, and the day the marking bench arrives is a
@@ -180,6 +180,26 @@ extension, so each line is something that broke once.
   real: a fresh agent ran `recipe/assignment` against a bare two-file skeleton
   and came back with five benches, a schematic, `0 errors`, five waveforms, five
   analyses and a submission list, with the handout untouched.
+
+### Code nobody wrote down, written down
+
+- **`components/codespec`**: a prompt that reads code and produces a
+  specification — one file per module, in six sections whose **depths do not
+  mix**, so a reader who stops after section 1 is left with less and never with
+  something wrong. Numbers carry where they came from (`measured`/`derived`/
+  `read`) and statements carry whose they are (`[PDF]`/`[code]`/`[undecided]`);
+  `[undecided]` is the list of decisions nobody signed off. All three chains
+  end by writing one, because the day the marking bench arrives is not the day
+  to re-read your own code.
+- **`▶ workflow` on a scenario.** Section 5 is a table of one row per cycle,
+  each citing the lines that ran — which is a path through the code already.
+  Clicking the lens walks it: the current step opens top right, the step before
+  it underneath, and the stretch to read is bracketed down the gutter.
+  `alt+→`/`alt+←` step, and those keys mean nothing when no walk is on. A step
+  never leaves one file — a row citing two files becomes two steps of the same
+  cycle, because an editor that jumps elsewhere halfway through loses the
+  reader's place — and each step replaces what is in its pane, so a walk of ten
+  steps leaves two tabs behind rather than ten.
 
 ### Comments are part of the deliverable
 

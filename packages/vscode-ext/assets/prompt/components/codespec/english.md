@@ -112,6 +112,26 @@ leaves every table off by one.
 row a scenario number in section 4, and in section 5 point at the scenario of the module that uses
 that row — never write the same path twice (rule 7).
 
+## A tool reads this document
+
+Sections 5 and 6 are not only for people. When RTLGraph opens a specification it puts a
+**`▶ workflow`** on each scenario and walks its section-5 table through the code — the current
+step on the right, the step before it underneath, the stretch to read bracketed down the gutter.
+For that to work:
+
+- **Keep the citations inside the table cells.** A `rx:116` that drifts into prose outside the
+  table leaves that step with nowhere to go. Condition line in the condition cell, assignment line
+  in the assignment cell.
+- **Keep the reference-file table in `00-format.md`** (file ↔ marker, `rx:`). That is how the tool
+  knows which file `rx` is. Citing `uart_receiver.v:116` outright works too.
+- **One row, one cycle.** A row citing two files is split into one step per file, because a step
+  that moves the editor elsewhere halfway through loses the reader's place.
+- **A condition line and the assignment under it** (`rx:115`, `rx:116`) are shown as one stretch;
+  lines far apart are shown separately. So put only one cycle's lines in a row.
+
+Which means: do not leave section 5 empty or replace it with prose. That table *is* the path
+through the code.
+
 ## Hunt the exceptions first
 
 The normal path falls out of reading the code. The value is in the **exceptions**, and most of

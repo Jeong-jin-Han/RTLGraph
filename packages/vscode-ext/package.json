@@ -156,6 +156,22 @@
       {
         "command": "rtlgraph.setPreset",
         "title": "RTLGraph: Set View Preset"
+      },
+      {
+        "command": "rtlgraph.walkWorkflow",
+        "title": "RTLGraph: Walk a Workflow"
+      },
+      {
+        "command": "rtlgraph.walkNext",
+        "title": "RTLGraph: Workflow — Next Step"
+      },
+      {
+        "command": "rtlgraph.walkPrevious",
+        "title": "RTLGraph: Workflow — Previous Step"
+      },
+      {
+        "command": "rtlgraph.walkStop",
+        "title": "RTLGraph: Workflow — Stop"
       }
     ],
     "menus": {
@@ -196,7 +212,19 @@
           "markdownDescription": "Language for RTLGraph's own wording — the waveform view and what `--wave` writes. `auto` follows VS Code's display language. Names from the code are never translated."
         }
       }
-    }
+    },
+    "keybindings": [
+      {
+        "command": "rtlgraph.walkNext",
+        "key": "alt+right",
+        "when": "rtlgraph.walking"
+      },
+      {
+        "command": "rtlgraph.walkPrevious",
+        "key": "alt+left",
+        "when": "rtlgraph.walking"
+      }
+    ]
   },
   "scripts": {
     "build": "node esbuild.mjs",
