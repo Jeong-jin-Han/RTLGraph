@@ -534,8 +534,7 @@ one line of `.v` changes.
 │   ├── 01-overview.md            the whole thing on one page; read this first
 │   ├── 10-<module>.md            one file per module, in instantiation order
 │   └── 90-<across>.md            what no single module closes over
-├── sim/          throwaway benches that print cycle numbers, so the document's numbers are measured
-└── log/<date>.md what was asked, what was decided, and what is still open
+└── sim/          throwaway benches that print cycle numbers, so the document's numbers are measured
 ```
 
 **One file per module, not one per scenario** — the file someone opens to change the design is the
@@ -581,9 +580,10 @@ Rules that keep the layers honest:
 because their job is to make the document's numbers measurements rather than arithmetic. They are
 not the project's testbenches and do not belong in `tb/`.
 
-`log/<date>.md` is the record the rules themselves come from: what was asked, what was decided and
-why, **what the agent interpreted rather than was told** (marked as interpretation), what was found
-while writing, and what is still open. Write it as you go, not at the end.
+**The sticking points go back in the report, not into a folder of notes**: where the instructions
+were ambiguous or contradicted each other, what the writer decided on its own and on what grounds,
+anything it got wrong once and fixed, and the numbers it could not measure. That list is what the
+next version of these rules is made from.
 
 And write all of it the way "Writing a reader can follow" says — one named reader, claims that
 could be false, one name per thing, the shortening pass at the end.

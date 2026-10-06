@@ -23,8 +23,7 @@ PROJECT_FOLDER/<SPEC_FOLDER>/
 │   ├── 01-overview.md        the whole thing on one page; read this first
 │   ├── 10-<module>.md        one per module, numbered 10, 20, 30… in instantiation order
 │   └── 90-<name>.md          only what no single module closes over
-├── sim/          benches that confirmed the numbers (they print cycles; they judge nothing)
-└── log/<date>.md what was asked, what was decided, what is still open
+└── sim/          benches that confirmed the numbers (they print cycles; they judge nothing)
 ```
 
 ## Why group by module rather than by scenario
@@ -133,11 +132,16 @@ a definition in the project first (`.base/` is the usual place) and only then pu
 power-on `x`, for one — goes in the could-not-measure list. Anything you did not run is `derived` or `read` —
 writing a computed number as a measured one is the fastest way to make this document untrustworthy.
 
-## `log/` — where the rules come from
+## Hand the sticking points back
 
-Write `log/<today>.md` as you go, not at the end: what you were asked for, what was decided and
-why, **what you interpreted rather than were told (marked as interpretation)**, what you found
-while writing, and what is still open. This is the raw material for generalising the rules later.
+Do not make a folder of working notes. Put **what this prompt did not settle and you had to
+decide** in your final report instead — that is what the next version of the prompt is made from:
+
+- where the instructions were **ambiguous or contradicted each other**, quoted
+- what **you decided yourself**, and on what grounds
+- anything you **got wrong once and fixed** (a trace off by one cycle, say) — the next person
+  walks into the same hole
+- the numbers you could not measure, and why
 
 ## How to write it
 

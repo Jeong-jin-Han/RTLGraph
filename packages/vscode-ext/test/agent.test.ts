@@ -64,7 +64,7 @@ test('prompts: every kind in two languages, each pointing at a workflow the spec
           ? ['waveform.json', 'run-tb.sh --wave']
           // codespec writes prose about code it may not touch: no JSON, no validator
           : kind === 'codespec'
-            ? ['00-format.md', 'log/', 'sim/']
+            ? ['00-format.md', 'sim/']
             : ['rtlgraph/validate.mjs']
       for (const needle of [...needles, ...extra]) {
         assert.ok(prompt.includes(needle), `${kind}/${language} mentions ${needle}`)
