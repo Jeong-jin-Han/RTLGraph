@@ -194,8 +194,13 @@ extension, so each line is something that broke once.
 - **`▶ workflow` on a scenario.** Section 5 is a table of one row per cycle,
   each citing the lines that ran — which is a path through the code already.
   Clicking the lens walks it: the current step opens top right, the step before
-  it underneath, and the stretch to read is bracketed down the gutter.
-  `alt+→`/`alt+←` step, and those keys mean nothing when no walk is on. A step
+  it underneath, and the stretch to read is bracketed down the gutter. The
+  status bar carries `◀  RX-N1 3/6 · 1085  ▶`, so stepping is a click and the
+  count is on screen; clicking the middle opens the whole step list, where
+  moving the selection moves the walk. `alt+→`/`alt+←` do the same, and mean
+  nothing when no walk is on. A lens only exists in a text editor, so from the
+  rendered **preview** the palette's `RTLGraph: Walk a Workflow` offers the
+  previewed document's scenarios instead. A step
   never leaves one file — a row citing two files becomes two steps of the same
   cycle, because an editor that jumps elsewhere halfway through loses the
   reader's place — and each step replaces what is in its pane, so a walk of ten

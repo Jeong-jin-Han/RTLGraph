@@ -111,7 +111,8 @@ export async function run(): Promise<void> {
       'vscode.executeCodeLensProvider', specDoc.uri)
     const ours = (lenses ?? []).filter(l => l.command?.command === 'rtlgraph.walkWorkflow')
     assert.ok(ours.length >= 3, `a ▶ per scenario with a table: ${ours.length}`)
-    assert.match(ours[0].command?.title ?? '', /workflow — \d+ steps/)
+    // Korean here, because this workspace reads in Korean: "6 스텝".
+    assert.match(ours[0].command?.title ?? '', /▶ workflow — \d+ (steps|스텝)/)
 
     const id = ours[0].command?.arguments?.[1] as string
     await vscode.commands.executeCommand('rtlgraph.walkWorkflow', specDoc.uri, id)
@@ -130,6 +131,34 @@ export async function run(): Promise<void> {
       'the step before it is underneath')
     const tabs = vscode.window.tabGroups.all.flatMap(g => g.tabs).filter(t => /\.s?v$/.test(t.label))
     assert.ok(tabs.length <= 2, `a walk leaves no pile of tabs: ${tabs.map(t => t.label)}`)
+
+    // A reader working in the rendered preview sees no code lens — there is no
+    // text editor for one to live in — so the palette has to find the
+    // scenarios itself, and prefer the document being previewed.
+    await vscode.commands.executeCommand('rtlgraph.walkStop')
+    await vscode.commands.executeCommand('workbench.action.closeAllEditors')
+    await vscode.commands.executeCommand('markdown.showPreview', specDoc.uri)
+    await sleep(1500)
+    assert.equal(vscode.window.activeTextEditor, undefined, 'nothing is in focus but the preview')
+    void vscode.commands.executeCommand('rtlgraph.walkWorkflow')
+    await sleep(1500)
+    await vscode.commands.executeCommand('workbench.action.acceptSelectedQuickOpenItem')
+    await sleep(1500)
+    const fromPreview = vscode.window.visibleTextEditors.find(e => e.viewColumn === vscode.ViewColumn.Two)
+    assert.match(fromPreview?.document.uri.path ?? '', /uart_receiver\.v$/,
+      'the walk starts in the previewed document\'s own code')
+
+    // And the steps are a list you click, not a keystroke you have to know.
+    void vscode.commands.executeCommand('rtlgraph.walkSteps')
+    await sleep(1200)
+    await vscode.commands.executeCommand('workbench.action.quickOpenSelectNext')
+    await vscode.commands.executeCommand('workbench.action.quickOpenSelectNext')
+    await sleep(1200)
+    await vscode.commands.executeCommand('workbench.action.acceptSelectedQuickOpenItem')
+    await sleep(800)
+    const walked = vscode.window.visibleTextEditors.filter(e => e.viewColumn !== vscode.ViewColumn.One)
+    assert.equal(walked.length, 2, 'picking a step from the list keeps the two panes')
+    log('from the preview the palette offers that document\'s scenarios, and the step list walks them')
 
     if (process.env.RTLGRAPH_SHOT_WALK) {
       await sleep(1500)

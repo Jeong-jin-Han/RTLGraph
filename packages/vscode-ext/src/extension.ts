@@ -12,7 +12,7 @@ import { openBeside, openCodeBeside } from './openCode.ts'
 import { MATERIAL_ICON, withRtlgraphFiles } from './explorerIcons.ts'
 import { openRequirement } from './specView.ts'
 import { SpecHover } from './spec/hover.ts'
-import { WalkLens, WalkSession } from './spec/walk.ts'
+import { askForWalk, WalkLens, WalkSession } from './spec/walk.ts'
 import { fsmFileName, graphFileKind, graphName, hierarchyEntries, loadHierarchy, schematicFileName } from '@rtlgraph/ir'
 import type { FoldAction, FoldScope } from './protocol.ts'
 
@@ -526,17 +526,18 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.languages.registerHoverProvider(
       [{ pattern: '**/*.v' }, { pattern: '**/*.sv' }], new SpecHover()),
     vscode.commands.registerCommand('rtlgraph.walkWorkflow', async (uri?: unknown, id?: unknown) => {
-      const doc = uri instanceof vscode.Uri
-        ? await vscode.workspace.openTextDocument(uri)
-        : vscode.window.activeTextEditor?.document
-      if (!doc) return undefined
-      if (typeof id === 'string') return WalkSession.start(doc, id)
-      const walks = await import('./spec/steps.ts').then(m => m.walksIn(doc.getText()))
-      const picked = await vscode.window.showQuickPick(
-        walks.map(w => ({ label: w.id, description: w.title, detail: `${w.steps.length} steps` })),
-        { placeHolder: 'Which scenario?' })
-      return picked ? WalkSession.start(doc, picked.label) : undefined
+      if (uri instanceof vscode.Uri && typeof id === 'string') {
+        return WalkSession.start(await vscode.workspace.openTextDocument(uri), id)
+      }
+      // From the palette: the lens cannot reach a reader working in the
+      // markdown preview, so the scenarios are found rather than read off the
+      // document in focus.
+      const chosen = await askForWalk(vscode.window.activeTextEditor?.document)
+      return chosen
+        ? WalkSession.start(await vscode.workspace.openTextDocument(chosen.spec), chosen.id)
+        : undefined
     }),
+    vscode.commands.registerCommand('rtlgraph.walkSteps', () => WalkSession.steps()),
     vscode.commands.registerCommand('rtlgraph.walkNext', () => WalkSession.step(1)),
     vscode.commands.registerCommand('rtlgraph.walkPrevious', () => WalkSession.step(-1)),
     vscode.commands.registerCommand('rtlgraph.walkStop', () => WalkSession.stopCurrent()),

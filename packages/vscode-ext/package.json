@@ -164,6 +164,10 @@
         "title": "RTLGraph: Walk a Workflow"
       },
       {
+        "command": "rtlgraph.walkSteps",
+        "title": "RTLGraph: Workflow — All Steps"
+      },
+      {
         "command": "rtlgraph.walkNext",
         "title": "RTLGraph: Workflow — Next Step"
       },

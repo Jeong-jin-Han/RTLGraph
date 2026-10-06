@@ -9,7 +9,36 @@
 // opening beside it — a walk of ten steps must not leave ten tabs behind.
 
 import * as vscode from 'vscode'
+import { langOf, type Lang } from '@rtlgraph/wave'
 import { prefixesIn, walksIn, type Step, type Walk } from './steps.ts'
+
+// The few words this shows. Everything else on screen is the document's own.
+const WORDS = {
+  ko: {
+    steps: (n: number) => `${n} 스텝`,
+    pick: '어느 시나리오를 걸을까?',
+    list: (id: string, title: string) => `${id} — ${title}`,
+    stepper: '목록에서 고르면 그 스텝이 열린다 · Esc 로 끝',
+    before: '직전',
+    tip: '클릭하면 전체 스텝 목록 · alt+→ / alt+← 로도 걷는다',
+    none: '이 워크스페이스에는 걸을 수 있는 명세가 없다 (5 절 표가 있는 .md).',
+  },
+  en: {
+    steps: (n: number) => `${n} steps`,
+    pick: 'Which scenario?',
+    list: (id: string, title: string) => `${id} — ${title}`,
+    stepper: 'Pick a step to open it · Esc to finish',
+    before: 'before',
+    tip: 'Click for the whole list of steps · alt+→ / alt+← walk too',
+    none: 'No specification here has a path table to walk (a .md with a section 5 table).',
+  },
+} as const
+
+export function words(): typeof WORDS[Lang] {
+  const setting = vscode.workspace.getConfiguration('rtlgraph').get<string>('language')
+  const tag = setting === 'korean' ? 'ko' : setting === 'english' ? 'en' : vscode.env.language
+  return WORDS[langOf(tag)]
+}
 
 /** A `## 5.`-style path table is what makes a markdown file walkable. */
 export function looksLikeSpec(doc: vscode.TextDocument): boolean {
@@ -98,16 +127,60 @@ export class WalkSession {
     WalkSession.current = undefined
   }
 
+  /** The step list, for the palette and the status bar's middle button. */
+  static steps(): void {
+    void WalkSession.current?.stepper()
+  }
+
   private readonly spec: vscode.Uri
   private readonly walk: Walk
+  // Three buttons rather than one: a reader who expected to click through the
+  // steps should not have to find out that the keyboard was the way.
+  private readonly back: vscode.StatusBarItem
   private readonly status: vscode.StatusBarItem
+  private readonly forth: vscode.StatusBarItem
   private at = 0
 
   private constructor(spec: vscode.Uri, walk: Walk) {
     this.spec = spec
     this.walk = walk
-    this.status = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100)
-    this.status.command = 'rtlgraph.walkNext'
+    const item = (priority: number, command: string, tooltip: string) => {
+      const made = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, priority)
+      made.command = command
+      made.tooltip = tooltip
+      return made
+    }
+    this.back = item(102, 'rtlgraph.walkPrevious', 'alt+←')
+    this.status = item(101, 'rtlgraph.walkSteps', words().tip)
+    this.forth = item(100, 'rtlgraph.walkNext', 'alt+→')
+  }
+
+  /**
+   * Every step of this scenario, as a list you move through.
+   *
+   * Moving the selection opens that step, so the list is the walk: click the
+   * third row and the panes show the third cycle. It also answers "how many
+   * are there" without having to reach the end to find out.
+   */
+  private async stepper(): Promise<void> {
+    const total = this.walk.steps.length
+    const pick = vscode.window.createQuickPick<vscode.QuickPickItem & { index: number }>()
+    pick.title = `${this.walk.id} — ${this.walk.title}`
+    pick.placeholder = words().stepper
+    pick.matchOnDescription = true
+    pick.items = this.walk.steps.map((step, index) => ({
+      index,
+      label: `${index + 1}/${total}  ·  ${step.cycle}`,
+      description: step.said.replace(/`/g, ''),
+      detail: `${step.file}:${step.spans.map(s => (s.from === s.to ? s.from : `${s.from}-${s.to}`)).join(', ')}`,
+    }))
+    pick.activeItems = [pick.items[this.at]]
+    pick.onDidChangeActive(active => {
+      if (active[0]) void this.show(active[0].index)
+    })
+    pick.onDidAccept(() => pick.hide())
+    pick.onDidHide(() => pick.dispose())
+    pick.show()
   }
 
   private async move(by: number): Promise<void> {
@@ -137,9 +210,12 @@ export class WalkSession {
     // Only while a walk is on do ← / → mean "step": a keybinding that always
     // takes those is one the reader did not ask for.
     await vscode.commands.executeCommand('setContext', 'rtlgraph.walking', true)
-    this.status.text = `$(debug-step-over) ${this.walk.id}  ${at + 1}/${this.walk.steps.length}  ·  ${step.cycle}`
-    this.status.tooltip = `${step.said}\n\n← / → to walk, click for the next step`
-    this.status.show()
+    const total = this.walk.steps.length
+    this.back.text = '$(chevron-left)'
+    this.status.text = `$(debug-step-over) ${this.walk.id}  ${at + 1}/${total}  ·  ${step.cycle}`
+    this.forth.text = at + 1 < total ? '$(chevron-right)' : '$(check)'
+    this.forth.command = at + 1 < total ? 'rtlgraph.walkNext' : 'rtlgraph.walkStop'
+    for (const item of [this.back, this.status, this.forth]) item.show()
   }
 
   private async open(step: Step, column: vscode.ViewColumn, how: vscode.TextEditorDecorationType): Promise<void> {
@@ -160,13 +236,69 @@ export class WalkSession {
 
   stop(): void {
     void vscode.commands.executeCommand('setContext', 'rtlgraph.walking', false)
-    this.status.dispose()
+    for (const item of [this.back, this.status, this.forth]) item.dispose()
     for (const editor of vscode.window.visibleTextEditors) {
       editor.setDecorations(READING, [])
       editor.setDecorations(BEFORE, [])
     }
     if (WalkSession.current === this) WalkSession.current = undefined
   }
+}
+
+/**
+ * Every scenario in the workspace, with the document it came from.
+ *
+ * A code lens only exists in a text editor, so a reader working in the
+ * **markdown preview** sees none. The palette has to be able to offer the
+ * scenarios without a document in focus, which means finding them.
+ */
+export async function allWalks(): Promise<{ spec: vscode.Uri; walk: Walk }[]> {
+  const out: { spec: vscode.Uri; walk: Walk }[] = []
+  for (const spec of await vscode.workspace.findFiles('**/*.md', '**/node_modules/**', 200)) {
+    let doc: vscode.TextDocument
+    try {
+      doc = await vscode.workspace.openTextDocument(spec)
+    } catch {
+      continue
+    }
+    if (!/\|/.test(doc.getText())) continue // no table, no path
+    for (const walk of walksIn(doc.getText(), await prefixesFor(doc))) out.push({ spec, walk })
+  }
+  return out
+}
+
+/**
+ * The scenario to walk, asked for in whatever way the reader is working.
+ *
+ * With the document open as text, only its own scenarios are offered; from a
+ * preview or from nowhere in particular, every scenario in the workspace is,
+ * each saying which file it is in.
+ */
+export async function askForWalk(doc?: vscode.TextDocument): Promise<{ spec: vscode.Uri; id: string } | undefined> {
+  const here = doc?.languageId === 'markdown' ? walksIn(doc.getText(), await prefixesFor(doc)) : []
+  let found = here.length > 0 ? here.map(walk => ({ spec: doc!.uri, walk })) : await allWalks()
+  if (here.length === 0) {
+    // A preview has no document to ask, but its tab is named after one
+    // ("Preview 30-uart_receiver.md"). If that file is among the specs, the
+    // reader means its scenarios and not the whole workspace's.
+    const named = /([^\s/\\]+\.md)\s*$/.exec(vscode.window.tabGroups.activeTabGroup.activeTab?.label ?? '')?.[1]
+    const inThat = named ? found.filter(f => f.spec.path.endsWith(`/${named}`)) : []
+    if (inThat.length > 0) found = inThat
+  }
+  if (found.length === 0) {
+    void vscode.window.showWarningMessage(`RTLGraph: ${words().none}`)
+    return undefined
+  }
+  const picked = await vscode.window.showQuickPick(
+    found.map(({ spec, walk }) => ({
+      label: words().list(walk.id, walk.title),
+      description: words().steps(walk.steps.length),
+      detail: here.length > 0 ? undefined : vscode.workspace.asRelativePath(spec),
+      spec,
+      id: walk.id,
+    })),
+    { placeHolder: words().pick, matchOnDetail: true })
+  return picked ? { spec: picked.spec, id: picked.id } : undefined
 }
 
 /** The `▶ workflow` above each scenario that has a table under it. */
@@ -182,7 +314,7 @@ export class WalkLens implements vscode.CodeLensProvider {
       const at = lines.findIndex(line => new RegExp(`^#{2,4}\\s+${walk.id}[.\\s]`).test(line))
       if (at < 0) continue
       out.push(new vscode.CodeLens(new vscode.Range(at, 0, at, 0), {
-        title: `▶ workflow — ${walk.steps.length} steps`,
+        title: `▶ workflow — ${words().steps(walk.steps.length)}`,
         command: 'rtlgraph.walkWorkflow',
         arguments: [doc.uri, walk.id],
       }))
