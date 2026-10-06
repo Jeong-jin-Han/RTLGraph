@@ -22,6 +22,7 @@ const WORDS = {
     before: '직전',
     tip: '클릭하면 전체 스텝 목록 · alt+→ / alt+← 로도 걷는다',
     none: '이 워크스페이스에는 걸을 수 있는 명세가 없다 (5 절 표가 있는 .md).',
+    reader: '명세로 읽기',
   },
   en: {
     steps: (n: number) => `${n} steps`,
@@ -31,6 +32,7 @@ const WORDS = {
     before: 'before',
     tip: 'Click for the whole list of steps · alt+→ / alt+← walk too',
     none: 'No specification here has a path table to walk (a .md with a section 5 table).',
+    reader: 'Read as a specification',
   },
 } as const
 
@@ -101,10 +103,30 @@ const BEFORE = vscode.window.createTextEditorDecorationType({
   opacity: '0.75',
 })
 
+/** Where a walk has got to, for whoever is showing it. */
+export interface WalkAt {
+  id: string
+  index: number
+  total: number
+  file: string
+  cycle: string
+}
+
+const watching: ((at: WalkAt | undefined) => void)[] = []
+
+/** Told whenever the walk moves, and told `undefined` when it ends. */
+export function onWalkMoved(listen: (at: WalkAt | undefined) => void): vscode.Disposable {
+  watching.push(listen)
+  return new vscode.Disposable(() => {
+    const at = watching.indexOf(listen)
+    if (at >= 0) watching.splice(at, 1)
+  })
+}
+
 export class WalkSession {
   private static current: WalkSession | undefined
 
-  static async start(spec: vscode.TextDocument, id: string): Promise<WalkSession | undefined> {
+  static async start(spec: vscode.TextDocument, id: string, index = 0): Promise<WalkSession | undefined> {
     const prefixes = await prefixesFor(spec)
     const walk = walksIn(spec.getText(), prefixes).find(w => w.id === id)
     if (!walk) {
@@ -114,12 +136,22 @@ export class WalkSession {
     WalkSession.current?.stop()
     const session = new WalkSession(spec.uri, walk)
     WalkSession.current = session
-    await session.show(0)
+    await session.show(Math.min(Math.max(index, 0), walk.steps.length - 1))
     return session
   }
 
   static step(by: number): void {
     void WalkSession.current?.move(by)
+  }
+
+  /** Straight to one step — what clicking a row in the preview does. */
+  static goto(index: number): void {
+    void WalkSession.current?.show(index)
+  }
+
+  /** Which walk is on, if any, and where it has got to. */
+  static where(): WalkAt | undefined {
+    return WalkSession.current?.at_()
   }
 
   static stopCurrent(): void {
@@ -195,7 +227,8 @@ export class WalkSession {
    * The two groups are made once and then reused: opening with `preview` means
    * the next step lands in the same tab instead of beside it.
    */
-  private async show(at: number): Promise<void> {
+  async show(at: number): Promise<void> {
+    if (at < 0 || at >= this.walk.steps.length) return
     this.at = at
     const step = this.walk.steps[at]
     const before = at > 0 ? this.walk.steps[at - 1] : undefined
@@ -216,6 +249,7 @@ export class WalkSession {
     this.forth.text = at + 1 < total ? '$(chevron-right)' : '$(check)'
     this.forth.command = at + 1 < total ? 'rtlgraph.walkNext' : 'rtlgraph.walkStop'
     for (const item of [this.back, this.status, this.forth]) item.show()
+    for (const listen of [...watching]) listen(this.at_())
   }
 
   private async open(step: Step, column: vscode.ViewColumn, how: vscode.TextEditorDecorationType): Promise<void> {
@@ -234,8 +268,14 @@ export class WalkSession {
     if (ranges[0]) editor.revealRange(ranges[0], vscode.TextEditorRevealType.InCenter)
   }
 
+  private at_(): WalkAt {
+    const step = this.walk.steps[this.at]
+    return { id: this.walk.id, index: this.at, total: this.walk.steps.length, file: step.file, cycle: step.cycle }
+  }
+
   stop(): void {
     void vscode.commands.executeCommand('setContext', 'rtlgraph.walking', false)
+    for (const listen of [...watching]) listen(undefined)
     for (const item of [this.back, this.status, this.forth]) item.dispose()
     for (const editor of vscode.window.visibleTextEditors) {
       editor.setDecorations(READING, [])
@@ -309,7 +349,13 @@ export class WalkLens implements vscode.CodeLensProvider {
     const walks = walksIn(doc.getText(), prefixes)
     if (walks.length === 0) return []
     const lines = doc.getText().split('\n')
-    const out: vscode.CodeLens[] = []
+    // One at the top for the document as a whole: the reader, where the
+    // scenarios are laid out with their steps rather than counted.
+    const out: vscode.CodeLens[] = [new vscode.CodeLens(new vscode.Range(0, 0, 0, 0), {
+      title: `📖 ${words().reader}`,
+      command: 'rtlgraph.readSpec',
+      arguments: [doc.uri],
+    })]
     for (const walk of walks) {
       const at = lines.findIndex(line => new RegExp(`^#{2,4}\\s+${walk.id}[.\\s]`).test(line))
       if (at < 0) continue

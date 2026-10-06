@@ -205,6 +205,15 @@ extension, so each line is something that broke once.
   cycle, because an editor that jumps elsewhere halfway through loses the
   reader's place — and each step replaces what is in its pane, so a walk of ten
   steps leaves two tabs behind rather than ten.
+- **A reader for the specification itself** (`📖` at the top of the document,
+  or the book in its title bar). VS Code's markdown preview renders the text
+  and stops there — a lens cannot live in it — so this is the preview a spec
+  needs: the document, and under every scenario heading the steps of that
+  scenario, each saying its cycle and the lines it runs. Click one and the
+  walk goes there; `▶ ◀ ■` sit in the same strip; the step you are on is
+  marked as the editors on the right move. Every citation in the document is a
+  button that opens that line. Scenarios fold, and a fold you close stays
+  closed.
 - **Hovering a signal name** in the `.v` shows what section 6 of the
   specification says about it: where it is made, where it is read, the range it
   holds, and why. Every citation in the entry is a link to that line. A name no

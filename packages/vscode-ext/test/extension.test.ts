@@ -28,6 +28,10 @@ test('contributed commands and registered commands are the same set', () => {
     .filter(id => !id.startsWith('rtlgraph._')) // internal commands stay out of the palette
     .sort()
   assert.deepEqual(declared, registered)
+  // Two commands of the same name is not a duplicate entry in a list: the
+  // second registration throws, activation stops there, and every command
+  // after it in the file is simply missing.
+  assert.deepEqual(declared, [...new Set(declared)], 'and each name is claimed once')
 })
 
 test('menus only reference contributed commands', () => {

@@ -132,6 +132,22 @@ export async function run(): Promise<void> {
     const tabs = vscode.window.tabGroups.all.flatMap(g => g.tabs).filter(t => /\.s?v$/.test(t.label))
     assert.ok(tabs.length <= 2, `a walk leaves no pile of tabs: ${tabs.map(t => t.label)}`)
 
+    // The reader: the document with the steps of each scenario under its
+    // heading, which is the only place a walk can be started by clicking.
+    await vscode.commands.executeCommand('rtlgraph.readSpec', specDoc.uri)
+    await sleep(2000)
+    const readerTab = vscode.window.tabGroups.all.flatMap(g => g.tabs)
+      .find(t => (t.input as { viewType?: string })?.viewType?.endsWith('rtlgraph.spec'))
+    assert.ok(readerTab, 'the specification opens in RTLGraph\'s own reader')
+    assert.equal(readerTab?.label, '30-uart_receiver.md')
+    if (process.env.RTLGRAPH_SHOT_SPEC) {
+      await sleep(2500)
+      spawnSync('import', ['-window', 'root', process.env.RTLGRAPH_SHOT_SPEC])
+    }
+    log('the specification opens in RTLGraph\'s reader, scenarios and steps in place')
+    await vscode.commands.executeCommand('workbench.action.closeAllEditors')
+    await vscode.window.showTextDocument(specDoc, { viewColumn: vscode.ViewColumn.One })
+
     // A reader working in the rendered preview sees no code lens — there is no
     // text editor for one to live in — so the palette has to find the
     // scenarios itself, and prefer the document being previewed.

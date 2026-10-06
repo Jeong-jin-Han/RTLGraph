@@ -254,6 +254,58 @@ body.editing #stage g.wire { cursor: pointer; }
    what keeps the eye's place across to the labels. */
 #wave-plot .wave-row-group { fill: #faf5ff; }
 #wave-plot .wave-line.hot { stroke: #b45309; stroke-width: 2.2; }
+/* ── the specification reader ─────────────────────────────────────────────
+   A document first: one column, measured line length, nothing competing with
+   the writing. The only thing added to it is the step list under a scenario,
+   and that is tinted rather than boxed in so it reads as part of the section
+   it belongs to. */
+.spec-bar { display: flex; align-items: center; gap: 8px; padding: 6px 12px; border-bottom: 1px solid #e5e7eb; background: #f9fafb; }
+.spec-bar .name { font: 600 12px ui-monospace, monospace; color: #374151; }
+.spec-bar .spacer { flex: 1; }
+.spec-bar button.plain { font: inherit; height: 22px; padding: 0 10px; border: 1px solid #d1d5db; border-radius: 4px; background: #ffffff; color: #374151; cursor: pointer; }
+.spec-bar button.plain:hover { border-color: #2563eb; color: #1d4ed8; }
+.spec-doc { flex: 1; overflow: auto; padding: 14px 20px 60px; max-width: 900px; font: 13px/1.65 system-ui, -apple-system, "Segoe UI", sans-serif; color: #1f2937; }
+.spec-doc h1 { font-size: 20px; margin: 4px 0 10px; color: #111827; }
+.spec-doc h2 { font-size: 16px; margin: 22px 0 8px; padding-bottom: 4px; border-bottom: 1px solid #e5e7eb; color: #111827; }
+.spec-doc h3 { font-size: 14px; margin: 18px 0 6px; color: #1f2937; }
+.spec-doc h4 { font-size: 13px; margin: 14px 0 4px; color: #374151; }
+.spec-doc p { margin: 6px 0; }
+.spec-doc hr { border: 0; border-top: 1px solid #e5e7eb; margin: 16px 0; }
+.spec-doc code { font-family: ui-monospace, monospace; font-size: 12px; background: #f3f4f6; border-radius: 3px; padding: 0 3px; color: #1f2937; }
+.spec-doc pre.code { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 5px; padding: 8px 10px; overflow: auto; font: 12px/1.5 ui-monospace, monospace; }
+.spec-doc .md-list { margin: 6px 0; padding-left: 20px; }
+.spec-doc .md-list li { margin: 3px 0; }
+.spec-doc .md-list li.under { list-style: '– '; color: #4b5563; }
+.spec-doc .md-table { border-collapse: collapse; margin: 8px 0; font-size: 12px; }
+.spec-doc .md-table th, .spec-doc .md-table td { border: 1px solid #e5e7eb; padding: 3px 7px; text-align: left; vertical-align: top; }
+.spec-doc .md-table th { background: #f9fafb; font-weight: 600; color: #111827; }
+.spec-doc a.link { color: #1d4ed8; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+/* A line number is a way into the code, so it looks like a key you press. */
+.spec-doc button.cite { font: 11px ui-monospace, monospace; padding: 0 4px; border: 1px solid #ddd6fe; border-radius: 3px; background: #f5f3ff; color: #5b21b6; cursor: pointer; }
+.spec-doc button.cite:hover { background: #ede9fe; border-color: #a78bfa; }
+.spec-doc code.cite.dead { color: #6b7280; }
+.spec-doc .walk { margin: 8px 0 14px; border-left: 3px solid #ddd6fe; background: #faf9ff; border-radius: 0 5px 5px 0; }
+.spec-doc .walk.live { border-left-color: #7c3aed; background: #f5f3ff; }
+.spec-doc .walk-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 5px 8px; }
+.spec-doc .walk-bar button { font: inherit; height: 22px; padding: 0 9px; white-space: nowrap; flex: none; border: 1px solid #d1d5db; border-radius: 4px; background: #ffffff; color: #374151; cursor: pointer; }
+.spec-doc .walk-bar button.fold { width: 22px; padding: 0; border-color: transparent; background: none; color: #6b7280; }
+.spec-doc .walk-bar button.go { border-color: #a78bfa; color: #5b21b6; font-weight: 600; }
+.spec-doc .walk-bar button.go:hover { background: #ede9fe; }
+.spec-doc .walk-bar button.move { width: 26px; padding: 0; }
+.spec-doc .walk-bar .count { color: #6b7280; font-size: 11px; white-space: nowrap; }
+.spec-doc .walk-bar .now { margin-left: auto; font: 600 11px ui-monospace, monospace; color: #5b21b6; white-space: nowrap; }
+.spec-doc .steps { margin: 0; padding: 0 6px 6px 8px; list-style: none; }
+.spec-doc .steps .step { display: flex; gap: 8px; align-items: flex-start; padding: 4px 6px; border-radius: 4px; cursor: pointer; }
+.spec-doc .steps .step:hover { background: #ede9fe; }
+.spec-doc .steps .step.now { background: #ddd6fe; }
+.spec-doc .steps .step .n { flex: none; width: 18px; height: 18px; border-radius: 9px; background: #ffffff; border: 1px solid #c4b5fd; color: #5b21b6; font: 600 10px/17px system-ui, sans-serif; text-align: center; }
+.spec-doc .steps .step.now .n { background: #7c3aed; border-color: #7c3aed; color: #ffffff; }
+.spec-doc .steps .step .body { min-width: 0; }
+.spec-doc .steps .step .head { display: flex; gap: 8px; align-items: baseline; min-width: 0; }
+.spec-doc .steps .step .cycle { font: 600 11px ui-monospace, monospace; color: #1f2937; }
+.spec-doc .steps .step .where { font: 11px ui-monospace, monospace; color: #6b7280; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.spec-doc .steps .step .said { font-size: 12px; color: #4b5563; }
+.spec-doc p.nothing { color: #6b7280; font-style: italic; }
 [hidden] { display: none !important; }
 `
 

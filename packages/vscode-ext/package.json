@@ -160,6 +160,11 @@
         "title": "RTLGraph: Set View Preset"
       },
       {
+        "command": "rtlgraph.readSpec",
+        "title": "RTLGraph: Read the Specification",
+        "icon": "$(book)"
+      },
+      {
         "command": "rtlgraph.walkWorkflow",
         "title": "RTLGraph: Walk a Workflow"
       },
@@ -196,6 +201,13 @@
           "command": "rtlgraph.makeSubmission",
           "when": "explorerResourceIsFolder",
           "group": "rtlgraph"
+        }
+      ],
+      "editor/title": [
+        {
+          "command": "rtlgraph.readSpec",
+          "when": "rtlgraph.isSpec && resourceExtname == .md",
+          "group": "navigation@-1"
         }
       ]
     },

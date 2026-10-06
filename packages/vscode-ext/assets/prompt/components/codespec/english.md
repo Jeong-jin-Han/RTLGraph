@@ -114,10 +114,10 @@ that row — never write the same path twice (rule 7).
 
 ## A tool reads this document
 
-Sections 5 and 6 are not only for people. When RTLGraph opens a specification it puts a
-**`▶ workflow`** on each scenario and walks its section-5 table through the code — the current
-step on the right, the step before it underneath, the stretch to read bracketed down the gutter.
-For that to work:
+Sections 5 and 6 are not only for people. RTLGraph has a **reader** for this document (`📖` at
+the top of it) that lists, under every scenario heading, the steps of that scenario; clicking one
+opens that cycle on the code — the current step on the right, the step before it underneath, the
+stretch to read bracketed down the gutter. For that to work:
 
 - **Keep the citations inside the table cells.** A `rx:116` that drifts into prose outside the
   table leaves that step with nowhere to go. Condition line in the condition cell, assignment line

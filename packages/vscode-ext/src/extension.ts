@@ -12,7 +12,9 @@ import { openBeside, openCodeBeside } from './openCode.ts'
 import { MATERIAL_ICON, withRtlgraphFiles } from './explorerIcons.ts'
 import { openRequirement } from './specView.ts'
 import { SpecHover } from './spec/hover.ts'
+import { SpecPreview } from './spec/view.ts'
 import { askForWalk, WalkLens, WalkSession } from './spec/walk.ts'
+import { walksIn } from './spec/steps.ts'
 import { fsmFileName, graphFileKind, graphName, hierarchyEntries, loadHierarchy, schematicFileName } from '@rtlgraph/ir'
 import type { FoldAction, FoldScope } from './protocol.ts'
 
@@ -261,6 +263,19 @@ function promptLanguages(): ('korean' | 'english')[] | undefined {
 }
 
 // Only this package imports `vscode`; everything else lives in @rtlgraph/*.
+/**
+ * Whether what is in front of the reader is a specification we can walk.
+ *
+ * A `when` clause cannot read a file, so the answer is worked out here and
+ * left in a context key; without it the title button would sit on every
+ * markdown file in the workspace.
+ */
+async function markSpec(editor: vscode.TextEditor | undefined): Promise<void> {
+  const is = editor?.document.languageId === 'markdown'
+    && walksIn(editor.document.getText()).length > 0
+  await vscode.commands.executeCommand('setContext', 'rtlgraph.isSpec', is)
+}
+
 export function activate(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
     RtlGraphEditorProvider.register(context),
@@ -538,6 +553,15 @@ export function activate(context: vscode.ExtensionContext): void {
         : undefined
     }),
     vscode.commands.registerCommand('rtlgraph.walkSteps', () => WalkSession.steps()),
+    // The reader: the document rendered, with the steps of each scenario under
+    // its heading. The button for it sits in the title bar of a spec, which is
+    // what `rtlgraph.isSpec` is for.
+    vscode.commands.registerCommand('rtlgraph.readSpec', (uri?: unknown) =>
+      SpecPreview.fromCommand(context, uri instanceof vscode.Uri ? uri : undefined)),
+    vscode.window.onDidChangeActiveTextEditor(editor => void markSpec(editor)),
+    vscode.workspace.onDidSaveTextDocument(saved => {
+      if (saved === vscode.window.activeTextEditor?.document) void markSpec(vscode.window.activeTextEditor)
+    }),
     vscode.commands.registerCommand('rtlgraph.walkNext', () => WalkSession.step(1)),
     vscode.commands.registerCommand('rtlgraph.walkPrevious', () => WalkSession.step(-1)),
     vscode.commands.registerCommand('rtlgraph.walkStop', () => WalkSession.stopCurrent()),
@@ -616,6 +640,9 @@ export function activate(context: vscode.ExtensionContext): void {
     // Internal: what the active schematic last drew (used by the end-to-end test).
     vscode.commands.registerCommand('rtlgraph._renderState', () => RtlGraphEditorProvider.activeRenderState()),
   )
+
+  // Whatever was already open when we woke up.
+  void markSpec(vscode.window.activeTextEditor)
 }
 
 export function deactivate(): void {}

@@ -59,6 +59,14 @@ const configs = [
   },
   {
     ...common,
+    entryPoints: ['src/webview/spec.ts'],
+    outfile: 'dist/spec.js',
+    platform: 'browser',
+    format: 'iife',
+    target: 'es2022',
+  },
+  {
+    ...common,
     entryPoints: ['src/webview/main.ts'],
     outfile: 'dist/webview.js',
     platform: 'browser',
