@@ -82,10 +82,18 @@ test('the step being walked is marked, and the buttons appear on that scenario',
   assert.equal(all(card, 'step').filter(s => s.className.includes('now')).length, 1, 'exactly one step is current')
   const moves = all(card, 'move')
   assert.deepEqual(moves.map(m => m.textContent), ['◀', '▶'], 'and it is steppable from here')
+  assert.deepEqual(moves.map(m => m.disabled), [false, false], 'both ways, from the middle of a walk')
 
   ui.posted.length = 0
   moves[1].listeners.get('click')?.[0]({} as never)
   assert.deepEqual(ui.posted, [{ type: 'step', by: 1 }])
+
+  // At either end there is no step that way, so the button is not offered.
+  ui.send({ type: 'at', at: { id: 'RX-N1', index: 0, total: 6 } })
+  assert.deepEqual(all(card, 'move').map(m => m.disabled), [true, false], 'nothing before the first step')
+  ui.send({ type: 'at', at: { id: 'RX-N1', index: 5, total: 6 } })
+  assert.deepEqual(all(card, 'move').map(m => m.disabled), [false, true], 'nor after the last')
+  ui.send({ type: 'at', at: { id: 'RX-N1', index: 1, total: 6 } })
 
   // A scenario nobody is walking keeps just its ▶ and its count.
   const other = all(ui.body, 'walk').find(c => c.dataset.id !== 'RX-N1')!

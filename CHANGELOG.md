@@ -214,6 +214,9 @@ extension, so each line is something that broke once.
   marked as the editors on the right move. Every citation in the document is a
   button that opens that line. Scenarios fold, and a fold you close stays
   closed.
+- Nothing comes before the first step, so the pane under it is left empty
+  rather than holding the last walk's last step, and the button that would
+  step backwards from there is not offered.
 - **Hovering a signal name** in the `.v` shows what section 6 of the
   specification says about it: where it is made, where it is read, the range it
   holds, and why. Every citation in the entry is a link to that line. A name no

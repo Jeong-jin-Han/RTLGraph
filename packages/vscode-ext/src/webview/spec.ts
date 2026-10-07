@@ -284,6 +284,9 @@ function markWalk(only?: string): void {
       found.bar.append(el('span', 'now', want))
       for (const [label, by] of [['◀', -1], ['▶', 1]] as const) {
         const button = el('button', 'move', label)
+        // A step that does not exist is not offered: there is nothing before
+        // the first, and nothing after the last.
+        button.disabled = by < 0 ? at.index === 0 : at.index + 1 >= at.total
         button.addEventListener('click', () => vscode.postMessage({ type: 'step', by }))
         found.bar.append(button)
       }

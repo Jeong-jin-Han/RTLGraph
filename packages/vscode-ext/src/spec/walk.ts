@@ -84,6 +84,20 @@ export async function sourceOf(spec: vscode.Uri, file: string): Promise<vscode.U
   return found.length === 1 ? found[0] : undefined
 }
 
+/**
+ * Closes what is in one column, leaving the group itself behind.
+ *
+ * The layout is set again right after, which brings the empty group back, so
+ * the panes do not jump about between the first step and the second. Anything
+ * with unsaved edits is left alone: a walk is for reading, and it has no
+ * business closing someone's work.
+ */
+async function emptyOut(column: vscode.ViewColumn): Promise<void> {
+  const group = vscode.window.tabGroups.all.find(g => g.viewColumn === column)
+  const closable = group?.tabs.filter(tab => !tab.isDirty) ?? []
+  if (closable.length > 0) await vscode.window.tabGroups.close(closable, true)
+}
+
 // The bracket down the left: one decoration for the whole stretch, so a step
 // that reads lines 115–116 looks like one thing and not two highlights.
 const READING = vscode.window.createTextEditorDecorationType({
@@ -233,6 +247,10 @@ export class WalkSession {
     const step = this.walk.steps[at]
     const before = at > 0 ? this.walk.steps[at - 1] : undefined
 
+    // The first step has nothing before it, and the pane under it must say so
+    // by being empty. Left as it was, it shows the last walk's last step as if
+    // it were this walk's previous one — the one reading a walk cannot afford.
+    if (!before) await emptyOut(vscode.ViewColumn.Three)
     await vscode.commands.executeCommand('vscode.setEditorLayout', {
       orientation: 0, // columns
       groups: [{ size: 0.5 }, { groups: [{ size: 0.5 }, { size: 0.5 }], size: 0.5 }],
@@ -244,7 +262,8 @@ export class WalkSession {
     // takes those is one the reader did not ask for.
     await vscode.commands.executeCommand('setContext', 'rtlgraph.walking', true)
     const total = this.walk.steps.length
-    this.back.text = '$(chevron-left)'
+    // Nothing before the first step, so no button that pretends otherwise.
+    this.back.text = at > 0 ? '$(chevron-left)' : '$(blank)'
     this.status.text = `$(debug-step-over) ${this.walk.id}  ${at + 1}/${total}  ·  ${step.cycle}`
     this.forth.text = at + 1 < total ? '$(chevron-right)' : '$(check)'
     this.forth.command = at + 1 < total ? 'rtlgraph.walkNext' : 'rtlgraph.walkStop'

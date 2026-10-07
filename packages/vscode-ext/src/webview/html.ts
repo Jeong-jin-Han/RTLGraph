@@ -292,6 +292,7 @@ body.editing #stage g.wire { cursor: pointer; }
 .spec-doc .walk-bar button.go { border-color: #a78bfa; color: #5b21b6; font-weight: 600; }
 .spec-doc .walk-bar button.go:hover { background: #ede9fe; }
 .spec-doc .walk-bar button.move { width: 26px; padding: 0; }
+.spec-doc .walk-bar button:disabled { opacity: 0.4; cursor: default; }
 .spec-doc .walk-bar .count { color: #6b7280; font-size: 11px; white-space: nowrap; }
 .spec-doc .walk-bar .now { margin-left: auto; font: 600 11px ui-monospace, monospace; color: #5b21b6; white-space: nowrap; }
 .spec-doc .steps { margin: 0; padding: 0 6px 6px 8px; list-style: none; }

@@ -122,6 +122,10 @@ export async function run(): Promise<void> {
     const atFirst = vscode.window.visibleTextEditors
       .find(e => e.viewColumn === vscode.ViewColumn.Two)!.document.uri.path
     assert.match(atFirst, /\.s?v$/, 'and it is the code, not the document')
+    // Nothing came before the first step, and the pane under it says so by
+    // being empty rather than by showing the last walk's last step.
+    assert.equal(vscode.window.visibleTextEditors.filter(e => e.viewColumn === vscode.ViewColumn.Three).length, 0,
+      'the pane under the first step is empty')
 
     await vscode.commands.executeCommand('rtlgraph.walkNext')
     await sleep(900)
