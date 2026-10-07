@@ -220,6 +220,14 @@ extension, so each line is something that broke once.
   already — so the sentence leads and the citations sit under it. A table
   written before that column existed still walks: whatever in the row is not
   a citation is used instead.
+- The reader follows the VS Code theme, the way the markdown preview does —
+  colours, fonts and all, down to `markdown.preview.fontFamily`. The schematic
+  and the waveform stay white on purpose: they are figures, and a figure is
+  the same figure in any theme. A document is not.
+- A step's line numbers are individually clickable, but only in the step the
+  walk is standing on; in any other step the same click walks there first,
+  because jumping into a step the walk is not on leaves the editor somewhere
+  the bracket is not.
 - Nothing comes before the first step, so the pane under it is left empty
   rather than holding the last walk's last step, and the button that would
   step backwards from there is not offered.

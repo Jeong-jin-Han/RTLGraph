@@ -110,30 +110,44 @@ test('the step being walked is marked, and the buttons appear on that scenario',
   assert.equal(all(other, 'move').length, 0)
 })
 
-// A step often reads three places in one file. Clicking the row walks to the
-// step, which opens the first; clicking one of the lines goes to that line,
-// and must not also be taken as a click on the row.
-test('each line a step reads is its own way in', { skip }, async () => {
+// A step often reads three places in one file. Inside the step the walk is
+// standing on, each is its own small jump; in any other step the same click
+// means "walk here" — jumping into a step the walk is not on would leave the
+// editor somewhere the bracket is not.
+test('a line inside a step jumps only while the walk stands on that step', { skip }, async () => {
   const ui = await webview()
+  const press = (node: FakeElement) => {
+    ui.posted.length = 0
+    let stopped = false
+    node.listeners.get('click')?.[0]({ stopPropagation: () => (stopped = true) } as never)
+    return { stopped, posted: ui.posted[0] as Record<string, unknown> }
+  }
+
+  // Nothing is being walked: a line is a way into its step.
   ui.send(payload())
-  const first = all(all(ui.body, 'walk')[0], 'step')[0]
-  const lines = all(all(first, 'where')[0], 'line')
-  assert.ok(lines.length >= 3, `one per stretch: ${lines.map(l => l.textContent)}`)
+  const steps = () => all(all(ui.body, 'walk')[0], 'step')
+  const lines = (at: number) => all(all(steps()[at], 'where')[0], 'line')
+  assert.ok(lines(0).length >= 3, `one per stretch: ${lines(0).map(l => l.textContent)}`)
+  let hit = press(lines(0)[2])
+  assert.equal(hit.stopped, true, 'the row underneath does not also take the click')
+  assert.deepEqual(hit.posted, { type: 'walk', id: 'RX-N1', index: 0 })
 
-  ui.posted.length = 0
-  let stopped = false
-  lines[2].listeners.get('click')?.[0]({ stopPropagation: () => (stopped = true) } as never)
-  assert.equal(stopped, true, 'the row underneath does not also take the click')
-  const [sent] = ui.posted as { type: string; file: string; line: number }[]
-  assert.equal(sent.type, 'open')
-  assert.equal(String(sent.line), lines[2].textContent.split('-')[0])
+  // Standing on step 1: now the lines of step 1 are small jumps…
+  ui.send({ type: 'at', at: { id: 'RX-N1', index: 0, total: 6 } })
+  hit = press(lines(0)[2])
+  assert.equal(hit.posted.type, 'open')
+  assert.equal(String(hit.posted.line), lines(0)[2].textContent.split('-')[0])
+  hit = press(all(steps()[0], 'cite')[0])
+  assert.equal(hit.posted.type, 'open', 'and so are the citations in its own text')
 
-  // The citations in the step's own text behave the same way.
-  ui.posted.length = 0
-  stopped = false
-  all(first, 'cite')[0].listeners.get('click')?.[0]({ stopPropagation: () => (stopped = true) } as never)
-  assert.equal(stopped, true)
-  assert.equal((ui.posted[0] as { type: string }).type, 'open')
+  // …and the lines of step 2 are not: they walk there first.
+  hit = press(lines(1)[0])
+  assert.deepEqual(hit.posted, { type: 'walk', id: 'RX-N1', index: 1 })
+
+  // Step over, and the two swap roles.
+  ui.send({ type: 'at', at: { id: 'RX-N1', index: 1, total: 6 } })
+  assert.equal(press(lines(1)[0]).posted.type, 'open')
+  assert.deepEqual(press(lines(0)[0]).posted, { type: 'walk', id: 'RX-N1', index: 0 })
 })
 
 test('a citation anywhere in the document is a way into the code', { skip }, async () => {

@@ -255,65 +255,76 @@ body.editing #stage g.wire { cursor: pointer; }
 #wave-plot .wave-row-group { fill: #faf5ff; }
 #wave-plot .wave-line.hot { stroke: #b45309; stroke-width: 2.2; }
 /* ── the specification reader ─────────────────────────────────────────────
-   A document first: one column, measured line length, nothing competing with
-   the writing. The only thing added to it is the step list under a scenario,
-   and that is tinted rather than boxed in so it reads as part of the section
-   it belongs to. */
-.spec-bar { display: flex; align-items: center; gap: 8px; padding: 6px 12px; border-bottom: 1px solid #e5e7eb; background: #f9fafb; }
-.spec-bar .name { font: 600 12px ui-monospace, monospace; color: #374151; }
+   A document first, and a document in VS Code follows VS Code: every colour
+   here is a theme variable, with the light value as the fallback for anything
+   a theme does not define. The drawings elsewhere in this extension are white
+   on purpose — they are figures, and a figure is the same figure in any
+   theme — but this one is prose, read beside the markdown preview, and it
+   looked like a different application. Fonts follow the preview's own
+   settings (markdown.preview.fontFamily) for the same reason. */
+body.spec-page {
+  background: var(--vscode-editor-background, #ffffff);
+  color: var(--vscode-editor-foreground, #111827);
+  font-family: var(--vscode-markdown-font-family, var(--vscode-font-family, system-ui, sans-serif));
+}
+.spec-bar { display: flex; align-items: center; gap: 8px; padding: 6px 12px; background: var(--vscode-editorWidget-background, #f9fafb); border-bottom: 1px solid var(--vscode-widget-border, var(--vscode-panel-border, #e5e7eb)); }
+.spec-bar .name { font: 600 12px var(--vscode-editor-font-family, ui-monospace, monospace); color: var(--vscode-descriptionForeground, #6b7280); }
 .spec-bar .spacer { flex: 1; }
-.spec-bar button.plain { font: inherit; height: 22px; padding: 0 10px; border: 1px solid #d1d5db; border-radius: 4px; background: #ffffff; color: #374151; cursor: pointer; }
-.spec-bar button.plain:hover { border-color: #2563eb; color: #1d4ed8; }
-.spec-doc { flex: 1; overflow: auto; padding: 14px 20px 60px; max-width: 900px; font: 13px/1.65 system-ui, -apple-system, "Segoe UI", sans-serif; color: #1f2937; }
-.spec-doc h1 { font-size: 20px; margin: 4px 0 10px; color: #111827; }
-.spec-doc h2 { font-size: 16px; margin: 22px 0 8px; padding-bottom: 4px; border-bottom: 1px solid #e5e7eb; color: #111827; }
-.spec-doc h3 { font-size: 14px; margin: 18px 0 6px; color: #1f2937; }
-.spec-doc h4 { font-size: 13px; margin: 14px 0 4px; color: #374151; }
+.spec-bar button.plain { font: inherit; height: 22px; padding: 0 10px; border: 1px solid var(--vscode-button-border, transparent); border-radius: 4px; background: var(--vscode-button-secondaryBackground, #ffffff); color: var(--vscode-button-secondaryForeground, #374151); cursor: pointer; }
+.spec-bar button.plain:hover { background: var(--vscode-button-secondaryHoverBackground, #eef2ff); }
+.spec-doc { flex: 1; overflow: auto; padding: 14px 20px 60px; max-width: 900px; font-size: var(--vscode-markdown-font-size, 13px); line-height: var(--vscode-markdown-line-height, 1.65); }
+.spec-doc h1 { font-size: 1.6em; margin: 4px 0 10px; }
+.spec-doc h2 { font-size: 1.25em; margin: 22px 0 8px; padding-bottom: 4px; border-bottom: 1px solid var(--vscode-textSeparator-foreground, #e5e7eb); }
+.spec-doc h3 { font-size: 1.1em; margin: 18px 0 6px; }
+.spec-doc h4 { font-size: 1em; margin: 14px 0 4px; }
 .spec-doc p { margin: 6px 0; }
-.spec-doc hr { border: 0; border-top: 1px solid #e5e7eb; margin: 16px 0; }
-.spec-doc code { font-family: ui-monospace, monospace; font-size: 12px; background: #f3f4f6; border-radius: 3px; padding: 0 3px; color: #1f2937; }
-.spec-doc pre.code { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 5px; padding: 8px 10px; overflow: auto; font: 12px/1.5 ui-monospace, monospace; }
+.spec-doc hr { border: 0; border-top: 1px solid var(--vscode-textSeparator-foreground, #e5e7eb); margin: 16px 0; }
+.spec-doc code { font-family: var(--vscode-editor-font-family, ui-monospace, monospace); font-size: 0.92em; background: var(--vscode-textCodeBlock-background, #f3f4f6); color: var(--vscode-textPreformat-foreground, inherit); border-radius: 3px; padding: 0 3px; }
+.spec-doc pre.code { background: var(--vscode-textCodeBlock-background, #f9fafb); border: 1px solid var(--vscode-widget-border, #e5e7eb); border-radius: 5px; padding: 8px 10px; overflow: auto; font: 0.92em/1.5 var(--vscode-editor-font-family, ui-monospace, monospace); }
 .spec-doc .md-list { margin: 6px 0; padding-left: 20px; }
 .spec-doc .md-list li { margin: 3px 0; }
-.spec-doc .md-list li.under { list-style: '– '; color: #4b5563; }
-.spec-doc .md-table { border-collapse: collapse; margin: 8px 0; font-size: 12px; }
-.spec-doc .md-table th, .spec-doc .md-table td { border: 1px solid #e5e7eb; padding: 3px 7px; text-align: left; vertical-align: top; }
-.spec-doc .md-table th { background: #f9fafb; font-weight: 600; color: #111827; }
-.spec-doc a.link { color: #1d4ed8; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+.spec-doc .md-list li.under { list-style: '\\2013  '; color: var(--vscode-descriptionForeground, #4b5563); }
+.spec-doc .md-table { border-collapse: collapse; margin: 8px 0; font-size: 0.92em; }
+.spec-doc .md-table th, .spec-doc .md-table td { border: 1px solid var(--vscode-widget-border, #e5e7eb); padding: 3px 7px; text-align: left; vertical-align: top; }
+.spec-doc .md-table th { background: var(--vscode-editorWidget-background, #f9fafb); font-weight: 600; }
+.spec-doc a.link { color: var(--vscode-textLink-foreground, #1d4ed8); cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
 /* A line number is a way into the code, so it looks like a key you press. */
-.spec-doc button.cite { font: 11px ui-monospace, monospace; padding: 0 4px; border: 1px solid #ddd6fe; border-radius: 3px; background: #f5f3ff; color: #5b21b6; cursor: pointer; }
-.spec-doc button.cite:hover { background: #ede9fe; border-color: #a78bfa; }
-.spec-doc code.cite.dead { color: #6b7280; }
-.spec-doc .walk { margin: 8px 0 14px; border-left: 3px solid #ddd6fe; background: #faf9ff; border-radius: 0 5px 5px 0; }
-.spec-doc .walk.live { border-left-color: #7c3aed; background: #f5f3ff; }
+.spec-doc button.cite { font: 0.85em var(--vscode-editor-font-family, ui-monospace, monospace); padding: 0 4px; border: 1px solid var(--vscode-widget-border, #ddd6fe); border-radius: 3px; background: var(--vscode-textCodeBlock-background, #f5f3ff); color: var(--vscode-textLink-foreground, #5b21b6); cursor: pointer; }
+.spec-doc button.cite:hover { background: var(--vscode-toolbar-hoverBackground, #ede9fe); border-color: var(--vscode-focusBorder, #a78bfa); }
+.spec-doc code.cite.dead { color: var(--vscode-descriptionForeground, #6b7280); }
+.spec-doc .walk { margin: 8px 0 14px; border-left: 3px solid var(--vscode-widget-border, #ddd6fe); background: var(--vscode-editorWidget-background, #faf9ff); border-radius: 0 5px 5px 0; }
+.spec-doc .walk.live { border-left-color: var(--vscode-focusBorder, #7c3aed); }
 .spec-doc .walk-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 5px 8px; }
-.spec-doc .walk-bar button { font: inherit; height: 22px; padding: 0 9px; white-space: nowrap; flex: none; border: 1px solid #d1d5db; border-radius: 4px; background: #ffffff; color: #374151; cursor: pointer; }
-.spec-doc .walk-bar button.fold { width: 22px; padding: 0; border-color: transparent; background: none; color: #6b7280; }
-.spec-doc .walk-bar button.go { border-color: #a78bfa; color: #5b21b6; font-weight: 600; }
-.spec-doc .walk-bar button.go:hover { background: #ede9fe; }
+.spec-doc .walk-bar button { font: inherit; height: 22px; padding: 0 9px; white-space: nowrap; flex: none; border: 1px solid var(--vscode-button-border, transparent); border-radius: 4px; background: var(--vscode-button-secondaryBackground, #ffffff); color: var(--vscode-button-secondaryForeground, #374151); cursor: pointer; }
+.spec-doc .walk-bar button:hover { background: var(--vscode-button-secondaryHoverBackground, #eef2ff); }
+.spec-doc .walk-bar button.fold { width: 22px; padding: 0; border-color: transparent; background: none; color: var(--vscode-descriptionForeground, #6b7280); }
+.spec-doc .walk-bar button.go { background: var(--vscode-button-background, #ffffff); color: var(--vscode-button-foreground, #5b21b6); font-weight: 600; }
+.spec-doc .walk-bar button.go:hover { background: var(--vscode-button-hoverBackground, #ede9fe); }
 .spec-doc .walk-bar button.move { width: 26px; padding: 0; }
 .spec-doc .walk-bar button:disabled { opacity: 0.4; cursor: default; }
-.spec-doc .walk-bar .count { color: #6b7280; font-size: 11px; white-space: nowrap; }
-.spec-doc .walk-bar .now { margin-left: auto; font: 600 11px ui-monospace, monospace; color: #5b21b6; white-space: nowrap; }
+.spec-doc .walk-bar .count { color: var(--vscode-descriptionForeground, #6b7280); font-size: 0.85em; white-space: nowrap; }
+.spec-doc .walk-bar .now { margin-left: auto; font: 600 0.85em var(--vscode-editor-font-family, ui-monospace, monospace); color: var(--vscode-textLink-foreground, #5b21b6); white-space: nowrap; }
 .spec-doc .steps { margin: 0; padding: 0 6px 6px 8px; list-style: none; }
 .spec-doc .steps .step { display: flex; gap: 8px; align-items: flex-start; padding: 4px 6px; border-radius: 4px; cursor: pointer; }
-.spec-doc .steps .step:hover { background: #ede9fe; }
-.spec-doc .steps .step.now { background: #ddd6fe; }
-.spec-doc .steps .step .n { flex: none; width: 18px; height: 18px; border-radius: 9px; background: #ffffff; border: 1px solid #c4b5fd; color: #5b21b6; font: 600 10px/17px system-ui, sans-serif; text-align: center; }
-.spec-doc .steps .step.now .n { background: #7c3aed; border-color: #7c3aed; color: #ffffff; }
+.spec-doc .steps .step:hover { background: var(--vscode-list-hoverBackground, #ede9fe); }
+.spec-doc .steps .step.now { background: var(--vscode-list-activeSelectionBackground, #ddd6fe); color: var(--vscode-list-activeSelectionForeground, inherit); }
+.spec-doc .steps .step .n { flex: none; width: 18px; height: 18px; border-radius: 9px; background: var(--vscode-editor-background, #ffffff); border: 1px solid var(--vscode-widget-border, #c4b5fd); color: var(--vscode-descriptionForeground, #5b21b6); font: 600 10px/17px var(--vscode-font-family, system-ui, sans-serif); text-align: center; }
+.spec-doc .steps .step.now .n { background: var(--vscode-focusBorder, #7c3aed); border-color: var(--vscode-focusBorder, #7c3aed); color: var(--vscode-editor-background, #ffffff); }
 .spec-doc .steps .step .body { min-width: 0; }
 .spec-doc .steps .step .head { display: flex; gap: 8px; align-items: baseline; min-width: 0; }
-.spec-doc .steps .step .cycle { font: 600 11px ui-monospace, monospace; color: #1f2937; }
-.spec-doc .steps .step .where { font: 11px ui-monospace, monospace; color: #6b7280; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-/* Each stretch the step reads is its own way in, so each looks like one. */
-.spec-doc .steps .step .where button.line { font: inherit; padding: 0 2px; border: 0; border-radius: 2px; background: none; color: #6b7280; cursor: pointer; text-decoration: underline dotted; text-underline-offset: 2px; }
-.spec-doc .steps .step .where button.line:hover { background: #ede9fe; color: #5b21b6; }
-.spec-doc .steps .step .why { font-size: 13px; color: #1f2937; }
-.spec-doc .steps .step .said { font-size: 12px; color: #4b5563; }
+.spec-doc .steps .step .cycle { font: 600 0.85em var(--vscode-editor-font-family, ui-monospace, monospace); }
+.spec-doc .steps .step .where { font: 0.85em var(--vscode-editor-font-family, ui-monospace, monospace); color: var(--vscode-descriptionForeground, #6b7280); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Each stretch the step reads is its own way in — but only in the step the
+   walk is standing on, so only there does it look like one. */
+.spec-doc .steps .step .where button.line { font: inherit; padding: 0 2px; border: 0; border-radius: 2px; background: none; color: inherit; cursor: pointer; }
+.spec-doc .steps .step.now .where button.line { text-decoration: underline dotted; text-underline-offset: 2px; }
+.spec-doc .steps .step.now .where button.line:hover { background: var(--vscode-toolbar-hoverBackground, #ede9fe); color: var(--vscode-textLink-foreground, #5b21b6); }
+.spec-doc .steps .step .why { font-size: 1em; }
+.spec-doc .steps .step .said { font-size: 0.92em; color: var(--vscode-descriptionForeground, #4b5563); }
 /* The code under a sentence is evidence for it, not the thing being said. */
-.spec-doc .steps .step .said.under { font-size: 11px; color: #6b7280; margin-top: 1px; }
+.spec-doc .steps .step .said.under { font-size: 0.85em; color: var(--vscode-descriptionForeground, #6b7280); margin-top: 1px; }
 .spec-doc .steps .step .said.under code { background: none; padding: 0; }
-.spec-doc p.nothing { color: #6b7280; font-style: italic; }
+.spec-doc p.nothing { color: var(--vscode-descriptionForeground, #6b7280); font-style: italic; }
 [hidden] { display: none !important; }
 `
 

@@ -94,6 +94,27 @@ function openCode(file: string, line: number): void {
   vscode.postMessage({ type: 'open', file, line })
 }
 
+/**
+ * The step whose row is being built, if any.
+ *
+ * A line number inside a step row means two different things depending on
+ * where the walk is. In the step you are on, it is a small jump within what
+ * you are already reading. In another step it is not — going there would put
+ * the editor somewhere the walk is not, with the bracket still drawn around a
+ * different cycle — so it walks to that step instead.
+ */
+let inStep: { id: string; index: number } | undefined
+
+/** Whether the walk is standing on the step currently being built. */
+const standingOn = (within: { id: string; index: number }): boolean =>
+  at?.id === within.id && at.index === within.index
+
+/** What a line inside a step row does when it is pressed. */
+function pressed(within: { id: string; index: number } | undefined, file: string, line: number): void {
+  if (!within || standingOn(within)) openCode(file, line)
+  else vscode.postMessage({ type: 'walk', id: within.id, index: within.index })
+}
+
 /** A citation, as something to press. Anything that resolves to no file is text. */
 function citation(name: string, from: string, to?: string): HTMLElement {
   const file = fileOf(name)
@@ -105,9 +126,10 @@ function citation(name: string, from: string, to?: string): HTMLElement {
   // Inside a step row the row itself is clickable, and a citation that let the
   // click through landed the reader on the step's first line instead of on the
   // line they pressed.
+  const within = inStep
   button.addEventListener('click', event => {
     event.stopPropagation?.()
-    openCode(file, Number(from))
+    pressed(within, file, Number(from))
   })
   return button
 }
@@ -207,6 +229,7 @@ function list(lines: string[]): HTMLElement {
  * first of them; clicking one of these goes to that one.
  */
 function whereIn(step: Step): HTMLElement {
+  const within = inStep
   const where = el('span', 'where')
   where.append(el('span', 'file', `${step.file}:`))
   for (const [index, span] of step.spans.entries()) {
@@ -216,7 +239,7 @@ function whereIn(step: Step): HTMLElement {
     line.title = `${step.file}:${span.from}`
     line.addEventListener('click', event => {
       event.stopPropagation?.()
-      openCode(step.file, span.from)
+      pressed(within, step.file, span.from)
     })
     where.append(line)
   }
@@ -243,6 +266,7 @@ function walkCard(walk: Walk): HTMLElement {
 
   const steps = el('ol', 'steps')
   for (const [index, step] of walk.steps.entries()) {
+    inStep = { id: walk.id, index }
     const row = el('li', 'step')
     row.append(el('span', 'n', `${index + 1}`))
     const body = el('div', 'body')
@@ -267,6 +291,7 @@ function walkCard(walk: Walk): HTMLElement {
     row.addEventListener('click', () => vscode.postMessage({ type: 'walk', id: walk.id, index }))
     steps.append(row)
   }
+  inStep = undefined
   card.append(steps)
 
   // Opening or closing a scenario changes that scenario and nothing else.
@@ -363,6 +388,9 @@ const idIn = (heading: string): string | undefined =>
   /^([A-Z]{1,4}-[NE]\d+)[.\s]/.exec(heading.trim())?.[1]
 
 function draw(): void {
+  // Says this page is the document reader: the shared stylesheet paints every
+  // other view white, and this one follows the theme.
+  document.body.classList.add('spec-page')
   // A document rewritten under the reader (an agent writing it in another
   // window) should come back where they were standing in it.
   const was = (document.body.querySelector?.('.spec-doc') as HTMLElement | undefined)?.scrollTop ?? 0

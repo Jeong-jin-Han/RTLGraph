@@ -152,6 +152,9 @@ stretch to read bracketed down the gutter. For that to work:
   of the bit", "the tenth bit arrives and the byte comes out". Keep citations out of this cell.
 - **A condition line and the assignment under it** (`rx:115`, `rx:116`) are shown as one stretch;
   lines far apart are shown separately. So put only one cycle's lines in a row.
+- **The line numbers in a row are individually clickable only in the step being walked.** A line
+  in any other step walks there first. So a row holding two cycles leaves the reader no way to
+  look at one cycle's lines while standing on the other — one row, one cycle.
 
 Which means: do not leave section 5 empty or replace it with prose. That table *is* the path
 through the code.
