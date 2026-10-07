@@ -161,9 +161,13 @@ export interface Entry {
   line: number
 }
 
-const BOLD_ENTRY = /^\*\*`?([A-Za-z_]\w*)`?\*\*\s*(.*)$/
+// The three shapes section 6 is written in: a bold name (as a paragraph or as
+// a bullet), a subheading per signal, and a row of a table. A document that
+// used any of them was written by someone describing signals; none of them is
+// a shape a sentence falls into by accident.
+const BOLD_ENTRY = /^(?:[-*]\s+)?\*\*`?([A-Za-z_]\w*)`?\*\*\s*(.*)$/
 const HEAD_ENTRY = /^#{3,4}\s+`?([A-Za-z_]\w*)`?\s*(.*)$/
-const ROW_ENTRY = /^\|\s*`([A-Za-z_]\w*)`\s*\|(.+)\|\s*$/
+const ROW_ENTRY = /^\|\s*\**`([A-Za-z_]\w*)`\**\s*\|(.+)\|\s*$/
 
 /**
  * Section 6, read back as one entry per signal.
@@ -186,7 +190,11 @@ export function entriesIn(doc: string): Map<string, Entry> {
     current = undefined
   }
   for (const [at, line] of lines.entries()) {
-    if (/^##\s+\d\./.test(line)) { close(); deep = /^##\s+6\./.test(line); continue }
+    // `## 6. 세부`, `## 6 — Detail`, `## 6) Detail`: the number is what says
+    // which section this is, and a writer should not lose their hovers to a
+    // dash instead of a full stop.
+    const section = /^##\s+(\d+)\b/.exec(line)
+    if (section) { close(); deep = section[1] === '6'; continue }
     if (!deep) continue
     const row = ROW_ENTRY.exec(line)
     if (row) {

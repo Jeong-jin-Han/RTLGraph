@@ -167,7 +167,7 @@ first — they are where the misunderstandings are — then hand the result to `
 
 ## The three chains, one at a time
 
-A chain is one paste that walks an agent through several of the six, in order,
+A chain is one paste that walks an agent through several of the seven, in order,
 running the scripts in between. What it buys you is not typing: it is that the
 **order and the stopping points are written down** rather than remembered at the
 moment you can least afford to get them wrong.

@@ -91,6 +91,17 @@ A module file is these six sections, in this order:
 Scenario numbers: module abbreviation − kind (`N` normal / `E` exceptional) + an index, e.g.
 `RX-E3`.
 
+**The heading is not free-form.** It is how the extension finds a scenario:
+
+```
+### RX-N1. Receives one byte      ← 2–4 hashes, the number, then `.` or a space, then the title
+```
+
+The number is **1–4 uppercase letters**, `-`, **`N`** or **`E`**, then digits. Not `Rx-N1`, not
+`RX_N1`, not `RX-n1`, and nothing may come before it (`### Scenario RX-N1` does not parse). A
+heading with the number and no title parses but is shown nowhere, so always write the title. A
+table under a heading of any other shape is **not a scenario** and gets no walk.
+
 **Numbering**: components take the tens — 10, 20, 30 — and the modules inside one take the units
 (`20-pulse_top`, `21-pulse_fsm`, `22-pulse_dp`). Leave `90-` free however many modules there are.
 
@@ -124,8 +135,15 @@ stretch to read bracketed down the gutter. For that to work:
 - **Keep the citations inside the table cells.** A `rx:116` that drifts into prose outside the
   table leaves that step with nowhere to go. Condition line in the condition cell, assignment line
   in the assignment cell.
-- **Keep the reference-file table in `00-format.md`** (file ↔ marker, `rx:`). That is how the tool
-  knows which file `rx` is. Citing `uart_receiver.v:116` outright works too.
+- **Keep the reference-file table in `00-format.md`.** That is how the tool knows which file `rx`
+  is. One row per file, the file name **alone in its cell** and the marker **with its colon**:
+
+  | File | sha1, first 8 | Marker |
+  |---|---|---|
+  | `uart_receiver.v` | `ea15f96e` | `rx:line` |
+
+  `rx` without the colon registers nothing, and a cell reading `uart_receiver.v (the receiver)`
+  is not a file name. Citing `uart_receiver.v:116` outright works too.
 - **One row, one cycle.** A row citing two files is split into one step per file, because a step
   that moves the editor elsewhere halfway through loses the reader's place.
 - **Fill in the "what happens" column.** It is the title of each step when the scenario is
@@ -138,12 +156,27 @@ stretch to read bracketed down the gutter. For that to work:
 Which means: do not leave section 5 empty or replace it with prose. That table *is* the path
 through the code.
 
+**Open the reader once you are done.** A scenario heading with no steps listed under it means
+that heading, or the marker table in `00-format.md`, does not match the shapes above — fix it
+before moving to the next file.
+
 Section 6 is read too. **Hovering a name in the `.v`** shows that name's section 6 entry, the way
-a library function shows its doc comment. For that, an entry has to **start with the name**:
-`` **`clock_counter`** (`rx:58`) `reg` 11 bits. `` followed by `- made at : …` lines, or a row of
-a `| name | line | what it is |` table. Both shapes are read. A name mentioned only mid-sentence
-gets no hover. Every citation inside an entry becomes a link to that line, so **saying where a
-signal is made and where it is read, by line number**, pays for itself.
+a library function shows its doc comment. Two things make that work.
+
+**Keep the number in the section heading** — `## 6. Detail` or `## 6 — Detail`. Two hashes and the
+digit are what find the section; `## Detail` loses every hover in that file.
+
+**An entry starts with the name it is about.** All three shapes are read:
+
+```
+**`clock_counter`** (`rx:58`) `reg`, 11 bits.    ← then `- made at : …` lines under it
+### `clock_counter`                               ← a subheading per signal
+| `clock_counter` | 58 | `reg`, 11 bits |         ← first cell of a row, backticks required
+```
+
+A name mentioned only mid-sentence gets no hover. Every citation inside an entry becomes a link to
+that line, so **saying where a signal is made and where it is read, by line number**, pays for
+itself.
 
 ## Hunt the exceptions first
 

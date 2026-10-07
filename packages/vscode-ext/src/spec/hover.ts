@@ -20,7 +20,9 @@ interface Read {
   about: Set<string>
 }
 
-const CITATION = /`([A-Za-z_][\w./-]*(?:\.s?v)?):(\d+)(?:\s*[-–]\s*\d+)?`/g
+// Backticks optional, as everywhere else a citation is read: "made at rx:89"
+// is a citation whether or not the writer marked it up as one.
+const CITATION = /`?([A-Za-z_][\w./-]*(?:\.s?v)?):(\d+)(?:\s*[-–]\s*\d+)?`?/g
 
 /** Every file a document's citations name, through the project's prefixes. */
 function about(doc: string, prefixes: Map<string, string>): Set<string> {

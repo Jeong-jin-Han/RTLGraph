@@ -369,7 +369,11 @@ export class WalkLens implements vscode.CodeLensProvider {
     if (doc.languageId !== 'markdown') return []
     const prefixes = await prefixesFor(doc)
     const walks = walksIn(doc.getText(), prefixes)
-    if (walks.length === 0) return []
+    // A document in a `spec/` folder that parsed into nothing is the case a
+    // writer most needs to see: the reader opens and says so, rather than the
+    // 📖 quietly not being there.
+    const looksLikeSpec = /\/spec\//.test(doc.uri.path) || prefixes.size > 0
+    if (walks.length === 0 && !looksLikeSpec) return []
     const lines = doc.getText().split('\n')
     // One at the top for the document as a whole: the reader, where the
     // scenarios are laid out with their steps rather than counted.

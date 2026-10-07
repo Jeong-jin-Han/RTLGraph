@@ -179,6 +179,23 @@ test('section 6 reads back as one entry per name, in either shape', () => {
   assert.equal(table.get('running')!.text, '64 · `bit_counter != 0`. "받는 중"')
 })
 
+// Three shapes, and a heading that numbers itself with a dash rather than a
+// full stop is still section 6. A hover that goes quiet because of
+// punctuation is a hover nobody can debug.
+test('section 6 is found however it is punctuated, in all three shapes', () => {
+  const entries = entriesIn(`## 6 — Detail
+
+### \`clock_counter\`
+11 bits, counts to 1084.
+
+- **\`running\`** \`wire\`. bit_counter != 0.
+
+| \`has_byte\` | 60 | reg. set at rx:126 |
+`)
+  assert.deepEqual([...entries.keys()].sort(), ['clock_counter', 'has_byte', 'running'])
+  assert.match(entries.get('running')!.text, /bit_counter/, 'a bullet is an entry too')
+})
+
 test('nothing outside section 6 becomes an entry', () => {
   const entries = entriesIn(`## 2. 그 일에 필요한 것
 

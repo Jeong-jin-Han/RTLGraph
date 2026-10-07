@@ -552,8 +552,20 @@ everyone, 4–5 for the reader chasing a case, 6 for whoever is changing the cod
 | 2 | **What that needs** | one row per step: *to do this → you need → so this signal exists* | a table, plus the names that mislead |
 | 3 | **Ports** | direction, width, one line each | a table |
 | 4 | **Scenarios, one line each** | event → outcome → how well it is confirmed | a table |
-| 5 | **The path, by cycle** | one table per scenario: cycle · the condition that became true · the assignment that ran | 10 rows each |
+| 5 | **The path, by cycle** | one table per scenario: cycle · the condition that became true · the assignment that ran · **what happens**, in words | 10 rows each |
 | 6 | **Detail** | every signal, every use, the side effects, and the *why* | no limit |
+
+**The shape of a scenario heading is not free.** The extension finds scenarios by it:
+
+```
+### RX-N1. 바이트 하나를 받는다      ← 2–4 hashes, then the id, then `.` or a space, then the title
+```
+
+The id is **1–4 uppercase letters**, `-`, **`N`** (normal) or **`E`** (exceptional), then digits:
+`RX-N1`, `TX-E3`, `L-N1`. Not `Rx-N1`, not `RX_N1`, not `RX-n1`, and nothing before it on the line
+(`### Scenario RX-N1` does not parse). A heading with the id and nothing after it parses as a
+scenario but is shown nowhere, so always write the title. A path table under a heading that does
+not match this is **not a scenario** — it is read as ordinary prose and no walk is offered for it.
 
 Rules that keep the layers honest:
 
@@ -563,7 +575,10 @@ Rules that keep the layers honest:
    the same cycle, so a path that walks the file top to bottom invents an order the hardware does
    not have. For each cycle, ask what *else* became true in it: that question is what finds the
    shift that still happens in a cancelled frame.
-3. **Only section 6 says "why".** If a path table needs a sentence, the sentence belongs in 6.
+3. **Only section 6 says "why".** If a path table needs to give a *reason*, the reason belongs in
+   6. Section 5's last column is the exception and is not a reason: **what happens**, one line per
+   cycle in human words ("sees the line fall and starts a frame"). The extension titles each step
+   of a walk with it, and without it a walk shows the reader the code they are already looking at.
 4. **Every number says where it came from.** `시뮬 / measured` — a bench in `sim/` printed it;
    `계산 / derived` — worked out from the code; `읽기만 / read` — read off the source. Never let a
    derived number be read as a measured one.
@@ -572,6 +587,11 @@ Rules that keep the layers honest:
    list of decisions nobody signed off.
 6. **Line numbers are dated.** Record a hash of each file the numbers refer to, and print the code
    fragment beside every citation — one comment moves them all.
+6b. **Section 6's heading carries its number** (`## 6. 세부`, `## 6 — Detail`): two hashes and
+   the digit. Each entry in it **starts with the name** it is about — `**\`clock_counter\`**`, a
+   `### \`clock_counter\`` subheading, or a table row whose first cell is `` `clock_counter` ``
+   (backticked) — because hovering that name in the `.v` shows that entry. A name mentioned only
+   mid-sentence gets no hover.
 7. **Say a thing once.** Shared machinery goes in the overview; a scenario lives in the file of the
    module whose port the event arrives at; anything crossing modules goes in the across-file and
    refers to the others by scenario number (`TX-N1`, `RX-E7`), never by repeating their paths.
@@ -589,6 +609,32 @@ And write all of it the way "Writing a reader can follow" says — one named rea
 could be false, one name per thing, the shortening pass at the end.
 
 ---
+
+### What reads this back
+
+The documents are not only for people, and a writer who knows what reads them gets the format
+right the first time.
+
+- **`00-format.md` carries the marker table**, and its rows are what turn `rx:116` into a file.
+  One row per file, with the file name **alone in its cell** and the marker **with its colon**:
+
+  | 파일 | sha1 앞 8자 | 표기 |
+  |---|---|---|
+  | `uart_receiver.v` | `ea15f96e` | `rx:줄` |
+
+  `rx` without the colon registers nothing; a cell reading `uart_receiver.v (수신기)` is not a
+  file name. A citation that writes its own file (`uart_receiver.v:116`) needs no table.
+- **`▶ workflow`** on each scenario walks its section-5 table through the code: current step top
+  right, the one before it underneath, the stretch bracketed down the gutter. One row is one
+  cycle — a row citing two files becomes one step per file, so keep one cycle's lines in one row.
+  Keep citations **inside the table cells**: one that drifts into prose leaves that step nowhere
+  to go.
+- **📖** at the top of the document opens the reader, which lists every scenario's steps under its
+  heading. **If the 📖 is there but a scenario shows no steps, that scenario's heading or the
+  marker table did not parse** — check them against the shapes above before writing anything else.
+- **Hovering a name** in the `.v` shows that name's section 6 entry, which is why an entry starts
+  with its name and why the section heading keeps its number.
+
 
 ## Registry — primitives the extension draws as symbols
 
@@ -817,15 +863,16 @@ Why it behaved that way belongs to Workflow W, run later against the code — no
 
 ## Writing a reader can follow
 
-Two of the things you produce here are prose, not data: **the comments in the RTL** and **the
-waveform analysis**. Both fail the same way, and it is not a style problem.
+Three of the things you produce here are prose, not data: **the comments in the RTL**, **the
+waveform analysis**, and **the specification Workflow R writes**. All three fail the same way,
+and it is not a style problem.
 
 > **The reason writing about your own design is hard has a name: you cannot un-know it.**
 > Once you know why `serial_in_d` resets to 1, a comment saying "reset to idle" reads as complete.
 > To the reader it says nothing — they do not yet have the thing that makes it make sense.
 > The bar is not "is this accurate". Accurate and unusable is the normal failure.
 
-The eight principles below are **constructive**: it is cheap to check whether a piece of writing
+The eight principles below (plus 6b, which is about how much to mark up) are **constructive**: it is cheap to check whether a piece of writing
 satisfies one, and when it does not, the principle says what to change. That is why "be clear" and
 "omit needless words" are not on the list — you cannot check them.
 

@@ -123,9 +123,10 @@ test('every chain names real prompts, real scripts, and where to stop', () => {
   }
 })
 
-// The two things this extension produces that are prose rather than data — the
-// comments in the RTL and the waveform analysis — fail the same way, so they are
-// governed by one section, and a prompt that writes either has to point at it.
+// The three things this extension produces that are prose rather than data —
+// the comments in the RTL, the waveform analysis and the specification — fail
+// the same way, so one section governs them, and a prompt that writes any of
+// them has to point at it.
 test('the prompts that write prose point at the writing principles', () => {
   const heading = 'Writing a reader can follow'
   assert.ok(spec.includes(`## ${heading}`), 'the spec defines them')
@@ -135,6 +136,11 @@ test('the prompts that write prose point at the writing principles', () => {
   const rows = [...section.matchAll(/^\| \d+ \| \*\*(.+?)\*\* \|/gm)].map(m => m[1])
   assert.equal(rows.length, 8, `eight principles, found ${rows}`)
   assert.match(section, /\| 6b \| \*\*Mark little\*\*/, 'and the one about marking too much')
+  // The count is quoted in the prompts, so the section has to say the same
+  // number it has — 6b sits outside it and is named separately.
+  assert.match(section, /The eight principles below \(plus 6b/, 'the section counts itself honestly')
+  assert.ok(section.includes('the specification Workflow R writes'),
+    'and the specification is one of the things it governs')
   assert.ok(spec.includes('Curse of Knowledge') && spec.includes('People Can Follow'), 'and says where they came from')
 
   for (const kind of ['rtl', 'refactor', 'assignment', 'waveform', 'codespec'] as const) {

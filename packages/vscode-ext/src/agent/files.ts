@@ -9,7 +9,7 @@
 // → code nobody documented becomes a specification a person can read fast.
 export const PROMPT_KINDS = ['spec', 'rtl', 'refactor', 'rtlgraph', 'assignment', 'waveform', 'codespec'] as const
 
-// …and the chains: one paste that walks an agent through several of the six in
+// …and the chains: one paste that walks an agent through several of the seven in
 // order, stopping where a person has to look. The day the marking bench arrives
 // is a sequence, not a prompt, and keeping that sequence in someone's head is
 // how a step gets skipped.
@@ -107,7 +107,7 @@ export const AGENT_FILES: readonly BundledFile[] = [
   // and `run-tb.sh` is a shell script. Cheaper to ship the four lines that
   // prevent it than to have an agent work out each time that it needs them.
   { from: 'assets/agent/gitattributes', to: GITATTRIBUTES },
-  // For the reader, not the agent: which of the five to reach for, and why.
+  // For the reader, not the agent: which of the seven to reach for, and why.
   ...PROMPT_LANGUAGES.map(language => ({
     from: `assets/prompt/README${language === 'english' ? '' : `.${language}`}.md`,
     to: `${PROMPT_DIR}/README${language === 'english' ? '' : `.${language}`}.md`,
