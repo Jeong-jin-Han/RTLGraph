@@ -906,6 +906,23 @@ around them.
 
 ---
 
+## Line endings — the scripts have to run on the machine they land on
+
+A project here is often checked out on Windows, where Git converts files to CRLF, and then run
+under Cygwin or MSYS, where a `.sh` with CRLF dies on the first line with
+`$'\r': command not found` — `run-tb.sh`, the one command that says whether the design passes.
+
+**`.gitattributes` is already provided.** `Copy Agent Spec to Workspace` writes one into a project
+that has none (`* text=auto`, and `eol=lf` for `*.sh`, `Makefile`, `*.mk`, `*.mjs`) and leaves an
+existing one alone. **Do not write your own, and do not edit the one that is there** unless the
+user asks — if a project needs a rule for files you added, add that one line rather than replacing
+the file.
+
+What this asks of you: anything you write that a shell runs — a script, a `Makefile` — gets **LF
+line endings**, and when a tool reports `\r` in an error, suspect the checkout before the script.
+
+---
+
 ## Language rules
 - Ids, net names, module names, pin names, literals: exactly as in the code, never translated.
 - `meaning`, `label`, `note`, diagnostic `msg`: in the language the user asked for. In Korean, add the
