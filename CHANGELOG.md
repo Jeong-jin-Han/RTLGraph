@@ -221,7 +221,12 @@ extension, so each line is something that broke once.
   written before that column existed still walks: whatever in the row is not
   a citation is used instead.
 - The reader follows the VS Code theme, the way the markdown preview does —
-  colours, fonts and all, down to `markdown.preview.fontFamily`. The schematic
+  colours, fonts, heading scale, table rules and all, down to
+  `markdown.preview.fontFamily`. It sits beside that preview, and a document
+  that set its own look read as a different tool's: the tables had rules down
+  every column and the citations were tinted boxes, so a cell holding four of
+  them was a row of buttons rather than a sentence. Citations now read as the
+  code they are and light up under the hand. The schematic
   and the waveform stay white on purpose: they are figures, and a figure is
   the same figure in any theme. A document is not.
 - A step's line numbers are individually clickable, but only in the step the

@@ -272,25 +272,29 @@ body.spec-page {
 .spec-bar .spacer { flex: 1; }
 .spec-bar button.plain { font: inherit; height: 22px; padding: 0 10px; border: 1px solid var(--vscode-button-border, transparent); border-radius: 4px; background: var(--vscode-button-secondaryBackground, #ffffff); color: var(--vscode-button-secondaryForeground, #374151); cursor: pointer; }
 .spec-bar button.plain:hover { background: var(--vscode-button-secondaryHoverBackground, #eef2ff); }
-.spec-doc { flex: 1; overflow: auto; padding: 14px 20px 60px; max-width: 900px; font-size: var(--vscode-markdown-font-size, 13px); line-height: var(--vscode-markdown-line-height, 1.65); }
-.spec-doc h1 { font-size: 1.6em; margin: 4px 0 10px; }
-.spec-doc h2 { font-size: 1.25em; margin: 22px 0 8px; padding-bottom: 4px; border-bottom: 1px solid var(--vscode-textSeparator-foreground, #e5e7eb); }
-.spec-doc h3 { font-size: 1.1em; margin: 18px 0 6px; }
-.spec-doc h4 { font-size: 1em; margin: 14px 0 4px; }
-.spec-doc p { margin: 6px 0; }
+.spec-doc { flex: 1; overflow: auto; padding: 16px 22px 60px; max-width: 980px; font-size: var(--vscode-markdown-font-size, 14px); line-height: var(--vscode-markdown-line-height, 1.6); }
+/* The preview's own scale: a document that sits beside it and sets its own
+   is a document that looks like a different tool's. */
+.spec-doc h1 { font-size: 2em; margin: 0 0 14px; }
+.spec-doc h2 { font-size: 1.5em; margin: 26px 0 10px; padding-bottom: 4px; border-bottom: 1px solid var(--vscode-textSeparator-foreground, #e5e7eb); }
+.spec-doc h3 { font-size: 1.25em; margin: 20px 0 8px; }
+.spec-doc h4 { font-size: 1.05em; margin: 16px 0 6px; }
+.spec-doc p { margin: 10px 0; }
 .spec-doc hr { border: 0; border-top: 1px solid var(--vscode-textSeparator-foreground, #e5e7eb); margin: 16px 0; }
 .spec-doc code { font-family: var(--vscode-editor-font-family, ui-monospace, monospace); font-size: 0.92em; background: var(--vscode-textCodeBlock-background, #f3f4f6); color: var(--vscode-textPreformat-foreground, inherit); border-radius: 3px; padding: 0 3px; }
+.spec-doc h1, .spec-doc h2, .spec-doc h3, .spec-doc h4 { font-weight: 600; line-height: 1.3; }
 .spec-doc pre.code { background: var(--vscode-textCodeBlock-background, #f9fafb); border: 1px solid var(--vscode-widget-border, #e5e7eb); border-radius: 5px; padding: 8px 10px; overflow: auto; font: 0.92em/1.5 var(--vscode-editor-font-family, ui-monospace, monospace); }
-.spec-doc .md-list { margin: 6px 0; padding-left: 20px; }
-.spec-doc .md-list li { margin: 3px 0; }
+.spec-doc .md-list { margin: 10px 0; padding-left: 22px; }
+.spec-doc .md-list li { margin: 4px 0; }
 .spec-doc .md-list li.under { list-style: '\\2013  '; color: var(--vscode-descriptionForeground, #4b5563); }
-.spec-doc .md-table { border-collapse: collapse; margin: 8px 0; font-size: 0.92em; }
-.spec-doc .md-table th, .spec-doc .md-table td { border: 1px solid var(--vscode-widget-border, #e5e7eb); padding: 3px 7px; text-align: left; vertical-align: top; }
-.spec-doc .md-table th { background: var(--vscode-editorWidget-background, #f9fafb); font-weight: 600; }
+.spec-doc .md-table { border-collapse: collapse; margin: 10px 0; }
+.spec-doc .md-table th, .spec-doc .md-table td { border: 0; border-bottom: 1px solid var(--vscode-textSeparator-foreground, #e5e7eb); padding: 5px 10px; text-align: left; vertical-align: top; }
+.spec-doc .md-table th { font-weight: 600; border-bottom-width: 2px; }
+.spec-doc .md-table tr:last-child td { border-bottom: 0; }
 .spec-doc a.link { color: var(--vscode-textLink-foreground, #1d4ed8); cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
 /* A line number is a way into the code, so it looks like a key you press. */
-.spec-doc button.cite { font: 0.85em var(--vscode-editor-font-family, ui-monospace, monospace); padding: 0 4px; border: 1px solid var(--vscode-widget-border, #ddd6fe); border-radius: 3px; background: var(--vscode-textCodeBlock-background, #f5f3ff); color: var(--vscode-textLink-foreground, #5b21b6); cursor: pointer; }
-.spec-doc button.cite:hover { background: var(--vscode-toolbar-hoverBackground, #ede9fe); border-color: var(--vscode-focusBorder, #a78bfa); }
+.spec-doc button.cite { font-family: var(--vscode-editor-font-family, ui-monospace, monospace); font-size: 0.92em; padding: 0 3px; border: 0; border-radius: 3px; background: var(--vscode-textCodeBlock-background, #f3f4f6); color: var(--vscode-textPreformat-foreground, inherit); cursor: pointer; }
+.spec-doc button.cite:hover { color: var(--vscode-textLink-foreground, #1d4ed8); text-decoration: underline; text-underline-offset: 2px; }
 .spec-doc code.cite.dead { color: var(--vscode-descriptionForeground, #6b7280); }
 .spec-doc .walk { margin: 8px 0 14px; border-left: 3px solid var(--vscode-widget-border, #ddd6fe); background: var(--vscode-editorWidget-background, #faf9ff); border-radius: 0 5px 5px 0; }
 .spec-doc .walk.live { border-left-color: var(--vscode-focusBorder, #7c3aed); }
@@ -320,9 +324,9 @@ body.spec-page {
 .spec-doc .steps .step.now .where button.line { text-decoration: underline dotted; text-underline-offset: 2px; }
 .spec-doc .steps .step.now .where button.line:hover { background: var(--vscode-toolbar-hoverBackground, #ede9fe); color: var(--vscode-textLink-foreground, #5b21b6); }
 .spec-doc .steps .step .why { font-size: 1em; }
-.spec-doc .steps .step .said { font-size: 0.92em; color: var(--vscode-descriptionForeground, #4b5563); }
+.spec-doc .steps .step .said { font-size: 0.95em; color: var(--vscode-descriptionForeground, #4b5563); }
 /* The code under a sentence is evidence for it, not the thing being said. */
-.spec-doc .steps .step .said.under { font-size: 0.85em; color: var(--vscode-descriptionForeground, #6b7280); margin-top: 1px; }
+.spec-doc .steps .step .said.under { font-size: 0.9em; color: var(--vscode-descriptionForeground, #6b7280); margin-top: 2px; line-height: 1.5; }
 .spec-doc .steps .step .said.under code { background: none; padding: 0; }
 .spec-doc p.nothing { color: var(--vscode-descriptionForeground, #6b7280); font-style: italic; }
 [hidden] { display: none !important; }
