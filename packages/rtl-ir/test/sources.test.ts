@@ -88,6 +88,42 @@ test('a name the extractor had to invent may sit on a line that names what it is
   assert.equal(strict[0].node, 'op_q9')
 })
 
+// A register recovered from a block sits on the block, and SystemVerilog spells
+// that block three more ways. Rejecting them sent a real user looking for an
+// assignment line to point the register at instead.
+test('a register may sit on any spelling of the always block', () => {
+  const code = (block: string) => [
+    'module d (input clk, input rst_n, output reg [3:0] q);',
+    `    ${block}`,
+    "        if (!rst_n) q <= 4'd0;",
+    "        else        q <= q + 4'd1;",
+    '    end',
+    'endmodule',
+  ].join('\n')
+  const graph = {
+    version: '0.1.0', kind: 'component', title: 'd', created: '', modified: '',
+    source: { root: '.', files: ['d.v'], top: 'd' },
+    signals: { q: { width: 4, flow: 'data', driver: 'q_reg:Q', sinks: [] } },
+    nodes: {
+      q_reg: { kind: 'reg', flow: 'data', time: 'seq', module: 'DFF', ports: { CLK: 'in', D: 'in', Q: 'out' }, origin: { file: 'd.v', line: 2 } },
+    },
+  } as unknown as ComponentGraph
+
+  for (const block of [
+    'always @(posedge clk or negedge rst_n) begin',
+    'always_ff @(posedge clk or negedge rst_n) begin',
+    'always_comb begin',
+    'always_latch begin',
+  ]) {
+    assert.deepEqual(checkSources(graph, () => code(block)), [], block)
+  }
+
+  // Still a block, not a name that happens to start with the keyword.
+  const named = checkSources(graph, () => code('always_soon = 1;'))
+  assert.deepEqual(named.map(d => d.code), ['origin-mismatch'])
+  assert.equal(named[0].node, 'q_reg')
+})
+
 // Moving the JSON into a folder of its own — the assignment layout where the
 // code may not be touched — and leaving `source.root` behind is the easiest
 // mistake to make, and the loudest: every element's origin then points at a

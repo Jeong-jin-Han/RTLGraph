@@ -27,7 +27,14 @@ export interface ValidationResult {
   diagnostics: Diagnostic[]
 }
 
-export function validateComponentGraph(input: unknown): ValidationResult {
+export interface ValidateOptions {
+  // What the file inherits from the schematic that instantiates it, which only a
+  // walk of the hierarchy knows. Leaving it out says nothing above was looked at
+  // — not that nothing is there.
+  above?: { spec?: string }
+}
+
+export function validateComponentGraph(input: unknown, options: ValidateOptions = {}): ValidationResult {
   const diagnostics: Diagnostic[] = []
   const error = (code: string, msg: string, at: Partial<Diagnostic> = {}) =>
     diagnostics.push({ severity: 'error', code, msg, ...at })
@@ -69,8 +76,13 @@ export function validateComponentGraph(input: unknown): ValidationResult {
 
   // A link to the document the design is built from: the sentence has to be
   // there (that is the whole point of the link) and a document has to be named,
-  // here or once for the file in source.spec.
-  const specFile = isObj(g.source) && typeof g.source.spec === 'string' ? g.source.spec : undefined
+  // here or once for the file in source.spec, or once above it.
+  const ownSpec = isObj(g.source) && typeof g.source.spec === 'string' ? g.source.spec : undefined
+  const specFile = ownSpec ?? options.above?.spec
+  // A schematic read on its own may still sit under a root that names the
+  // document, and a false error costs more than a missed one: only a root, which
+  // has nothing above it, and a file whose ancestors are known can be held to it.
+  const aboveKnown = g.kind === 'system' || options.above !== undefined
   const checkSpec = (spec: unknown, at: Partial<Diagnostic>) => {
     if (spec === undefined) return
     if (!isObj(spec)) return error('schema', 'spec must be an object', at)
@@ -78,8 +90,8 @@ export function validateComponentGraph(input: unknown): ValidationResult {
       error('spec-quote', 'spec must quote the sentence it refers to', at)
     }
     if (spec.file !== undefined && typeof spec.file !== 'string') error('schema', 'spec.file must be a string', at)
-    if (spec.file === undefined && specFile === undefined) {
-      error('spec-file', 'spec names no document and source.spec is not set', at)
+    if (spec.file === undefined && specFile === undefined && aboveKnown) {
+      error('spec-file', 'spec names no document and source.spec is not set here or above', at)
     }
     if (spec.page !== undefined && (!Number.isInteger(spec.page) || (spec.page as number) < 1)) {
       error('schema', 'spec.page must be a page number from 1', at)

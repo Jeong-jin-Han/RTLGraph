@@ -13,6 +13,12 @@ const mentions = (text: string, token: string) =>
   new RegExp(`(^|[^A-Za-z0-9_$])${escapeRegExp(token)}(?!${IDENT_CHAR})`).test(text)
 const lastSegment = (name: string) => name.replace(/^@/, '').split('.').pop()!
 
+// SystemVerilog says what kind of block it is in the keyword, and "_" is an
+// identifier character, so a bare \balways\b matches none of the three spellings
+// and sent everyone looking for an assignment line to point a register at.
+// A name that merely starts with "always" is still not a block.
+const ALWAYS_BLOCK = /\balways(_ff|_comb|_latch)?\b/
+
 // Inferred elements are named after the net they produce: "op_<net>" for logic
 // recovered from an expression, "<net>_reg" for a register recovered from an
 // always block, "<net>__t1" for a step of a split expression, "<net>_D" for the
@@ -170,7 +176,7 @@ export function checkSources(graph: ComponentGraph, read: ReadSource): Diagnosti
       // A register or a block recovered from an always block sits on that block,
       // and an "always" line names the clock, not what was recovered from it.
       const recovered = !own.some(token => declared(token, node.origin?.file))
-      const always = recovered || lastSegment(id).endsWith('_reg') ? [/\balways\b/] : []
+      const always = recovered || lastSegment(id).endsWith('_reg') ? [ALWAYS_BLOCK] : []
       const tokens = recovered ? [...own, ...around(id)] : own
       check(node.origin, tokens, `node ${id}`, { node: id }, always)
     }

@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
   FILTER_PRESETS, componentRefs, graphFileKind, graphName, hierarchyEntries, loadHierarchy, resolveRef,
-  validateComponentGraph, visibleElements, type ComponentGraph,
+  specOf, validateComponentGraph, visibleElements, type ComponentGraph,
 } from '../src/index.ts'
 
 // root (system) -> top component -> sub component -> leaf logic
@@ -103,6 +103,41 @@ test('child file problems carry the child path and instance', () => {
   const endpoint = h.diagnostics.find(d => d.code === 'endpoint')!
   assert.equal(endpoint.node, 'u_top/u_sub')
   assert.match(endpoint.msg, /^top\/sub\/sub\.rtlgraph-schematic\.json: /)
+})
+
+// The brief is named once, in the root. Checking a child on its own could not see
+// that, so every inherited quote came back as an error and the path had to be
+// repeated in each child file.
+test('a child quoting the brief its root names is checked against that name', () => {
+  const read = project(f => {
+    f['sys_top.rtlgraph.json'].source.spec = 'spec/brief.pdf'
+    f['top/sub/sub.rtlgraph-schematic.json'].nodes.u_inc.spec = { quote: 'the count steps by one', page: 3 }
+  })
+  const h = loadHierarchy('sys_top.rtlgraph.json', read)
+  assert.deepEqual(h.diagnostics, [])
+  assert.equal(hierarchyEntries(h.root).length, 3, 'the child is sound, so it is part of the hierarchy')
+  // The document is where the file that named it says it is, not where the child
+  // would have had to spell it.
+  assert.deepEqual(specOf(h.root, { node: 'u_top/u_sub/u_inc' }), {
+    path: 'spec/brief.pdf', page: 3, quote: 'the count steps by one',
+  })
+})
+
+test('a quote no file in the hierarchy names a document for is still an error', () => {
+  const read = project(f => {
+    f['top/sub/sub.rtlgraph-schematic.json'].nodes.u_inc.spec = { quote: 'the count steps by one', page: 3 }
+  })
+  const h = loadHierarchy('sys_top.rtlgraph.json', read)
+  assert.deepEqual(h.diagnostics.map(d => [d.code, d.node]), [['spec-file', 'u_top/u_sub/u_inc']])
+})
+
+test('a child opened on its own is not asked for the brief its root holds', () => {
+  const read = project(f => {
+    f['top/sub/sub.rtlgraph-schematic.json'].nodes.u_inc.spec = { quote: 'the count steps by one', page: 3 }
+  })
+  const h = loadHierarchy('top/sub/sub.rtlgraph-schematic.json', read)
+  assert.deepEqual(h.diagnostics, [], 'the root above it is not open, which is not the same as there being none')
+  assert.equal(specOf(h.root, { node: 'u_inc' }), undefined, 'and with no document in reach, there is nothing to open')
 })
 
 test('root files hold only ports and components', () => {

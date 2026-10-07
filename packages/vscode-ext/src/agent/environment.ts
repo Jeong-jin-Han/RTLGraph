@@ -11,6 +11,13 @@ export const PROBES = {
   yosys: 'yosys -V',
   xvlog: 'xvlog --version',
   gtkwave: 'gtkwave --version',
+  // An SoC lab is not finished when the RTL compiles: the thing being
+  // simulated is software, and "can this machine build the hex?" comes before
+  // "is there a simulator?". One lab died on a cross-compiler with no libc,
+  // which no report of HDL tools would ever have mentioned.
+  make: 'make --version',
+  riscvGcc: 'riscv64-unknown-elf-gcc --version',
+  riscvLibc: 'riscv64-unknown-elf-gcc -print-file-name=libc.a',
 } as const
 
 export type ProbedTool = keyof typeof PROBES
@@ -29,6 +36,36 @@ export type EnvironmentFacts = { [K in ProbedTool]?: string } & {
   platform: string // process.platform
   vivadoSettings: string[] // settings64.sh files found on disk
   nodegraph?: Companion
+}
+
+/**
+ * The other toolchain: what turns a lab's C into the hex a memory model reads.
+ *
+ * Only shown when there is a sign of it, because most projects here are RTL
+ * and nothing else — a row saying a RISC-V compiler is missing would be noise
+ * in all of them.
+ */
+function software(f: EnvironmentFacts): string[] {
+  if (!f.riscvGcc) return []
+  // `-print-file-name` answers with the name it was given when it cannot find
+  // the library, which is the shape of "there is a compiler but no libc".
+  const libc = f.riscvLibc && f.riscvLibc !== 'libc.a' ? f.riscvLibc : undefined
+  return [
+    '## Software toolchain',
+    '',
+    'This machine can build code for a soft core. A lab whose answer is a C file is not testable',
+    'until the hex exists, so this comes before the simulator, not after it.',
+    '',
+    '| Tool | Available | Use |',
+    '|---|---|---|',
+    `| riscv64-unknown-elf-gcc | ✅ \`${f.riscvGcc}\` | compile the lab's C to an ELF |`,
+    `| its C library | ${libc ? `✅ \`${libc}\`` : '❌'} | ${libc
+      ? 'links normally'
+      : '`cannot find -lc` — this compiler has no libc. Build freestanding (`GCC_OPTS=-nostdlib make`) '
+        + 'rather than editing the handout\'s Makefile, and say so in the report.'} |`,
+    `| make | ${f.make ? `✅ \`${f.make}\`` : '❌'} | run the handout's Makefile |`,
+    '',
+  ]
 }
 
 const install = (platform: string, apt: string, brew: string) =>
@@ -78,6 +115,7 @@ export function buildEnvironmentReport(f: EnvironmentFacts): string {
     `| Python 3 | ${has(f.python)} | scripting |`,
     `| pyverilog | ${has(f.pyverilog)} | ${f.pyverilog ? 'Verilog parser library' : 'optional — `pip install pyverilog`'} |`,
     '',
+    ...software(f),
     '## Companion extensions',
     '',
     '| Extension | Available | Use |',

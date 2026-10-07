@@ -27,6 +27,10 @@
 #   --wave          also dump a waveform and read it, under the same folder the
 #                   bench came from: waveform/given/<bench>.vcd and
 #                   <bench>.waveform.json, which is what the viewer opens
+#   --wave-depth N  with --wave, dump only N levels under the bench (0 = all).
+#                   A netlist of vendor cells has nothing readable inside it
+#   --timeout SEC   give up on a bench that has run this long (default 900,
+#                   0 waits forever; RTLGRAPH_TIMEOUT sets it too)
 #   --report        with --wave, also write <bench>.waveform.md — the same
 #                   measurements as prose, for reading without the editor
 #   --keep-build    keep the compiler's scratch even when a bench passed
@@ -55,8 +59,10 @@ quiet=0
 keep=0
 swap=1
 wave=0
+wavedepth=0
 report=0
 keepbuild=0
+limit=${RTLGRAPH_TIMEOUT:-900}
 want=()
 
 while [ $# -gt 0 ]; do
@@ -66,12 +72,14 @@ while [ $# -gt 0 ]; do
     --out) out="$2"; shift 2 ;;
     --top) top="$2"; shift 2 ;;
     --wave) wave=1; shift ;;
+    --wave-depth) wave=1; wavedepth="$2"; shift 2 ;;
+    --timeout) limit="$2"; shift 2 ;;
     --report) report=1; shift ;;
     --keep-build) keepbuild=1; shift ;;
     --keep) keep=1; shift ;;
     --in-place) swap=0; shift ;;
     --quiet) quiet=1; shift ;;
-    -h|--help) sed -n '2,34p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    -h|--help) sed -n '2,38p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
     -*) echo "run-tb: unknown option $1 (try --help)" >&2; exit 2 ;;
     *) want+=("$1"); shift ;;
   esac
@@ -99,8 +107,11 @@ EOF
 # way — any tb_*.v / *_tb.v sitting with the code.
 list_dir() { [ -d "$1" ] && find "$1" -maxdepth 1 \( -name '*.v' -o -name '*.sv' \) | sort; }
 list_stray() {
+  # `sim/` is skipped here as well as in the design files: those benches judge
+  # nothing by design — they print cycle numbers for the specification — and
+  # listing them as testbenches fills the verdict table with "SAID NOTHING".
   find "$project" \( -name .git -o -name node_modules -o -name 'xsim.dir' -o -path "$out" \
-    -o -path "$project/tb/given" -o -path "$project/tb/mine" \) -prune -o \
+    -o -name sim -o -path "$project/tb/given" -o -path "$project/tb/mine" \) -prune -o \
     \( -name 'tb_*.v' -o -name '*_tb.v' -o -name 'TB_*.v' -o -name 'tb_*.sv' -o -name '*_tb.sv' \) -print | sort
 }
 
@@ -170,8 +181,69 @@ while IFS= read -r f; do
   sources+=("$f")
 done < <(find "$project" \( -name .git -o -name node_modules -o -name 'xsim.dir' -o -path "$out" \
     -o -name submission -o -name build -o -name dist -o -name .Xil -o -name '.rtlgraph-build' \
+    -o -name sim \
     -o -name '*.sim' -o -name '*.cache' -o -name '*.runs' -o -name '*.hw' -o -name '*.ip_user_files' \) -prune -o \
   \( -name '*.v' -o -name '*.sv' \) -print | sort -t/ -k1 | awk '{print gsub(/\//,"/") "\t" $0}' | sort -n | cut -f2-)
+
+# `sim/` is pruned above with the build folders: the specification prompt puts
+# measuring benches there — files that judge nothing and print cycle numbers —
+# and a bench compiled as a design file is a second top with a syntax the
+# design never asked for.
+
+# ── cells nothing in the project defines ──────────────────────────────────────
+# A handed-out core is sometimes a synthesized netlist: thousands of the FPGA
+# vendor's own cells (LUT6, FDRE, CARRY4 …) that no file here defines, and that
+# FDRE expects `glbl.GSR` beside it as a second top. Compiled with the project
+# alone, not one bench builds.
+#
+# Which cells those are is not worth a list — a list only knows the cells
+# somebody has already hit. What is checkable is simpler: a module is
+# instantiated and nothing in the sources declares it. If that happens and a
+# Vivado library is on this machine, hand it over; the search is lazy, so a
+# library passed when it was not needed costs nothing.
+#   RTLGRAPH_VENDOR_SRC=<dir holding unisims/ and glbl.v> skips the search.
+vendor_src=""
+undefined_modules() {
+  [ ${#sources[@]} -gt 0 ] || return 0
+  awk '
+    # `module foo` — declared here, so never missing.
+    /^[[:space:]]*module[[:space:]]+[A-Za-z_]/ { sub(/^[[:space:]]*module[[:space:]]+/, ""); sub(/[^A-Za-z0-9_$].*$/, ""); declared[$0] = 1; next }
+    # `FDRE #(.INIT(0)) ff_a (` or `LUT6 lut_1 (` — a name, then an instance
+    # name, then an open bracket. Keywords that read the same way are skipped.
+    /^[[:space:]]*[A-Za-z_][A-Za-z0-9_$]*[[:space:]]*(#[[:space:]]*\(.*\))?[[:space:]]+[A-Za-z_][A-Za-z0-9_$]*[[:space:]]*\(/ {
+      line = $0; sub(/^[[:space:]]*/, "", line); sub(/[^A-Za-z0-9_$].*$/, "", line)
+      if (line !~ /^(module|endmodule|always|always_ff|always_comb|always_latch|initial|final|assign|if|else|for|while|repeat|forever|case|casex|casez|begin|end|task|function|generate|wire|reg|logic|integer|real|time|genvar|parameter|localparam|input|output|inout|defparam|specify|table|posedge|negedge|return|disable|wait|fork|join|automatic|static|typedef|import|export|package|interface|modport|property|sequence|assert|assume|cover|bind|class|virtual|extern|pure|context)$/) used[line] = 1
+      next
+    }
+    END { for (name in used) if (!(name in declared)) print name }
+  ' "${sources[@]}" | sort -u
+}
+find_vendor_src() {
+  local c tool settings
+  tool=$(command -v xvlog 2>/dev/null || true)
+  settings=$(grep -o '/[^` ]*/settings64\.sh' "$here/ENVIRONMENT.md" 2>/dev/null | head -1)
+  for c in "${RTLGRAPH_VENDOR_SRC:-}" \
+           "${XILINX_VIVADO:+$XILINX_VIVADO/data/verilog/src}" \
+           "${tool:+$(dirname -- "$(dirname -- "$tool")")/data/verilog/src}" \
+           "${settings:+$(dirname -- "$settings")/data/verilog/src}" \
+           $(ls -d /tools/Xilinx/Vivado/*/data/verilog/src /opt/Xilinx/Vivado/*/data/verilog/src 2>/dev/null | sort -r); do
+    [ -n "$c" ] && [ -d "$c/unisims" ] && [ -f "$c/glbl.v" ] && { printf '%s' "$c"; return 0; }
+  done
+  return 1
+}
+missing=$(undefined_modules)
+if [ -n "$missing" ]; then
+  if vendor_src=$(find_vendor_src); then
+    echo "note: $(echo "$missing" | wc -l) module(s) are instantiated and defined nowhere here ($(echo "$missing" | head -3 | tr '\n' ' ')…);"
+    echo "      taking them from $vendor_src/unisims, with glbl as a second top."
+  else
+    vendor_src=""
+    echo "note: these modules are instantiated and defined nowhere in the project:"
+    echo "$missing" | head -8 | sed 's/^/        /'
+    echo "      If they are Xilinx cells, set RTLGRAPH_VENDOR_SRC to the folder holding unisims/ and glbl.v,"
+    echo "      or source Vivado's settings64.sh. If they are the project's own, a file is missing."
+  fi
+fi
 
 # ── the simulator ─────────────────────────────────────────────────────────────
 if [ -z "$sim" ]; then
@@ -187,12 +259,34 @@ if [ -z "$sim" ]; then
 fi
 
 mkdir -p "$out"
+
+# A simulation that waits for something never comes back, and a runner that
+# waits with it is worse than a failed bench: the one time this happened, xsim
+# sat at its own prompt for ten minutes and had to be killed, which left a copy
+# of the bench in the project folder.
+limited() { # the command to run under the time limit
+  if [ "$limit" -gt 0 ] && command -v timeout >/dev/null 2>&1; then
+    timeout --foreground -k 5 "$limit" "$@"
+    local status=$?
+    [ "$status" -eq 124 ] && echo "run-tb: no output for ${limit}s — stopped. --timeout 0 waits forever."
+    return $status
+  fi
+  "$@"
+}
+
 module_of() { sed -n 's/^[[:space:]]*module[[:space:]]\+\([A-Za-z_][A-Za-z0-9_$]*\).*/\1/p' "$1" | head -1; }
 
 # A .v bench is Verilog-2005 until it proves otherwise: compiling it as
 # SystemVerilog turns words like `expect` into keywords and breaks a bench that
 # was fine. So try the plain dialect first and widen only if it fails.
-dialects_for() { case "$1" in *.sv) echo "-g2012" ;; *) echo "-g2005 -g2005-sv -g2012" ;; esac; }
+dialects_for() {
+  case "$1" in *.sv) echo "-g2012"; return ;; esac
+  # …unless the design itself is SystemVerilog, in which case -g2005 can only
+  # fail, and its log — a wall of "requires SystemVerilog" about files the
+  # reader did not write — is the one that used to be shown.
+  case " ${sources[*]} " in *.sv\ *|*.sv) echo "-g2005-sv -g2012"; return ;; esac
+  echo "-g2005 -g2005-sv -g2012"
+}
 
 # A module that dumps, compiled alongside a bench that was never asked to. The
 # bench keeps its own file untouched — which matters most for the one bench we
@@ -201,41 +295,114 @@ dumper_for() { # bench, workdir → prints the file to compile with it, or nothi
   local bench=$1 work=$2 top
   [ "$wave" = 1 ] || return 0
   top=${top:-$(module_of "$bench")}
+  # Depth 0 is everything under the bench, which is what a reader wants of a
+  # design they can hold in their head. A netlist of five thousand vendor cells
+  # is not that, and nobody reads inside a LUT: --wave-depth 3 stops there.
   cat > "$work/rtlgraph_dumper.v" <<DUMPER
 module rtlgraph_dumper;
     initial begin
         \$dumpfile("$work/wave.vcd");
-        \$dumpvars(0, $top);
+        \$dumpvars($wavedepth, $top);
     end
 endmodule
 DUMPER
   printf '%s' "$work/rtlgraph_dumper.v"
 }
 
-run_iverilog() { # bench, workdir
-  local bench=$1 work=$2 first="" tried="" dump
+# What the compiler said, into the build log, trimmed. A vendor library warns
+# about itself on every build — 250 lines of it before the bench says anything —
+# and those lines are about the library, not about this project.
+show_compile_log() { # file → the build log
+  local n shown="$1.shown"
+  if [ -n "$vendor_src" ]; then grep -vF "$vendor_src/" "$1" > "$shown"; else cp "$1" "$shown"; fi
+  n=$(wc -l < "$shown")
+  if [ "$n" -le 30 ]; then cat "$shown"
+  else
+    head -8 "$shown"
+    echo "(… $((n - 8)) more compiler lines — --keep-build keeps them in ${1#"$project"/})"
+  fi
+  n=$(( $(wc -l < "$1") - n ))
+  [ "$n" -eq 0 ] || echo "($n warnings from inside the vendor library are not shown)"
+  rm -f "$shown"
+}
+
+# Everything the build says goes to $build; stdout is the simulation's own
+# output and nothing else, because that is what the verdict is read from.
+run_iverilog() { # bench, workdir, build log
+  local bench=$1 work=$2 build=$3 tried="" dump unit dialect mode clog best="" bestn=-1 n
+  local extra=() roots=() sel=()
   dump=$(dumper_for "$bench" "$work")
+  unit=${top:-$(module_of "$bench")}
+  roots=(-s "$unit")
+  if [ -n "$vendor_src" ]; then
+    extra=(-y "$vendor_src/unisims" "$vendor_src/glbl.v")
+    roots+=(-s glbl)
+  fi
+  [ -n "$dump" ] && roots+=(-s rtlgraph_dumper)
   for dialect in $(dialects_for "$bench"); do
-    if iverilog "$dialect" -o "$work/a.out" "$bench" "${sources[@]}" ${dump:+"$dump"} > "$work/compile.$dialect.log" 2>&1; then
-      cat "$work/compile.$dialect.log"
-      ( cd -- "$project" && vvp -n "$work/a.out" )
-      return
-    fi
-    [ -n "$first" ] || first="$work/compile.$dialect.log"
-    tried="$tried $dialect"
+    # First the way it has always been built: every module nobody instantiates
+    # is a top. Only when that fails, name the bench as the one top — a project
+    # can carry a top that is not meant to elaborate yet (a board wrapper for a
+    # later lab), and it must not take the bench down with it.
+    for mode in all only; do
+      sel=()
+      [ "$mode" = only ] && sel=("${roots[@]}")
+      clog="$work/compile.$dialect.$mode.log"
+      if iverilog "$dialect" ${sel[@]+"${sel[@]}"} -o "$work/a.out" "$bench" "${sources[@]}" ${dump:+"$dump"} ${extra[@]+"${extra[@]}"} > "$clog" 2>&1; then
+        show_compile_log "$clog" >> "$build"
+        [ "$mode" = only ] && echo "(built with $unit as the only top: another top-level module here does not elaborate on its own — see compile.$dialect.all.log with --keep-build)" >> "$build"
+        ( cd -- "$project" && limited vvp -n "$work/a.out" )
+        return
+      fi
+      # Keep the attempt that got furthest rather than the first one. With a
+      # SystemVerilog design the first log says only "requires SystemVerilog",
+      # which hides whatever the real reason was.
+      n=$(grep -c 'error' "$clog")
+      if [ "$bestn" -lt 0 ] || [ "$n" -lt "$bestn" ]; then best=$clog; bestn=$n; fi
+      tried="$tried $dialect/$mode"
+    done
   done
-  cat "$first"
-  echo "(iverilog: none of$tried compiled it; the errors above are the first of them)"
+  {
+    grep -E 'error|sorry|give up' "$best" | head -40
+    echo "(iverilog: none of$tried compiled it; the lines above are from the attempt that got furthest, $(basename -- "$best"))"
+  } >> "$build"
   return 9
 }
 
-run_vivado() { # bench, workdir
-  local bench=$1 work=$2 unit mode=""
+run_vivado() { # bench, workdir, build log
+  local bench=$1 work=$2 build=$3 unit f
+  local vfiles=() svfiles=() libs=() tops=()
   unit=${top:-$(module_of "$bench")}
-  case "$bench" in *.sv) mode="--sv" ;; esac
-  ( cd -- "$work" && xvlog $mode "$bench" "${sources[@]}" > compile.log 2>&1 \
-      && xelab -debug typical "$unit" -s tb_snapshot >> compile.log 2>&1 ) || { cat "$work/compile.log"; return 9; }
-  ( cd -- "$work" && xsim tb_snapshot -runall )
+  tops=("$unit")
+  # xvlog reads SystemVerilog only when told to, whatever the file is called,
+  # so the two kinds are compiled apart: a .v bench over a .sv bus is normal.
+  for f in "$bench" "${sources[@]}"; do
+    case "$f" in *.sv) svfiles+=("$f") ;; *) vfiles+=("$f") ;; esac
+  done
+  if [ -n "$vendor_src" ]; then
+    vfiles+=("$vendor_src/glbl.v")
+    libs=(-L unisims_ver -L unimacro_ver -L secureip)
+    tops+=(glbl)
+  fi
+  # --relax is what Vivado's own simulation script passes: without it a design
+  # that mixes files with and without a `timescale stops at elaboration, which
+  # the GUI never shows you because the GUI passes it.
+  ( cd -- "$work" && : > compile.log \
+      && { [ ${#vfiles[@]} -eq 0 ] || xvlog "${vfiles[@]}" >> compile.log 2>&1; } \
+      && { [ ${#svfiles[@]} -eq 0 ] || xvlog --sv "${svfiles[@]}" >> compile.log 2>&1; } \
+      && xelab --relax -debug typical ${libs[@]+"${libs[@]}"} "${tops[@]}" -s tb_snapshot >> compile.log 2>&1 ) \
+    || { grep -E 'ERROR|error' "$work/compile.log" | head -40 >> "$build"; return 9; }
+  show_compile_log "$work/compile.log" >> "$build"
+  # xsim runs where its snapshot is, which is not where a bench's relative
+  # paths resolve: -xsimdir would fix that, but xsim mis-parses it when the
+  # path holds a space and then sits at its prompt. So stdin is /dev/null —
+  # anything that would wait for a person ends the run instead of hanging it —
+  # and a bench that reads a file by a relative path is run from $project by
+  # iverilog and not by this path. Say so rather than let it look like a fault
+  # in the design.
+  grep -lE '\$readmem[bh]|\$fopen' -- "$bench" >/dev/null 2>&1 \
+    && echo "note: this bench reads a file; under Vivado it is read from $(basename -- "$work"), not from the project folder" >> "$build"
+  ( cd -- "$work" && limited xsim tb_snapshot -runall < /dev/null )
 }
 
 # ── run ───────────────────────────────────────────────────────────────────────
@@ -252,6 +419,19 @@ unplace() {
   placed=""; restore=""
 }
 trap 'unplace' EXIT INT TERM
+
+# A run that was killed (a simulator that hung, a closed terminal) leaves its
+# copy of the bench in the project folder, and the next run then treats that
+# copy as a file of the project's own — it is compiled twice, under two names.
+# Say so and take it out.
+for bench in "${benches[@]}"; do
+  stale="$project/$(basename -- "$bench")"
+  if [ "$swap" = 1 ] && [ "$(dirname -- "$bench")" != "$project" ] && [ -e "$stale" ] \
+     && cmp -s "$bench" "$stale"; then
+    echo "note: $(basename -- "$stale") was left in the project folder by a run that did not finish; removing it"
+    rm -f "$stale"
+  fi
+done
 
 for bench in "${benches[@]}"; do
   rel=${bench#"$project"/}
@@ -272,13 +452,27 @@ for bench in "${benches[@]}"; do
     echo "   (in $(basename -- "$project")/$(basename -- "$bench") for the run)"
   fi
 
-  if [ "$sim" = vivado ]; then run_vivado "$active" "$work" > "$log" 2>&1; status=$?
-  else run_iverilog "$active" "$work" > "$log" 2>&1; status=$?; fi
-  [ "$quiet" = 1 ] || sed 's/^/   /' "$log"
+  # Two logs, not one. The verdict is read from what the simulation printed,
+  # and a compiler warning with the word "error" in it is not the bench
+  # failing — which is exactly how a vendor library once turned a pass into a
+  # fail. Both are shown; only one is judged.
+  build="$work/build.log"; : > "$build"
+  if [ "$sim" = vivado ]; then run_vivado "$active" "$work" "$build" > "$log" 2>&1; status=$?
+  else run_iverilog "$active" "$work" "$build" > "$log" 2>&1; status=$?; fi
+  if [ "$quiet" != 1 ]; then
+    [ -s "$build" ] && sed 's/^/   /' "$build"
+    sed 's/^/   /' "$log"
+  fi
 
-  # A bench decides its own verdict; we only read it. Anything that says FAIL,
-  # ERROR, or a non-zero mismatch count has failed, whatever else it printed.
+  # A bench decides its own verdict; this only reads it. A bench that says so
+  # at the head of a line — `PASS`, `[ 1234 ] FAIL …` — is taken at its word
+  # and nothing else is weighed: that is the shape the spec asks benches to
+  # print, and it cannot be tripped by a sentence that happens to hold the
+  # word "error". Only a bench that says nothing so plainly is read loosely.
+  spoke() { grep -Eqi "^[[:space:]]*(\[[^]]*\][[:space:]]*)?$1\b" "$log"; }
   if [ $status -eq 9 ]; then verdict="DID NOT COMPILE"
+  elif spoke 'fail(ed|ure)?'; then verdict=FAIL
+  elif spoke 'pass(ed)?'; then verdict=PASS
   elif grep -Eqi '(^|[^A-Za-z])(fail(ed|ure)?|error)([^A-Za-z]|$)|\$fatal|mismatch(es)?:? *[1-9]|Errors: *[1-9]' "$log"; then verdict=FAIL
   elif grep -Eqi '(^|[^A-Za-z])pass(ed)?([^A-Za-z]|$)|0 mismatch|test(bench)? (complete|finished|done)' "$log"; then verdict=PASS
   elif [ $status -ne 0 ]; then verdict=FAIL

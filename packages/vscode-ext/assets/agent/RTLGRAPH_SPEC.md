@@ -149,6 +149,14 @@ and set `source.contractCheck` to `"pass"` (none), `"partial"` (only C3/C4/C5/C7
     `params: { "BITWIDTH": 4 }`, adapt the copy in `.base/` to match the code, and leave a
     `library-adapted` diagnostic. RTLGraph keeps drawing it as a register and keeps checking its
     ports; the width then comes from the nets, and it says so (`registry-params`).
+  - **When the project's flip-flop is not a `DFF` at all** — a `PipeReg #(BITWIDTH)` the project
+    wrote itself, with its own port names — write it as `kind: "reg"` with `module: "PipeReg"` and
+    the parameters the instance passes, and say in `diagnostics` which module the project uses as its
+    flip-flop. `kind` is what draws the register symbol and marks the clock boundary, and the
+    registry is consulted by module name only, so a name outside it is checked against nothing: the
+    ports and the width are taken on trust, and nothing in `.base/` is adapted. This is a workaround,
+    not the format's answer — there is no field that declares "this module is this project's `DFF`",
+    so the `module` name and that diagnostic are the only trace of it.
 - **A `reg` node's `rstKind`, `rstPriority` and `rstValue`** describe the flip-flop it instantiates, so
   for a registry primitive they come from that primitive's own definition (`.base/DFF.v`: synchronous,
   `RST` beats `EN`, clears to 0). Reading them there is not invention.
@@ -191,6 +199,7 @@ ids stay stable when the code is edited:
 | `assign y = (a == b);` | `CMP_EQ` (a literal operand goes to `consts`) | `<scope>.op_y` |
 | `always @(posedge CLK)` assigning `q` | `reg` node, `module: "DFF"`; reset branch → `RST` pin (`rstKind` `"async"` if the reset edge is in the sensitivity list, else `"sync"`; `rstValue`); enabling condition → `EN` pin; next-state value → `D` pin; `q` → `Q` pin. Tie missing pins with `consts` (`"RST": "1'b0"`, `"EN": "1'b1"`) | `<scope>.q_reg` |
 | Next-state or other logic that is not one of the above (shift, bitwise data ops, a 4-way `case`) | `kind: "module"`, `module: "expr"`, `label`: a short summary such as `"A << 1"` or `"MUX 4:1"` | `<scope>.op_y` |
+| A memory array (`reg [31:0] RF [31:0]`, `mem [0:DEPTH-1]` — a register file, RAM or ROM) | **one** node for the whole array: `kind: "module"`, `module: "expr"`, `label` its shape (`"RF 32 x 32"`), `ports` the pins the code reads and writes it through (`ADDR`, `WDATA`, `WE`, `RDATA`) | `<scope>.<array name>_mem` |
 | A `case`/`casex` (or if-else chain) producing control outputs | `control` node with `truthTable` (≤ 6 inputs) or `equations` | the instance path, or `<scope>.op_<first output>` inside one module |
 | Nested expression `y = (a + b) - c` | split into nodes; name the intermediate net `<scope>.y__t1` | |
 
@@ -203,13 +212,39 @@ its `BW` from the operands (`cnt_q == LIMIT`, both `[3:0]` → `{ "BW": 3 }`). T
 it would be `{ "BW": 0 }`, and the validator would then report a width error against the operands
 it was inferred from.
 
+One box for a memory is a workaround, not the format's answer: a word per `reg` node is 32 or 1024
+boxes nobody can read, and there is no `kind` for a memory, so the array is drawn as an expression.
+Put the depth and the word width in the `label` and in a `memory` diagnostic, because the box itself
+says neither; and a synchronous memory still takes the `comb` `time` Step 6 gives a `module` node,
+which is the part of the picture that stays wrong.
+
 ### Step 5 — Nets (`signals`)
 - One entry per electrical net. Key = the name in the component top; a net that exists only inside a
   flattened instance gets the instance path prefix (`data_path.ADD_OUT`).
-- `width` from the declaration (`[5:0]` → 6), evaluating parameters.
+- `width` from the declaration (`[5:0]` → 6), evaluating parameters **with the value the
+  instantiation passes**, not the declared default. A default is only what the module falls back to:
+  a core whose `AWIDTH` defaults to 10 but is instantiated `#(16)` by both its callers has 16-bit
+  address nets, and the default would make `PORT2_ADDR[10:0]` reach outside the net the code
+  declares. Record the value used in a `param-evaluated` diagnostic, so the number in the JSON can
+  be traced back to the instantiation it came from rather than to the declaration.
+- **One module instantiated twice with different values**: one schematic describes one module, so it
+  cannot hold two sets of widths. Use the **first** instantiation in file order, and name the other
+  values and where they are instantiated in the same `param-evaluated` diagnostic.
 - `driver`: exactly one endpoint. `sinks`: every other endpoint (`[]` when nothing reads the net).
   Endpoint syntax: `"<nodeId>:<port>"`, or `"@NAME"` for a component port (no `:port`). A top input
   port drives; a top output port sinks.
+- **A bit-select is not an endpoint.** An endpoint names a whole pin, so `IMEM_ADDR[30]`,
+  `PORT2_ADDR[10:0]` or `HADDR[AWIDTH-1:2]` — a few bits of one net going to a pin — cannot be
+  written as one. Two ways out, by where the slice lands:
+  - it feeds a **registry primitive** (a `MUX2`, an `ADD`): put an `expr` node in between
+    (`kind: "module"`, `module: "expr"`, `label: "HADDR[AWIDTH-1:2]"`), the full net into it and its
+    output to the pin. The primitive's widths are checked against its nets, so wiring the whole net
+    straight in is a `width` error.
+  - anywhere else: connect the whole net and add a `slice` diagnostic naming the net, the pin and the
+    bits really used.
+
+  Both are workarounds — there is no endpoint form for `"net[30]"`, so the drawing says "this net
+  reaches that pin" and which bits do is only in a `label` or a diagnostic.
 - **A net nothing drives is not written.** Leave the pins it would reach unconnected (the validator
   reports them as `undriven` warnings, which stay) and add a `C6` diagnostic naming the net, with the
   line where it is declared. A net with several drivers: keep the first driver, add a `C6` diagnostic.
@@ -286,10 +321,16 @@ requirements page — record where each piece comes from:
 1. `source.spec`: the document, relative to `source.root` (`"spec/pwm_brief.pdf"`, or
    `"hw_brief.pdf"` when the handout sits beside the code). Name it in the **root**;
    a schematic that does not name one inherits the nearest one above it, so every
-   box in the design can open the brief even where it quotes no sentence. Repeating it in a
-   child file is allowed and changes nothing (`demo/pwm` names it in the root and in
-   the main component's schematic); it is only *needed* when that component was asked
-   for by a different document.
+   box in the design can open the brief even where it quotes no sentence.
+   **The inheritance is resolved through the hierarchy, from the root down**: the root is
+   what is validated and what the editor opens, and every schematic reached from it is
+   read with the nearest `source.spec` above it. So a component six folders deep does not
+   repeat `"../../../../../../hw_brief.pdf"` to quote a sentence — it quotes, and the
+   document comes from above. A schematic validated entirely on its own has no parent to
+   inherit from, and leaving `source.spec` out of it is not held against it there.
+   Repeating it in a child file is allowed and changes nothing (`demo/pwm` names it in
+   the root and in the main component's schematic); it is only *needed* when that
+   component was asked for by a different document.
 2. On the elements the document actually talks about, `spec: { quote, page }`:
    - `quote` is the sentence **verbatim**, copied from the document, not paraphrased —
      it is what finds the line again.
@@ -325,7 +366,7 @@ The codes you are most likely to see, and what each means:
 | `registry-*`, `width` | a primitive's ports or widths do not match `.base/` |
 | `hierarchy-missing`, `hierarchy-ports` | a `ref` that resolves nowhere, or a box whose ports differ from its schematic |
 | `fsm-missing`, `fsm-state`, `fsm-when`, `fsm-style`… | the machine file is missing, or its states and transitions do not hold together |
-| `spec-quote`, `spec-file` | a `spec` with nothing quoted, or naming no document |
+| `spec-quote`, `spec-file` | a `spec` with nothing quoted, or naming no document — a child inherits the root's document (Step 7c), so run the validator on the root before adding `source.spec` to every child |
 | `system-logic`, `system-empty` | logic in the root, or a root with no component |
 
 Fix every error. A warning is either a real finding about the code — leave it, with a
@@ -824,6 +865,7 @@ is drawn as a generic box — that is normal, not an error.
 | Component node | instance path; in the root, the main component's name | `u_dev`, `acc` |
 | Inferred logic | `<scope>.op_<net it drives>` | `data_path.op_CNT_D` |
 | Inferred register | `<scope>.<Q net>_reg` | `ACC_Q_reg` |
+| Memory array | `<scope>.<array name>_mem` | `RF_mem` |
 | Port node | `@` + port name | `@ACC` |
 | Net | name in the component top, else instance path + name | `CNT_Q`, `data_path.ADD_OUT` |
 | Endpoint | `<nodeId>:<pin>`, or `@NAME` | `data_path.u_mux:sel`, `@ACC` |

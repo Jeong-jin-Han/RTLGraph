@@ -88,6 +88,33 @@ test('groups must reference existing nodes', () => {
   expectError(mutated(g => { g.nodes['R_FF'].group = 'missing' }), 'group')
 })
 
+// A schematic inherits the brief of the file above it, and the file above it is
+// not in the file being read. Calling every inherited quote a mistake made a real
+// user repeat a long "../../../.." path in eight child files.
+test('a quote without a document is left alone when nothing is known about what is above', () => {
+  const quoting = mutated(g => { g.nodes.R_FF.spec = { quote: 'the counter counts', page: 2 } })
+  assert.deepEqual(validateComponentGraph(quoting), { ok: true, diagnostics: [] })
+})
+
+test('a quote without a document is an error once the files above it name none', () => {
+  const quoting = mutated(g => { g.nodes.R_FF.spec = { quote: 'the counter counts', page: 2 } })
+  const r = validateComponentGraph(quoting, { above: {} })
+  assert.equal(r.ok, false)
+  assert.deepEqual(codes(r.diagnostics, 'error'), ['spec-file'])
+  // and a root is the one file that has nothing above it to inherit from
+  expectError(mutated(g => { g.kind = 'system'; g.nodes.R_FF.spec = { quote: 'the counter counts' } }), 'spec-file')
+})
+
+test('a quote without a document takes the one a file above it names', () => {
+  const quoting = mutated(g => { g.nodes.R_FF.spec = { quote: 'the counter counts', page: 2 } })
+  assert.deepEqual(validateComponentGraph(quoting, { above: { spec: 'spec/brief.pdf' } }), { ok: true, diagnostics: [] })
+  // what the file names itself still wins, and a quote still has to be a sentence
+  assert.deepEqual(validateComponentGraph(mutated(g => {
+    g.source.spec = 'brief.pdf'
+    g.nodes.R_FF.spec = { quote: '  ' }
+  }), { above: {} }).diagnostics.map(d => d.code), ['spec-quote'])
+})
+
 test('prototype keys are not mistaken for nodes', () => {
   expectError(mutated(g => { g.signals.A.sinks = ['constructor:a'] }), 'endpoint')
 })

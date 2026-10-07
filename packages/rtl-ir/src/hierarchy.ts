@@ -43,7 +43,9 @@ export function componentRefs(fromFile: string, graph: unknown): string[] {
 export function loadHierarchy(rootPath: string, read: (path: string) => string | undefined): Hierarchy {
   const diagnostics: Diagnostic[] = []
 
-  const visit = (path: string, instance: string, stack: string[]): HierarchyEntry | undefined => {
+  // `above` is what the schematics over this one hand down; undefined for the
+  // opened file, which may itself be a child of a root nobody asked for.
+  const visit = (path: string, instance: string, stack: string[], above?: { spec?: string }): HierarchyEntry | undefined => {
     const where = instance ? { node: instance } : {}
     const prefix = instance ? `${path}: ` : ''
     const text = read(path)
@@ -58,7 +60,7 @@ export function loadHierarchy(rootPath: string, read: (path: string) => string |
       diagnostics.push({ severity: 'error', code: 'json', msg: `${prefix}${(err as Error).message}`, ...where })
       return undefined
     }
-    const result = validateComponentGraph(parsed)
+    const result = validateComponentGraph(parsed, { above })
     for (const d of result.diagnostics) {
       diagnostics.push(instance ? { ...d, msg: `${prefix}${d.msg}`, node: d.node ? `${instance}/${d.node}` : instance } : d)
     }
@@ -71,6 +73,10 @@ export function loadHierarchy(rootPath: string, read: (path: string) => string |
     }
 
     const entry: HierarchyEntry = { path, instance, graph, children: {} }
+    // The document a child inherits is the nearest one named at or above this
+    // file. The spelling stays the parent's — where the document is, is read off
+    // the file that named it — because a child is only asked whether there is one.
+    const handDown = { spec: graph.source.spec ?? above?.spec }
     for (const [id, node] of Object.entries(graph.nodes)) {
       if (node.kind !== 'component') continue
       const childInstance = instance ? `${instance}/${id}` : id
@@ -83,7 +89,7 @@ export function loadHierarchy(rootPath: string, read: (path: string) => string |
         diagnostics.push({ severity: 'error', code: 'hierarchy-depth', msg: `components nest deeper than ${MAX_HIERARCHY_DEPTH} levels`, node: childInstance })
         continue
       }
-      const child = visit(childPath, childInstance, [...stack, childPath])
+      const child = visit(childPath, childInstance, [...stack, childPath], handDown)
       if (!child) continue
       checkBoxAgainstFile(node, child.graph, childPath, childInstance)
       entry.children[id] = child
@@ -133,10 +139,16 @@ export function specOf(
   const own = parts.pop()!
   const entry = hierarchyEntries(root).find(e => e.instance === parts.join('/'))
   const spec = of.node !== undefined ? entry?.graph.nodes[own]?.spec : entry?.graph.signals[own]?.spec
-  const file = spec?.file ?? entry?.graph.source.spec
-  if (!entry || !spec || file === undefined) return undefined
+  if (!entry || !spec) return undefined
   const folder = entry.path.split('/').slice(0, -1)
-  return { path: resolve([...folder, ...entry.graph.source.root.split('/'), ...file.split('/')]), page: spec.page, quote: spec.quote }
+  // A quote that names no document means the one its file was built from, which
+  // a schematic is free to leave to the file above it — the same document, found
+  // the same way, so that the sentence is still highlighted in it.
+  const path = spec.file !== undefined
+    ? resolve([...folder, ...entry.graph.source.root.split('/'), ...spec.file.split('/')])
+    : briefOf(root, of)
+  if (path === undefined) return undefined
+  return { path, page: spec.page, quote: spec.quote }
 }
 
 // Joins the pieces of a path and takes out the "." and ".." it can.

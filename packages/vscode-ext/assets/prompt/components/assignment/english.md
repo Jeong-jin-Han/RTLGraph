@@ -171,7 +171,7 @@ says NodeGraph is not installed, skip this section entirely** and say so in your
 report; nothing below is worth writing without it.
 
 If it is installed, read the spec that row points at
-(`.agent/NODEGRAPH_SPEC.md` inside that extension) and write one
+(`.agent/nodegraph/SPEC.md` inside that extension) and write one
 `verification.nodegraph.json` beside the testbenches: RTLGraph draws what the
 circuit *is*, and this says what has been *shown about it* and why. One node per
 thing a bench proves, each carrying
@@ -179,10 +179,19 @@ thing a bench proves, each carrying
 - a title naming the behaviour ("a byte stands until the host takes it"),
 - content saying what is driven, what is expected, and what a failure would mean,
 - `original` quoting the sentence of the handout it comes from, and
-- a `links` entry of `"type": "code"` pointing at the lines that do it —
-  `tb/mine/tb_uart_corner.v:73-80` for the check, and a second one at the RTL it
-  exercises (`uart_receiver.v:78-88`), so the graph walks from a requirement to
-  its test to the logic under test.
+- `links` entries of `"type": "code"` pointing at the lines that do it — **first**
+  the line of the bench's opening comment where the bench quotes that sentence
+  (`tb/mine/tb_uart_corner.v:4`), then the check
+  (`tb/mine/tb_uart_corner.v:73-80`), then the RTL it exercises
+  (`uart_receiver.v:78-88`), so the graph walks from a requirement to its test to
+  the logic under test.
+
+The first link is the quoted line on purpose: NodeGraph's own checker reads a
+node carrying both an `original` and code links as a claim that the quote is at
+the line of the first one, and reports a mismatch when it is not there. For the
+same reason, a sentence the handout asks for gets a **requirement** node of its
+own that carries the quote and **no code link at all** — the quote is then
+checked against the document instead of against a line of Verilog.
 
 Edges run from the requirement to the test to the code. Anything the handout asks
 for that no bench covers yet is a node too, of the `gap` template, so the hole is

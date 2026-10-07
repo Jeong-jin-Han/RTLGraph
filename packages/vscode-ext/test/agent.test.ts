@@ -389,6 +389,41 @@ test('the bundled validator follows a root into its component schematics', () =>
   assert.match(run(join(dir, 'acc_top.rtlgraph.json')).stdout, /error hierarchy-ports \(node acc\)/)
 })
 
+// The brief is named once, in the root, and a schematic that names none inherits
+// it. Checking each file on its own held every child to naming it again, which
+// made a real user repeat a long "../../../.." path in eight files.
+test('the bundled validator lets a component schematic inherit the brief of its root', () => {
+  const run = (file: string) => spawnSync(process.execPath, [join(ROOT, VALIDATOR_BUNDLE), file], { encoding: 'utf8' })
+  const PROJECT = join(ROOT, '../../demo/uart-p01')
+  const dir = mkdtempSync(join(tmpdir(), 'rtlgraph-spec-'))
+  const names = [
+    'uart.rtlgraph.json', // the root comes first: it is the file the validator is given
+    'uart.rtlgraph-schematic.json',
+    'uart_transmitter.rtlgraph-schematic.json',
+    'uart_receiver.rtlgraph-schematic.json',
+  ]
+  const copy = (strip: (name: string) => boolean) => {
+    for (const name of names) {
+      const graph = JSON.parse(readFileSync(join(PROJECT, 'rtlgraph', name), 'utf8'))
+      graph.source.root = relative(dir, PROJECT)
+      if (strip(name)) delete graph.source.spec
+      writeFileSync(join(dir, name), JSON.stringify(graph))
+    }
+    return run(join(dir, names[0]))
+  }
+
+  // The demo repeats the document in every child; taking it out of the children
+  // is what the spec says is allowed.
+  const inherited = copy(name => name !== names[0])
+  assert.equal(inherited.status, 0, inherited.stdout + inherited.stderr)
+  assert.doesNotMatch(inherited.stdout, /spec-file/, 'the children quote the document the root names')
+
+  // Named nowhere at all, and the quotes have no document again.
+  const nowhere = copy(() => true)
+  assert.equal(nowhere.status, 1)
+  assert.match(nowhere.stdout, /error spec-file/)
+})
+
 test('the spec documents every field the IR has grown', () => {
   // The agent writes these files from this document alone: a field it does not
   // mention is a field no agent will ever produce.

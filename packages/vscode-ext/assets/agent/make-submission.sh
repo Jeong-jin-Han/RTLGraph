@@ -26,6 +26,9 @@
 #   --with-given      also include tb/given/ (the bench you are marked with)
 #   --with-base       include all of .base/, not only what the design needs
 #   --no-deps         do not add anything: hand in exactly the project's own .v
+#   --only FILE       hand in exactly these files (repeatable). For a lab whose
+#                     answer is not a pile of .v — a C file, one line changed in
+#                     a provided file — say what the deliverable is
 #   --with-rtlgraph   also include rtlgraph/ (RTLGraph JSON)
 #   --with-pdf        also include the handout PDF
 #   --all             everything above
@@ -48,6 +51,7 @@ out=""
 flat=1
 check=1
 list_only=0
+only=()
 with_tb=0
 with_given=0
 with_base=0
@@ -68,6 +72,7 @@ while [ $# -gt 0 ]; do
         --with-rtlgraph) with_rtlgraph=1; shift ;;
         --with-pdf)      with_pdf=1; shift ;;
         --no-deps)       deps=0; shift ;;
+        --only)          only+=("$2"); shift 2 ;;
         --all)           with_tb=1; with_given=1; with_base=1; with_rtlgraph=1; with_pdf=1; shift ;;
         --keep-tree)     flat=0; shift ;;
         --no-check)      check=0; shift ;;
@@ -105,12 +110,40 @@ add_dir() {  # add_dir <source dir> <name inside zip> <find expression...>
 }
 
 # The deliverable: the skeleton's RTL, benches excluded.
+#
+# Beside the project first, which is where a handed-out skeleton puts it. When
+# there is nothing there, look deeper rather than stopping: a lab built around
+# a vendor project keeps its RTL five folders down, and "no RTL found" is a
+# wrong answer to give about a folder that is full of it. The tool folders and
+# the build output are skipped, and so is `sim/` — those benches measure, they
+# are not the deliverable.
+rtl_at() { # maxdepth
+    find "$project" \( -name .git -o -name node_modules -o -name submission -o -name .Xil \
+        -o -name sim -o -name tb -o -name '.rtlgraph-build' -o -name '*.sim' -o -name '*.cache' \
+        -o -name '*.runs' -o -name '*.hw' -o -name '*.ip_user_files' \) -prune -o \
+      -maxdepth "$1" -type f \( -name '*.v' -o -name '*.sv' \) \
+      ! -name 'tb_*' ! -name 'TB_*' ! -name '*_tb.v' ! -name '*_tb.sv' -print | sort
+}
+deep=0
+if [ ${#only[@]} -gt 0 ]; then
+    found=$(for f in "${only[@]}"; do
+        [ -e "$f" ] || die "--only: no such file: $f"
+        ( cd -- "$(dirname -- "$f")" && printf '%s/%s\n' "$(pwd)" "$(basename -- "$f")" )
+    done)
+else
+    found=$(rtl_at 1)
+    if [ -z "$found" ]; then found=$(rtl_at 8); deep=1; fi
+fi
 while IFS= read -r f; do
+    [ -n "$f" ] || continue
+    # Deeper than the project folder, two files can share a name; keep the path
+    # for those so nothing is silently overwritten on the way in.
     add_file "$f" "$(basename -- "$f")"
-done < <(find "$project" -maxdepth 1 -type f \( -name '*.v' -o -name '*.sv' \) \
-             ! -name 'tb_*' ! -name 'TB_*' | sort)
+done < <(printf '%s\n' "$found")
 
-[ ${#entries[@]} -gt 0 ] || die "no RTL found directly in $project"
+[ ${#entries[@]} -gt 0 ] || die "no .v or .sv anywhere under $project that is not a testbench"
+[ "$deep" = 1 ] && echo "note: nothing beside the project, so the RTL was collected from under it (${#entries[@]} file(s))." >&2
+
 
 [ "$with_tb" = 1 ]       && add_dir "$project/tb/mine"  "tb/mine"  \( -name '*.v' -o -name '*.sv' \)
 [ "$with_given" = 1 ]    && add_dir "$project/tb/given" "tb/given" \( -name '*.v' -o -name '*.sv' \)

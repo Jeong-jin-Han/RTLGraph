@@ -236,6 +236,68 @@ extension, so each line is something that broke once.
   holds, and why. Every citation in the entry is a link to that line. A name no
   specification mentions gets no hover — a guess there is worse than silence.
 
+### What a real assignment broke
+
+A user drove `recipe/assignment` through a RISC-V SoC lab — a Vivado
+project, a synthesized netlist for a core, a C file as the answer — and
+wrote up sixteen places where this fell short. Most of them are fixed here,
+and the ones that are not are now written down in the spec as workarounds
+rather than left for the next person to rediscover.
+
+- **A netlist of vendor cells compiles.** `run-tb.sh` now works out which
+  modules are instantiated and defined nowhere in the project, and when there
+  are any it hands iverilog Vivado's `unisims` library and `glbl` as a second
+  top. Found by what is undefined rather than by a list of cell names, because
+  a list only knows the cells somebody has already hit.
+- **A top that does not elaborate no longer takes the bench down with it.** A
+  project can carry a board wrapper meant for a later lab; the build is tried
+  the old way first (every uninstantiated module a top) and then with the bench
+  named as the only one, saying which it took.
+- **The compile log you are shown is the attempt that got furthest**, not the
+  first. With a SystemVerilog design the first was a wall of "requires
+  SystemVerilog" hiding the real reason — and `-g2005` is now skipped outright
+  when the design has a `.sv` in it.
+- **A verdict is read from the simulation's own output**, with the build log
+  kept separate and shown separately. A vendor library warning with the word
+  "error" in it is not a bench failing. A line that starts with `PASS` or
+  `FAIL` is taken at its word before anything looser is tried.
+- **A bench cannot hang the run**: `--timeout` (900s by default) ends it, xsim
+  is given no stdin to wait on, and a copy left in the project folder by a run
+  that was killed is noticed and removed on the next one.
+- **`--wave-depth N`** stops the dump N levels under the bench — there is
+  nothing to read inside a LUT.
+- **Vivado**: `.v` and `.sv` are compiled apart (a `.v` bench over a `.sv` bus
+  is normal), with `-L unisims_ver -L unimacro_ver -L secureip`, `glbl` as a
+  second top, and `xelab --relax`, which is what Vivado's own script passes
+  and what a design mixing files with and without a `timescale` needs.
+- **`make-submission.sh` looks deeper than the project folder** when there is
+  no RTL directly in it, and `--only FILE` names the deliverable outright for
+  a lab whose answer is not a pile of `.v`.
+- **Measuring benches stay out of the design.** `sim/` — where the
+  specification prompt puts benches that judge nothing — is no longer swept up
+  as design files or listed as testbenches.
+- **The validator**: a `_reg` node may sit on `always_ff` (`\balways\b` never
+  matched it, because `_` is a word character), and `source.spec` inheritance
+  is honoured through a hierarchy, so a component six folders deep quotes the
+  brief without repeating `../../../../../..` — and a child validated alone is
+  not told off for leaving it out.
+- **The environment report** names the software toolchain when there is one: a
+  lab whose answer is C is not testable until the hex exists, and a cross
+  compiler without a libc is a wall you hit before the simulator matters.
+- **The assignment prompt** pointed at the wrong path for NodeGraph's spec
+  (`.agent/nodegraph/SPEC.md`), and asked for a node shape NodeGraph's own
+  checker rejects: a quote plus code links means "the quote is at the first
+  link's line". The shape that works — the requirement node carries the quote
+  and no code link, a test node's first link is where the bench quotes it — is
+  now the rule, with the reason.
+- **Three things the format cannot draw** are written down with the answer to
+  use today: a project's own flip-flop (`kind: "reg"` with its own `module`),
+  a memory array (one `expr` box, shape in the label), a bit-select (an `expr`
+  node where it feeds a primitive, a `slice` diagnostic elsewhere). Each says
+  why it is a workaround.
+- **"Evaluating parameters" says which value**: the one the instantiation
+  passes, not the declared default, recorded in a `param-evaluated` diagnostic.
+
 ### Comments are part of the deliverable
 
 - The spec has a section on them, and the prompts that write RTL point at it:
