@@ -119,6 +119,30 @@ test('a scenario can be folded away and stays folded', { skip }, async () => {
   assert.equal(all(card(), 'steps')[0].hidden, false)
 })
 
+// Folding a scenario used to redraw the page, which threw the reader back to
+// the top of the document every time they opened or closed one.
+test('folding a scenario, or stepping, leaves the document where it was', { skip }, async () => {
+  const ui = await webview()
+  ui.send(payload())
+  const doc = () => all(ui.body, 'spec-doc')[0]
+  const was = doc()
+  const card = () => all(ui.body, 'walk').find(c => c.dataset.id === 'RX-N1')!
+
+  all(card(), 'fold')[0].listeners.get('click')?.[0]({} as never)
+  assert.equal(doc(), was, 'the page is not rebuilt to fold one scenario')
+  assert.equal(all(card(), 'steps')[0].hidden, true)
+
+  const steps = all(card(), 'steps')[0]
+  ui.send({ type: 'at', at: { id: 'RX-N1', index: 3, total: 6 } })
+  assert.equal(doc(), was, 'nor to mark where the walk has got to')
+  assert.equal(all(card(), 'steps')[0], steps, 'the step rows are the same rows')
+  assert.ok(card().className.includes('live'))
+  assert.ok(all(card(), 'now').some(n => n.textContent === '4/6'), 'and the bar says where it is')
+
+  all(card(), 'fold')[0].listeners.get('click')?.[0]({} as never)
+  assert.equal(all(card(), 'steps')[0].hidden, false)
+})
+
 test('the document itself is rendered, headings and tables and all', { skip }, async () => {
   const ui = await webview()
   ui.send(payload())

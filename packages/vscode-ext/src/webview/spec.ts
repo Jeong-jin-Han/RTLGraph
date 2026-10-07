@@ -206,47 +206,21 @@ const whereOf = (step: Step): string =>
 function walkCard(walk: Walk): HTMLElement {
   const card = el('div', 'walk')
   card.dataset.id = walk.id
-  const live = at?.id === walk.id
-  if (live) card.classList.add('live')
 
   const bar = el('div', 'walk-bar')
   const fold = el('button', 'fold')
-  const open = !closed.has(walk.id)
-  fold.textContent = open ? '▾' : '▸'
   fold.title = walk.id
   bar.append(fold)
-
-  const go = el('button', 'go', `▶ ${words.walk}`)
-  go.addEventListener('click', () => vscode.postMessage({ type: 'walk', id: walk.id, index: 0 }))
-  bar.append(go)
-  bar.append(el('span', 'count', words.steps(walk.steps.length)))
-
-  if (live && at) {
-    bar.append(el('span', 'now', `${at.index + 1}/${at.total}`))
-    for (const [label, message] of [['◀', { type: 'step', by: -1 }], ['▶', { type: 'step', by: 1 }]] as const) {
-      const button = el('button', 'move', label)
-      button.addEventListener('click', () => vscode.postMessage(message))
-      bar.append(button)
-    }
-    // An icon, not a word: the bar has to fit a narrow panel on one row.
-    const stop = el('button', 'stop', '■')
-    stop.title = words.stop
-    stop.addEventListener('click', () => vscode.postMessage({ type: 'stop' }))
-    bar.append(stop)
-  }
   card.append(bar)
 
   const steps = el('ol', 'steps')
-  steps.hidden = !open
   for (const [index, step] of walk.steps.entries()) {
     const row = el('li', 'step')
-    if (live && at?.index === index) row.classList.add('now')
     row.append(el('span', 'n', `${index + 1}`))
     const body = el('div', 'body')
     const head = el('div', 'head')
     head.append(el('span', 'cycle', step.cycle))
-    const where = el('span', 'where', whereOf(step))
-    head.append(where)
+    head.append(el('span', 'where', whereOf(step)))
     body.append(head)
     const said = el('div', 'said')
     for (const part of inline(step.said)) said.append(part)
@@ -257,24 +231,101 @@ function walkCard(walk: Walk): HTMLElement {
   }
   card.append(steps)
 
+  // Opening or closing a scenario changes that scenario and nothing else.
+  // Redrawing the page for it threw the reader back to the top of the
+  // document, which is the one thing a fold must never do.
   fold.addEventListener('click', () => {
     if (closed.has(walk.id)) closed.delete(walk.id)
     else closed.add(walk.id)
     vscode.setState({ closed: [...closed] })
-    draw()
+    showFold(walk.id)
   })
+
+  shown.set(walk.id, { card, bar, steps, walk })
+  showFold(walk.id)
+  markWalk(walk.id)
   return card
+}
+
+/** The open/closed half of a card, applied where it stands. */
+function showFold(id: string): void {
+  const found = shown.get(id)
+  if (!found) return
+  const open = !closed.has(id)
+  found.steps.hidden = !open
+  const fold = found.bar.children[0] as HTMLElement | undefined
+  if (fold) fold.textContent = open ? '▾' : '▸'
+}
+
+/**
+ * Where the walk is, applied where the cards stand.
+ *
+ * Also in place rather than by redrawing: a step arriving from the editors
+ * must not move the document the reader is holding their place in.
+ */
+function markWalk(only?: string): void {
+  for (const [id, found] of shown) {
+    if (only !== undefined && id !== only) continue
+    const live = at?.id === id
+    found.card.classList.toggle('live', live)
+
+    // The bar is rebuilt — it gains ◀ ▶ ■ while this scenario is the one being
+    // walked — but only this bar, and only when what it says has changed.
+    const want = live && at ? `${at.index + 1}/${at.total}` : ''
+    if (found.bar.dataset.now === want) continue
+    found.bar.dataset.now = want
+    const fold = found.bar.children[0]
+    found.bar.replaceChildren(fold)
+    const go = el('button', 'go', `▶ ${words.walk}`)
+    go.addEventListener('click', () => vscode.postMessage({ type: 'walk', id, index: 0 }))
+    found.bar.append(go)
+    found.bar.append(el('span', 'count', words.steps(found.walk.steps.length)))
+    if (live && at) {
+      found.bar.append(el('span', 'now', want))
+      for (const [label, by] of [['◀', -1], ['▶', 1]] as const) {
+        const button = el('button', 'move', label)
+        button.addEventListener('click', () => vscode.postMessage({ type: 'step', by }))
+        found.bar.append(button)
+      }
+      // An icon, not a word: the bar has to fit a narrow panel on one row.
+      const stop = el('button', 'stop', '■')
+      stop.title = words.stop
+      stop.addEventListener('click', () => vscode.postMessage({ type: 'stop' }))
+      found.bar.append(stop)
+    }
+  }
+  // And the row itself.
+  for (const [id, found] of shown) {
+    if (only !== undefined && id !== only) continue
+    for (let index = 0; index < found.steps.children.length; index += 1) {
+      const row = found.steps.children[index] as HTMLElement
+      row.classList.toggle('now', at?.id === id && at.index === index)
+    }
+  }
+  // Bring the step into view only if it is not already there: `nearest` leaves
+  // a visible row alone, so clicking a row does not scroll under the hand.
+  if (at) {
+    const found = shown.get(at.id)
+    const row = found?.steps.children[at.index] as HTMLElement | undefined
+    if (row && !found?.steps.hidden) row.scrollIntoView?.({ block: 'nearest' })
+  }
 }
 
 // ── putting the page together ───────────────────────────────────────────────
 
 let text = ''
 let name = ''
+/** The cards on screen, so a fold or a step can change one in place. */
+const shown = new Map<string, { card: HTMLElement; bar: HTMLElement; steps: HTMLElement; walk: Walk }>()
 
 const idIn = (heading: string): string | undefined =>
   /^([A-Z]{1,4}-[NE]\d+)[.\s]/.exec(heading.trim())?.[1]
 
 function draw(): void {
+  // A document rewritten under the reader (an agent writing it in another
+  // window) should come back where they were standing in it.
+  const was = (document.body.querySelector?.('.spec-doc') as HTMLElement | undefined)?.scrollTop ?? 0
+  shown.clear()
   document.body.replaceChildren()
 
   const bar = el('div', 'spec-bar')
@@ -342,10 +393,7 @@ function draw(): void {
   }
   flush()
   if (walks.length === 0) doc.append(el('p', 'nothing', words.nothing))
-
-  // The step being walked should be on screen without being hunted for.
-  const now = document.body.querySelector?.('.step.now') as HTMLElement | undefined
-  now?.scrollIntoView?.({ block: 'center' })
+  if (was > 0) doc.scrollTop = was
 }
 
 window.addEventListener('message', (event: MessageEvent) => {
@@ -368,7 +416,7 @@ window.addEventListener('message', (event: MessageEvent) => {
     draw()
   } else if (message.type === 'at') {
     at = message.at
-    draw()
+    markWalk()
   }
 })
 
