@@ -214,6 +214,12 @@ extension, so each line is something that broke once.
   marked as the editors on the right move. Every citation in the document is a
   button that opens that line. Scenarios fold, and a fold you close stays
   closed.
+- A path table's last column, **what happens**, is what a step is titled
+  with: one line per cycle in human words. Restating the code there would
+  have shown the reader the same lines twice — they are open beside them
+  already — so the sentence leads and the citations sit under it. A table
+  written before that column existed still walks: whatever in the row is not
+  a citation is used instead.
 - Nothing comes before the first step, so the pane under it is left empty
   rather than holding the last walk's last step, and the button that would
   step backwards from there is not offered.

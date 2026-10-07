@@ -217,7 +217,7 @@ export class WalkSession {
     pick.items = this.walk.steps.map((step, index) => ({
       index,
       label: `${index + 1}/${total}  ·  ${step.cycle}`,
-      description: step.said.replace(/`/g, ''),
+      description: (step.why || step.said).replace(/`/g, ''),
       detail: `${step.file}:${step.spans.map(s => (s.from === s.to ? s.from : `${s.from}-${s.to}`)).join(', ')}`,
     }))
     pick.activeItems = [pick.items[this.at]]
@@ -265,6 +265,9 @@ export class WalkSession {
     // Nothing before the first step, so no button that pretends otherwise.
     this.back.text = at > 0 ? '$(chevron-left)' : '$(blank)'
     this.status.text = `$(debug-step-over) ${this.walk.id}  ${at + 1}/${total}  ·  ${step.cycle}`
+    // What happens here, in words — the step's own sentence if the table has
+    // one, and only then how to work the buttons.
+    this.status.tooltip = `${(step.why || step.said).replace(/`/g, '')}\n\n${words().tip}`
     this.forth.text = at + 1 < total ? '$(chevron-right)' : '$(check)'
     this.forth.command = at + 1 < total ? 'rtlgraph.walkNext' : 'rtlgraph.walkStop'
     for (const item of [this.back, this.status, this.forth]) item.show()

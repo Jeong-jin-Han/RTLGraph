@@ -58,7 +58,7 @@ A module file is these six sections, in this order:
 | 2 | What that needs | a row per step: *to do this → you need → so this signal exists* | one table, plus the names that mislead |
 | 3 | Ports | direction, width, one line each | one table |
 | 4 | Scenarios, one line each | event → outcome → how well confirmed | one table |
-| 5 | The path, by cycle | one table per scenario: cycle · condition that became true · assignment that ran | 10 rows |
+| 5 | The path, by cycle | one table per scenario: cycle · condition that became true · assignment that ran · **what happens** | 10 rows |
 | 6 | Detail | every signal, every use, side effects, the why | no limit |
 
 ## The seven rules
@@ -68,8 +68,10 @@ A module file is these six sections, in this order:
 2. **Paths go in cycle order, not line order.** The `if`s in one `always` block are evaluated in
    the same cycle. For every cycle, ask separately: **what else became true here?** That question
    is the only thing that finds, say, a shift that still happens in a frame that was cancelled.
-3. **"Why" lives in section 6 only.** If a path table makes you want to write a sentence, that
-   sentence belongs in 6.
+3. **"Why" lives in section 6 only.** If a path table makes you want to explain *the reason*,
+   that belongs in 6. The one exception is section 5's last column, **what happens**: one line
+   per cycle saying **in words** what became true there. Without it, walking a scenario shows the
+   same code lines twice and tells the reader nothing.
 4. **Every number says where it came from.** `measured` — a bench in `sim/` printed it; `derived`
    — worked out from the code; `read` — read off the source. Never let a derived number pass as a
    measured one.
@@ -126,6 +128,10 @@ stretch to read bracketed down the gutter. For that to work:
   knows which file `rx` is. Citing `uart_receiver.v:116` outright works too.
 - **One row, one cycle.** A row citing two files is split into one step per file, because a step
   that moves the editor elsewhere halfway through loses the reader's place.
+- **Fill in the "what happens" column.** It is the title of each step when the scenario is
+  walked. Do not restate the code there — it is in the next cell and in the editor beside it —
+  say it in words: "sees the line fall and starts a frame", "reads the line once, in the middle
+  of the bit", "the tenth bit arrives and the byte comes out". Keep citations out of this cell.
 - **A condition line and the assignment under it** (`rx:115`, `rx:116`) are shown as one stretch;
   lines far apart are shown separately. So put only one cycle's lines in a row.
 

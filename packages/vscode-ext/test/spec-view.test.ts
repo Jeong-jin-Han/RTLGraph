@@ -58,9 +58,15 @@ test('a scenario heading carries its steps, not just a count', { skip }, async (
   assert.ok(steps.length >= 3, `the steps themselves are listed: ${steps.length}`)
   // Each one says which cycle it is and where in the code it lands, which is
   // what "6 steps" on its own never said.
-  const said = steps[0].children.map(c => c.textContent).join(' ')
   assert.match(all(steps[0], 'where')[0].textContent, /uart_receiver\.v:\d+/)
-  assert.ok(all(steps[0], 'cycle')[0].textContent.length > 0, `a cycle: ${said}`)
+  assert.ok(all(steps[0], 'cycle')[0].textContent.length > 0, 'a cycle')
+  // And what happens there, in words. A step whose text is the same code the
+  // editor beside it is showing tells the reader nothing.
+  const why = all(steps[0], 'why')[0]
+  assert.ok(why, 'the step leads with a sentence')
+  assert.ok(why.children.map(c => c.textContent).join('').length > 8, `${why.textContent}`)
+  assert.equal(all(why, 'cite').length, 0, 'the sentence is words, not citations')
+  assert.ok(all(all(steps[0], 'under')[0], 'cite').length > 0, 'the code sits under it')
 })
 
 test('clicking a step asks the host to walk to exactly that step', { skip }, async () => {

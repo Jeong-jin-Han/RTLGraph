@@ -22,11 +22,11 @@ const SPEC = `## 5. 줄 경로
 
 ### RX-N1. 바이트 하나를 받는다
 
-| 사이클 | 참이 된 조건 | 실행된 대입 |
-|---|---|---|
-| 0 | \`rx:74\` \`start\` | \`rx:97\` bit_counter <= 4'd10 · \`rx:89\` clock_counter <= 0 |
-| 542 | \`rx:70\` \`sample\` | \`rx:116\` rx_shift <= {serial_in, rx_shift[9:1]} |
-| 10850 | \`rx:124-126\` | \`rx:126\` has_byte <= 1'b1 |
+| 사이클 | 참이 된 조건 | 실행된 대입 | 무슨 일 |
+|---|---|---|---|
+| 0 | \`rx:74\` \`start\` | \`rx:97\` bit_counter <= 4'd10 · \`rx:89\` clock_counter <= 0 | 하강을 보고 프레임을 시작한다 |
+| 542 | \`rx:70\` \`sample\` | \`rx:116\` rx_shift <= {serial_in, rx_shift[9:1]} | 시작 비트의 한가운데에서 라인을 읽는다 |
+| 10850 | \`rx:124-126\` | \`rx:126\` has_byte <= 1'b1 | 열 비트를 다 모아 바이트를 내놓는다 |
 
 결과: 바이트가 나온다.
 
@@ -64,6 +64,9 @@ test('a path table reads back as a walk, one step per row', () => {
   // three citations in one row, far enough apart to stay three stretches
   assert.deepEqual(first.spans, [{ from: 74, to: 74 }, { from: 89, to: 89 }, { from: 97, to: 97 }])
   assert.match(first.said, /bit_counter/)
+  // What a reader walking this is told, which is not the code they are looking at.
+  assert.equal(first.why, '하강을 보고 프레임을 시작한다')
+  assert.equal(first.why.includes('rx:'), false, 'the sentence carries no citations')
   assert.deepEqual(second.spans, [{ from: 70, to: 70 }, { from: 116, to: 116 }])
   // a range citation keeps its end, and the overlapping single line merges in
   assert.deepEqual(third.spans, [{ from: 124, to: 126 }])
@@ -78,6 +81,18 @@ test('a row that cites two files becomes one step per file', () => {
   assert.deepEqual(link.steps.map(s => s.file), ['uart.v', 'uart_receiver.v'])
   assert.ok(link.steps.every(s => s.cycle === '0'), 'both are still that one cycle')
   assert.deepEqual(link.steps[0].spans, [{ from: 23, to: 23 }])
+})
+
+// A table written before the column existed still has to walk: whatever in
+// the row is not a citation is the nearest thing to a sentence it has.
+test('a path table with no explanation column falls back to its prose', () => {
+  const walks = walksIn(`### RX-N1. 받는다
+
+| 사이클 | 참이 된 조건 | 실행된 대입 |
+|---|---|---|
+| 0 | \`rx:74\` \`start\` | 프레임이 시작된다 |
+`, prefixesIn(FORMAT))
+  assert.equal(walks[0].steps[0].why, '프레임이 시작된다')
 })
 
 test('a citation that names its own file needs no prefix table', () => {

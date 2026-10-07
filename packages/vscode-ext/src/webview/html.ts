@@ -305,7 +305,11 @@ body.editing #stage g.wire { cursor: pointer; }
 .spec-doc .steps .step .head { display: flex; gap: 8px; align-items: baseline; min-width: 0; }
 .spec-doc .steps .step .cycle { font: 600 11px ui-monospace, monospace; color: #1f2937; }
 .spec-doc .steps .step .where { font: 11px ui-monospace, monospace; color: #6b7280; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.spec-doc .steps .step .why { font-size: 13px; color: #1f2937; }
 .spec-doc .steps .step .said { font-size: 12px; color: #4b5563; }
+/* The code under a sentence is evidence for it, not the thing being said. */
+.spec-doc .steps .step .said.under { font-size: 11px; color: #6b7280; margin-top: 1px; }
+.spec-doc .steps .step .said.under code { background: none; padding: 0; }
 .spec-doc p.nothing { color: #6b7280; font-style: italic; }
 [hidden] { display: none !important; }
 `

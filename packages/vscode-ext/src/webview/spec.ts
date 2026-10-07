@@ -15,6 +15,7 @@ import katex from 'katex'
 
 interface Step {
   cycle: string
+  why: string
   said: string
   file: string
   spans: { from: number; to: number }[]
@@ -222,9 +223,19 @@ function walkCard(walk: Walk): HTMLElement {
     head.append(el('span', 'cycle', step.cycle))
     head.append(el('span', 'where', whereOf(step)))
     body.append(head)
-    const said = el('div', 'said')
-    for (const part of inline(step.said)) said.append(part)
-    body.append(said)
+    // What happens here, in words, is what the reader is walking for; the
+    // code is already open beside them. So the sentence leads and the lines
+    // it came from sit under it.
+    if (step.why) {
+      const why = el('div', 'why')
+      for (const part of inline(step.why)) why.append(part)
+      body.append(why)
+    }
+    if (step.said) {
+      const said = el('div', step.why ? 'said under' : 'said')
+      for (const part of inline(step.said)) said.append(part)
+      body.append(said)
+    }
     row.append(body)
     row.addEventListener('click', () => vscode.postMessage({ type: 'walk', id: walk.id, index }))
     steps.append(row)

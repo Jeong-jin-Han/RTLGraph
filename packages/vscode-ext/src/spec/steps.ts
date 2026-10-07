@@ -15,6 +15,15 @@
 export interface Step {
   /** The first column: the cycle this row is about, as the document wrote it. */
   cycle: string
+  /**
+   * What happens here, in words.
+   *
+   * The column a path table keeps for it ("무슨 일" / "what happens"), or, in a
+   * table written before that column existed, whatever in the row is not code.
+   * This is what a reader walking the scenario is actually told; the code is
+   * on screen beside them already.
+   */
+  why: string
   /** The rest of the row, as text, for the reader. */
   said: string
   /** The one file this step is read in. */
@@ -63,8 +72,16 @@ function placesIn(text: string, prefixes: Map<string, string>): { file: string; 
   return out
 }
 
+/**
+ * Which column of a path table is the explanation.
+ *
+ * Named in the header, because a table is free to call it what it likes and a
+ * guess from the content would move about from row to row.
+ */
+const EXPLAINS = /무슨\s*일|일어나는\s*일|해설|설명|뜻|what\s*happens|in\s*words|meaning/i
+
 /** One step per file, with the stretches in that file merged. */
-function stepsForRow(cycle: string, said: string, places: ReturnType<typeof placesIn>): Step[] {
+function stepsForRow(cycle: string, why: string, said: string, places: ReturnType<typeof placesIn>): Step[] {
   const byFile = new Map<string, { from: number; to: number }[]>()
   for (const place of places) {
     byFile.set(place.file, [...(byFile.get(place.file) ?? []), { from: place.from, to: place.to }])
@@ -78,7 +95,7 @@ function stepsForRow(cycle: string, said: string, places: ReturnType<typeof plac
       if (last && span.from <= last.to + 1) last.to = Math.max(last.to, span.to)
       else spans.push({ ...span })
     }
-    out.push({ cycle, said, file, spans })
+    out.push({ cycle, why, said, file, spans })
   }
   return out
 }
@@ -91,7 +108,7 @@ function stepsForRow(cycle: string, said: string, places: ReturnType<typeof plac
  */
 export function walksIn(doc: string, prefixes: Map<string, string> = new Map()): Walk[] {
   const out: Walk[] = []
-  let current: { id: string; title: string; steps: Step[]; header: boolean } | undefined
+  let current: { id: string; title: string; steps: Step[]; header: boolean; explains: number } | undefined
   const close = () => {
     if (current && current.steps.length > 0) {
       out.push({ id: current.id, title: current.title, steps: current.steps })
@@ -102,19 +119,34 @@ export function walksIn(doc: string, prefixes: Map<string, string> = new Map()):
     const heading = SCENARIO.exec(line)
     if (heading) {
       close()
-      current = { id: heading[1], title: heading[2].trim(), steps: [], header: false }
+      current = { id: heading[1], title: heading[2].trim(), steps: [], header: false, explains: -1 }
       continue
     }
     if (!current) continue
     if (line.startsWith('#')) { close(); continue }
     if (!line.trimStart().startsWith('|')) continue
-    if (RULE.test(line)) { current.header = true; continue }
-    if (!current.header) continue // the first row is the header until the rule
     const cells = line.split('|').slice(1, -1).map(c => c.trim())
+    if (RULE.test(line)) { current.header = true; continue }
+    if (!current.header) {
+      // The row before the rule names the columns, which is how the
+      // explanation column is found rather than guessed at.
+      current.explains = cells.findIndex(cell => EXPLAINS.test(cell))
+      continue
+    }
     if (cells.length < 2) continue
     const places = placesIn(line, prefixes)
     if (places.length === 0) continue // a row that cites nothing is nowhere to go
-    current.steps.push(...stepsForRow(cells[0], cells.slice(1).join(' · '), places))
+    const explains = current.explains
+    const why = explains > 0
+      ? cells[explains] ?? ''
+      // A table written before the column existed: whatever in it is not a
+      // citation and not Verilog is the nearest thing to a sentence it has.
+      : cells.slice(1).filter(cell => placesIn(cell, prefixes).length === 0).join(' · ')
+    const said = cells
+      .map((cell, at) => (at === 0 || at === explains ? '' : cell))
+      .filter(Boolean)
+      .join(' · ')
+    current.steps.push(...stepsForRow(cells[0], why, said, places))
   }
   close()
   return out
