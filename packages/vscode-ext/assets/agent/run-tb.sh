@@ -116,6 +116,13 @@ list_stray() {
 }
 
 benches=()
+# A bench that was copied into tb/given is usually still sitting where it came
+# from — a Vivado project keeps its own under sim_1/new — and running it from
+# both places runs it twice under one name. The copy in tb/given or tb/mine is
+# the one that is meant; the original is skipped.
+known_bench() { # path → true when a bench of this name is already in tb/
+  [ -e "$project/tb/given/$(basename -- "$1")" ] || [ -e "$project/tb/mine/$(basename -- "$1")" ]
+}
 for choice in "${want[@]}"; do
   case "$choice" in
     given) while IFS= read -r f; do benches+=("$f"); done < <(list_dir "$project/tb/given") ;;
@@ -123,7 +130,7 @@ for choice in "${want[@]}"; do
     all)
       while IFS= read -r f; do benches+=("$f"); done < <(list_dir "$project/tb/given")
       while IFS= read -r f; do benches+=("$f"); done < <(list_dir "$project/tb/mine")
-      while IFS= read -r f; do benches+=("$f"); done < <(list_stray)
+      while IFS= read -r f; do known_bench "$f" || benches+=("$f"); done < <(list_stray)
       ;;
     *)
       if [ -f "$choice" ]; then benches+=("$(cd -- "$(dirname -- "$choice")" && pwd)/$(basename -- "$choice")")
@@ -318,8 +325,13 @@ show_compile_log() { # file → the build log
   n=$(wc -l < "$shown")
   if [ "$n" -le 30 ]; then cat "$shown"
   else
-    head -8 "$shown"
-    echo "(… $((n - 8)) more compiler lines — --keep-build keeps them in ${1#"$project"/})"
+    # A netlist says the same thing about every one of its cells — "Port 1 (CO)
+    # of CARRY4 expects 4 bits" three hundred times. Eight of those lines are
+    # not a sample of the problem, they are one problem shown eight times. So
+    # the file and the numbers come off, and what is left is counted.
+    sed 's/^[^ ]*:[0-9]*:[[:space:]]*//; s/\b[0-9]\+\b/N/g' "$shown" | sort | uniq -c | sort -rn | head -6 |
+      while read -r count rest; do printf '  %4d x  %s\n' "$count" "$rest"; done
+    echo "(… $n compiler lines, $(sed 's/^[^ ]*:[0-9]*:[[:space:]]*//; s/\b[0-9]\+\b/N/g' "$shown" | sort -u | wc -l) different ones — --keep-build keeps them in ${1#"$project"/})"
   fi
   n=$(( $(wc -l < "$1") - n ))
   [ "$n" -eq 0 ] || echo "($n warnings from inside the vendor library are not shown)"

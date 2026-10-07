@@ -295,6 +295,10 @@ rather than left for the next person to rediscover.
   a memory array (one `expr` box, shape in the label), a bit-select (an `expr`
   node where it feeds a primitive, a `slice` diagnostic elsewhere). Each says
   why it is a workaround.
+- **The same bench found twice** — once in `tb/given/`, once where it was
+  copied from inside a vendor project — is run once. And a netlist that says
+  the same thing about every one of its cells is counted rather than sampled:
+  `118 x : Padding N high bits of the port` instead of eight of them.
 - **"Evaluating parameters" says which value**: the one the instantiation
   passes, not the declared default, recorded in a `param-evaluated` diagnostic.
 

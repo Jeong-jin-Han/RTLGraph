@@ -11,6 +11,10 @@ dist/
 # A real handed-out assignment, kept out of the repository: the handout is
 # course material. It sits in demo/ so it can be opened like any other demo.
 demo/uart-p01/
+# The same, for the lab this was driven through to find the limits in the
+# 0.2.0 notes: a Vivado project, a synthesized netlist, and a C file as the
+# answer. Course material, and 400MB of it.
+demo/d04-soc/
 
 # Copied from the repository root at package time so the marketplace page is the
 # same document as GitHub's, with its links rewritten to absolute ones.
