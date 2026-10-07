@@ -3,7 +3,7 @@ import { execSync } from 'node:child_process'
 import { chmodSync, existsSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import {
-  AGENT_FILES, BASE_MODULES, ENVIRONMENT_FILE, filesFor, PROMPT_KINDS, PROMPT_LANGUAGES, SUPERSEDED,
+  AGENT_FILES, BASE_MODULES, ENVIRONMENT_FILE, filesFor, GITATTRIBUTES, PROMPT_KINDS, PROMPT_LANGUAGES, SUPERSEDED,
 } from './files.ts'
 import { buildEnvironmentReport, PROBES, type Companion, type EnvironmentFacts, type ProbedTool } from './environment.ts'
 
@@ -66,6 +66,17 @@ export interface CopyResult {
 // it — the UART assignment's DFF takes BITWIDTH where the stock one takes BW —
 // so overwriting `.base/` on the next run would break a project that elaborates.
 async function adapted(extensionUri: vscode.Uri, from: string, to: string, at: vscode.Uri): Promise<boolean> {
+  // `.gitattributes` belongs to the project, not to us: ours is a starting
+  // point for a project that has none, and a project that has one has settled
+  // this already — very possibly for files we know nothing about.
+  if (to === GITATTRIBUTES) {
+    try {
+      await vscode.workspace.fs.stat(at)
+      return true
+    } catch {
+      return false
+    }
+  }
   if (!to.startsWith('.base/') || !to.endsWith('.v')) return false
   try {
     const there = await vscode.workspace.fs.readFile(at)

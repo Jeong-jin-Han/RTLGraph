@@ -74,6 +74,17 @@ export async function run(): Promise<void> {
   assert.ok(existsSync(join(folder, '.prompt/code/korean.md')), "another tool's prompts are untouched")
   log('everything we write is under .agent/rtlgraph/ and .prompt/rtlgraph/; only our own leftovers are cleaned up')
 
+  // Git for Windows checks files out with CRLF, and a .sh with CRLF does not
+  // run under Cygwin — starting with run-tb.sh. The lines that prevent that
+  // ship with the agent files; a project that has settled this already keeps
+  // whatever it settled on.
+  assert.match(readFileSync(join(folder, '.gitattributes'), 'utf8'), /\*\.sh\s+text eol=lf/)
+  writeFileSync(join(folder, '.gitattributes'), '* text=auto\n# the project had its own\n')
+  await vscode.commands.executeCommand('rtlgraph.copyAgentSpec', vscode.Uri.file(folder))
+  assert.match(readFileSync(join(folder, '.gitattributes'), 'utf8'), /the project had its own/,
+    'a .gitattributes the project already had is never written over')
+  log('a project with no .gitattributes gets one that keeps the scripts LF, and keeps its own if it has one')
+
   // Running the command again must not undo a primitive the project adapted to
   // its own code — the UART assignment's DFF takes BITWIDTH, and overwriting it
   // leaves a project that no longer elaborates.

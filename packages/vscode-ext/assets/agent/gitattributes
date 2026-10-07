@@ -1,0 +1,23 @@
+# Line endings, settled once, so the scripts in this project still run.
+#
+# Git for Windows checks files out with CRLF by default. Verilog does not care,
+# and neither does a simulator. A shell script does: a `.sh` with CRLF run under
+# Cygwin or MSYS fails with `$'\r': command not found`, and the first thing it
+# fails on is usually `.agent/rtlgraph/run-tb.sh` — the one command that says
+# whether the design passes.
+#
+# RTLGraph wrote this file because the project did not have one. It is yours
+# now: edit it, and `Copy Agent Spec to Workspace` will leave it alone.
+
+* text=auto
+
+# Run by a shell, so LF wherever they are checked out.
+*.sh      text eol=lf
+*.bash    text eol=lf
+Makefile  text eol=lf
+*.mk      text eol=lf
+# `#!/usr/bin/env node` on a CRLF line is not a shebang either.
+*.mjs     text eol=lf
+
+# Read by tools rather than diffed by people, and large.
+*.vcd     -text

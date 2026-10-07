@@ -102,7 +102,13 @@ function citation(name: string, from: string, to?: string): HTMLElement {
   const button = el('button', 'cite')
   button.textContent = label
   button.title = `${file}:${from}`
-  button.addEventListener('click', () => openCode(file, Number(from)))
+  // Inside a step row the row itself is clickable, and a citation that let the
+  // click through landed the reader on the step's first line instead of on the
+  // line they pressed.
+  button.addEventListener('click', event => {
+    event.stopPropagation?.()
+    openCode(file, Number(from))
+  })
   return button
 }
 
@@ -193,8 +199,29 @@ function list(lines: string[]): HTMLElement {
 
 // ── the steps of one scenario ───────────────────────────────────────────────
 
-const whereOf = (step: Step): string =>
-  `${step.file}:${step.spans.map(s => (s.from === s.to ? `${s.from}` : `${s.from}-${s.to}`)).join(', ')}`
+/**
+ * Where the step reads, as one way in per stretch.
+ *
+ * A step is often three places in one file — the condition, and the two
+ * assignments under it. Clicking the row walks to the step, which opens the
+ * first of them; clicking one of these goes to that one.
+ */
+function whereIn(step: Step): HTMLElement {
+  const where = el('span', 'where')
+  where.append(el('span', 'file', `${step.file}:`))
+  for (const [index, span] of step.spans.entries()) {
+    if (index > 0) where.append(el('span', 'comma', ', '))
+    const label = span.from === span.to ? `${span.from}` : `${span.from}-${span.to}`
+    const line = el('button', 'line', label)
+    line.title = `${step.file}:${span.from}`
+    line.addEventListener('click', event => {
+      event.stopPropagation?.()
+      openCode(step.file, span.from)
+    })
+    where.append(line)
+  }
+  return where
+}
 
 /**
  * The control under a scenario heading: how many steps there are, what each
@@ -221,7 +248,7 @@ function walkCard(walk: Walk): HTMLElement {
     const body = el('div', 'body')
     const head = el('div', 'head')
     head.append(el('span', 'cycle', step.cycle))
-    head.append(el('span', 'where', whereOf(step)))
+    head.append(whereIn(step))
     body.append(head)
     // What happens here, in words, is what the reader is walking for; the
     // code is already open beside them. So the sentence leads and the lines

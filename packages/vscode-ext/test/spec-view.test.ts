@@ -32,6 +32,10 @@ const skip = !here && 'needs `npm run build -w rtlgraph` and demo/uart-p01'
 let ui: Harness | undefined
 const webview = async (): Promise<Harness> => (ui ??= await loadWebview(BUNDLE))
 
+/** Everything written inside a node, the way a reader would read it. */
+const text = (node: FakeElement): string =>
+  node.textContent + node.children.map(text).join('')
+
 const all = (root: FakeElement, className: string): FakeElement[] => {
   const out: FakeElement[] = []
   const walk = (node: FakeElement) => {
@@ -58,13 +62,13 @@ test('a scenario heading carries its steps, not just a count', { skip }, async (
   assert.ok(steps.length >= 3, `the steps themselves are listed: ${steps.length}`)
   // Each one says which cycle it is and where in the code it lands, which is
   // what "6 steps" on its own never said.
-  assert.match(all(steps[0], 'where')[0].textContent, /uart_receiver\.v:\d+/)
+  assert.match(text(all(steps[0], 'where')[0]), /uart_receiver\.v:\d+/)
   assert.ok(all(steps[0], 'cycle')[0].textContent.length > 0, 'a cycle')
   // And what happens there, in words. A step whose text is the same code the
   // editor beside it is showing tells the reader nothing.
   const why = all(steps[0], 'why')[0]
   assert.ok(why, 'the step leads with a sentence')
-  assert.ok(why.children.map(c => c.textContent).join('').length > 8, `${why.textContent}`)
+  assert.ok(text(why).length > 8, text(why))
   assert.equal(all(why, 'cite').length, 0, 'the sentence is words, not citations')
   assert.ok(all(all(steps[0], 'under')[0], 'cite').length > 0, 'the code sits under it')
 })
@@ -104,6 +108,32 @@ test('the step being walked is marked, and the buttons appear on that scenario',
   // A scenario nobody is walking keeps just its ▶ and its count.
   const other = all(ui.body, 'walk').find(c => c.dataset.id !== 'RX-N1')!
   assert.equal(all(other, 'move').length, 0)
+})
+
+// A step often reads three places in one file. Clicking the row walks to the
+// step, which opens the first; clicking one of the lines goes to that line,
+// and must not also be taken as a click on the row.
+test('each line a step reads is its own way in', { skip }, async () => {
+  const ui = await webview()
+  ui.send(payload())
+  const first = all(all(ui.body, 'walk')[0], 'step')[0]
+  const lines = all(all(first, 'where')[0], 'line')
+  assert.ok(lines.length >= 3, `one per stretch: ${lines.map(l => l.textContent)}`)
+
+  ui.posted.length = 0
+  let stopped = false
+  lines[2].listeners.get('click')?.[0]({ stopPropagation: () => (stopped = true) } as never)
+  assert.equal(stopped, true, 'the row underneath does not also take the click')
+  const [sent] = ui.posted as { type: string; file: string; line: number }[]
+  assert.equal(sent.type, 'open')
+  assert.equal(String(sent.line), lines[2].textContent.split('-')[0])
+
+  // The citations in the step's own text behave the same way.
+  ui.posted.length = 0
+  stopped = false
+  all(first, 'cite')[0].listeners.get('click')?.[0]({ stopPropagation: () => (stopped = true) } as never)
+  assert.equal(stopped, true)
+  assert.equal((ui.posted[0] as { type: string }).type, 'open')
 })
 
 test('a citation anywhere in the document is a way into the code', { skip }, async () => {

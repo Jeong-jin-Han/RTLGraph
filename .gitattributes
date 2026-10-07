@@ -1,0 +1,18 @@
+# What the repository checks out, on any machine.
+#
+# The scripts shipped with the agent files are run by a shell; one checked out
+# with CRLF fails under Cygwin or MSYS with `$'\r': command not found`. The
+# same four lines go into every project `Copy Agent Spec to Workspace` touches
+# (assets/agent/gitattributes).
+
+* text=auto
+
+*.sh      text eol=lf
+*.bash    text eol=lf
+Makefile  text eol=lf
+*.mk      text eol=lf
+*.mjs     text eol=lf
+
+*.vcd     -text
+*.vsix    binary
+*.pdf     binary

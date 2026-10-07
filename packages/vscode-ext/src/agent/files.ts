@@ -33,6 +33,9 @@ export const VALIDATOR_FILE = `${AGENT_DIR}/validate.mjs`
 export const ENVIRONMENT_FILE = `${AGENT_DIR}/ENVIRONMENT.md`
 export const RUN_TB = `${AGENT_DIR}/run-tb.sh`
 export const MAKE_SUBMISSION = `${AGENT_DIR}/make-submission.sh`
+// Not under `.agent/`: git only reads it at the root of what it is checking
+// out. Written once, when a project has none, and never touched again.
+export const GITATTRIBUTES = '.gitattributes'
 export const WAVE_BUNDLE = 'dist/agent/rtlgraph-wave.mjs'
 export const WAVE_READER = `${AGENT_DIR}/wave.mjs`
 
@@ -100,6 +103,10 @@ export const AGENT_FILES: readonly BundledFile[] = [
   // Reads a dump and says what it measured — never why. `run-tb.sh --wave`
   // calls it; the `waveform` prompt is what turns measurements into reasons.
   { from: WAVE_BUNDLE, to: WAVE_READER },
+  // A shell script checked out with CRLF does not run under Cygwin or MSYS,
+  // and `run-tb.sh` is a shell script. Cheaper to ship the four lines that
+  // prevent it than to have an agent work out each time that it needs them.
+  { from: 'assets/agent/gitattributes', to: GITATTRIBUTES },
   // For the reader, not the agent: which of the five to reach for, and why.
   ...PROMPT_LANGUAGES.map(language => ({
     from: `assets/prompt/README${language === 'english' ? '' : `.${language}`}.md`,

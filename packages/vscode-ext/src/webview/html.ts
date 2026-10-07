@@ -305,6 +305,9 @@ body.editing #stage g.wire { cursor: pointer; }
 .spec-doc .steps .step .head { display: flex; gap: 8px; align-items: baseline; min-width: 0; }
 .spec-doc .steps .step .cycle { font: 600 11px ui-monospace, monospace; color: #1f2937; }
 .spec-doc .steps .step .where { font: 11px ui-monospace, monospace; color: #6b7280; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Each stretch the step reads is its own way in, so each looks like one. */
+.spec-doc .steps .step .where button.line { font: inherit; padding: 0 2px; border: 0; border-radius: 2px; background: none; color: #6b7280; cursor: pointer; text-decoration: underline dotted; text-underline-offset: 2px; }
+.spec-doc .steps .step .where button.line:hover { background: #ede9fe; color: #5b21b6; }
 .spec-doc .steps .step .why { font-size: 13px; color: #1f2937; }
 .spec-doc .steps .step .said { font-size: 12px; color: #4b5563; }
 /* The code under a sentence is evidence for it, not the thing being said. */

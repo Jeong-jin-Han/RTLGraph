@@ -5,7 +5,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 
 import { tmpdir } from 'node:os'
 import { basename, join, relative } from 'node:path'
 import { BASE_REGISTRY } from '@rtlgraph/registry'
-import { AGENT_FILES, BASE_MODULES, COMPONENT_DIR, filesFor, MAKE_SUBMISSION, PROMPT_CHAINS, PROMPT_KINDS, PROMPT_LANGUAGES, RECIPE_DIR, RUN_TB, VALIDATOR_BUNDLE } from '../src/agent/files.ts'
+import { AGENT_FILES, BASE_MODULES, COMPONENT_DIR, filesFor, MAKE_SUBMISSION, PROMPT_CHAINS, PROMPT_KINDS, PROMPT_LANGUAGES, RECIPE_DIR, RUN_TB, VALIDATOR_BUNDLE, GITATTRIBUTES } from '../src/agent/files.ts'
 import { buildEnvironmentReport } from '../src/agent/environment.ts'
 
 const ROOT = join(import.meta.dirname, '..')
@@ -13,6 +13,18 @@ const GOLDEN = join(ROOT, '../../demo/acc/acc/acc.rtlgraph-schematic.json')
 const read = (path: string) => readFileSync(join(ROOT, path), 'utf8')
 const flat = (text: string) => text.replace(/\s+/g, ' ')
 const spec = read('assets/agent/RTLGRAPH_SPEC.md')
+
+// A shell script checked out with CRLF does not run under Cygwin or MSYS, and
+// run-tb.sh is a shell script. The four lines that prevent it ship with the
+// agent files rather than being written out by an agent every time.
+test('a project with no .gitattributes gets one, and keeps its own', () => {
+  const ours = read('assets/agent/gitattributes')
+  assert.match(ours, /^\*\.sh\s+text eol=lf$/m, 'scripts stay LF wherever they are checked out')
+  assert.match(ours, /^\* text=auto$/m)
+  assert.match(ours, /Copy Agent Spec/, 'and it says it will not be written over')
+  assert.ok(AGENT_FILES.some(f => f.to === GITATTRIBUTES), 'it is one of the copied files')
+  assert.ok(filesFor({}).some(f => f.to === GITATTRIBUTES))
+})
 
 test('every file the command copies exists in the extension', () => {
   for (const { from } of AGENT_FILES) assert.ok(existsSync(join(ROOT, from)), from)
@@ -27,6 +39,9 @@ test('every file the command copies exists in the extension', () => {
   // Everything this extension writes is under its own name: nothing of ours
   // lands where another tool's files live.
   for (const { to } of AGENT_FILES) {
+    // `.gitattributes` is the one exception, and it has to be: git reads it
+    // at the root of the working tree and nowhere else.
+    if (to === GITATTRIBUTES) continue
     assert.ok(/^\.(agent|prompt)\/rtlgraph\/|^\.base\//.test(to), `${to} is namespaced`)
   }
 })
