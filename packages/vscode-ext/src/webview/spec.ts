@@ -153,7 +153,10 @@ function math(text: string, display: boolean): HTMLElement {
  */
 function inline(text: string): HTMLElement[] {
   const out: HTMLElement[] = []
-  const pattern = /\*\*([^*]+)\*\*|`([^`]+)`|\$([^$]+)\$|\[([^\]]+)\]\(([^)]+)\)/g
+  // A Verilog document is full of `$finish` and `$display`, and a pair of
+  // them on one line is not a formula. Maths may not span a code span, which
+  // is what separates `$a$` from "`$dumpvars` … `$finish`".
+  const pattern = /\*\*([^*]+)\*\*|`([^`]+)`|\$([^$`\n]{1,80})\$|\[([^\]]+)\]\(([^)]+)\)/g
   let from = 0
   const plain = (part: string) => {
     // Bare citations outside code spans are still places to go.

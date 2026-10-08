@@ -214,3 +214,37 @@ export function entriesIn(doc: string): Map<string, Entry> {
   close()
   return out
 }
+
+// ── which document is about which file ──────────────────────────────────────
+
+/**
+ * A citation anywhere in a document, with or without the backticks a writer
+ * may have put round it. The walk reads a table row with its own copy of this;
+ * this one runs over whole files.
+ */
+export const ANY_CITATION = /`?([A-Za-z_][\w./-]*(?:\.s?v)?):(\d+)(?:\s*[-\u2013]\s*\d+)?`?/g
+
+/** Every file a document's citations name, through the project's prefixes. */
+export function about(doc: string, prefixes: Map<string, string>): Set<string> {
+  const out = new Set<string>()
+  for (const [, name] of doc.matchAll(ANY_CITATION)) {
+    const file = /\.s?v$/.test(name) ? name : prefixes.get(name)
+    if (file) out.add(file.split('/').at(-1)!)
+  }
+  return out
+}
+
+/**
+ * How much of two paths is the same folder, in segments.
+ *
+ * A workspace holding two projects holds two files called `uart_receiver.v`,
+ * each with a specification of its own. The one that shares more of the path
+ * is the one the reader is working in.
+ */
+export function nearness(one: string, other: string): number {
+  const a = one.split('/')
+  const b = other.split('/')
+  let n = 0
+  while (n < a.length && n < b.length && a[n] === b[n]) n += 1
+  return n
+}

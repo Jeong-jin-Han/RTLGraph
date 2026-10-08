@@ -201,6 +201,20 @@ test('folding a scenario, or stepping, leaves the document where it was', { skip
   assert.equal(all(card(), 'steps')[0].hidden, false)
 })
 
+// Two Verilog system tasks on one line are not a formula between them.
+test('a pair of $tasks is not maths', { skip }, async () => {
+  const ui = await webview()
+  ui.send({
+    ...payload(),
+    text: '## 6. 세부\n\n벤치는 `$dumpvars` 를 부르고 끝에 `$finish` 를 부른다. 한편 $1085 = 125000000/115200$ 이다.\n',
+    walks: [],
+  })
+  const doc = all(ui.body, 'spec-doc')[0]
+  const maths = all(doc, 'math')
+  assert.equal(maths.length, 1, 'the one real formula, and not the text between the two tasks')
+  assert.match(text(doc), /\$dumpvars/, 'and the task names survive as written')
+})
+
 test('the document itself is rendered, headings and tables and all', { skip }, async () => {
   const ui = await webview()
   ui.send(payload())

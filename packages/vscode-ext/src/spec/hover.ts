@@ -9,7 +9,7 @@
 // never mentions gets no hover at all — a guess here is worse than silence.
 
 import * as vscode from 'vscode'
-import { entriesIn, prefixesIn, type Entry } from './steps.ts'
+import { about, ANY_CITATION as CITATION, entriesIn, nearness, prefixesIn, type Entry } from './steps.ts'
 import { sourceOf } from './walk.ts'
 
 /** One spec file, parsed, with what it is about. */
@@ -22,30 +22,9 @@ interface Read {
 
 // Backticks optional, as everywhere else a citation is read: "made at rx:89"
 // is a citation whether or not the writer marked it up as one.
-const CITATION = /`?([A-Za-z_][\w./-]*(?:\.s?v)?):(\d+)(?:\s*[-–]\s*\d+)?`?/g
-
-/** How much of two paths is the same folder, in segments. */
-function shared(one: string, other: string): number {
-  const a = one.split('/')
-  const b = other.split('/')
-  let n = 0
-  while (n < a.length && n < b.length && a[n] === b[n]) n += 1
-  return n
-}
-
-/** Every file a document's citations name, through the project's prefixes. */
-function about(doc: string, prefixes: Map<string, string>): Set<string> {
-  const out = new Set<string>()
-  for (const [, name] of doc.matchAll(CITATION)) {
-    const file = /\.s?v$/.test(name) ? name : prefixes.get(name)
-    if (file) out.add(file.split('/').at(-1)!)
-  }
-  return out
-}
-
 export class SpecHover implements vscode.HoverProvider {
   private readonly specs = new Map<string, Read>()
-  private readonly prefixes = new Map<string, Map<string, string>>()
+  private readonly prefixes = new Map<string, { stamp: number; table: Map<string, string> }>()
 
   async provideHover(doc: vscode.TextDocument, at: vscode.Position): Promise<vscode.Hover | undefined> {
     const range = doc.getWordRangeAtPosition(at, /[A-Za-z_]\w*/)
@@ -73,7 +52,7 @@ export class SpecHover implements vscode.HoverProvider {
       const entry = read?.entries.get(word)
       if (!read || !entry) continue
       if (!read.about.has(here)) { loose ??= { entry, spec }; continue }
-      const near = shared(spec.path, doc.path)
+      const near = nearness(spec.path, doc.path)
       if (!best || near > best.near) best = { entry, spec, near }
     }
     return best ?? loose
@@ -98,21 +77,35 @@ export class SpecHover implements vscode.HoverProvider {
     }
   }
 
-  /** The folder's `rx:` → `uart_receiver.v` table, read once per folder. */
+  /**
+   * The folder's `rx:` → `uart_receiver.v` table.
+   *
+   * Read again whenever the format file has been written: a reader who adds a
+   * file to that table and sees nothing change has no way to tell the table
+   * was wrong from the cache being stale.
+   */
   private async prefixesFor(spec: vscode.Uri): Promise<Map<string, string>> {
     const folder = vscode.Uri.joinPath(spec, '..')
-    const had = this.prefixes.get(folder.toString())
-    if (had) return had
-    let out = new Map<string, string>()
+    const format = vscode.Uri.joinPath(folder, '00-format.md')
+    const key = folder.toString()
+    let stamp = 0
     try {
-      const text = new TextDecoder().decode(
-        await vscode.workspace.fs.readFile(vscode.Uri.joinPath(folder, '00-format.md')))
-      out = prefixesIn(text)
+      stamp = (await vscode.workspace.fs.stat(format)).mtime
     } catch {
       // no format file: only citations that name their own file resolve
     }
-    this.prefixes.set(folder.toString(), out)
-    return out
+    const had = this.prefixes.get(key)
+    if (had && had.stamp === stamp) return had.table
+    let table = new Map<string, string>()
+    if (stamp > 0) {
+      try {
+        table = prefixesIn(new TextDecoder().decode(await vscode.workspace.fs.readFile(format)))
+      } catch {
+        // written while being read; the next hover picks it up
+      }
+    }
+    this.prefixes.set(key, { stamp, table })
+    return table
   }
 
   /**
