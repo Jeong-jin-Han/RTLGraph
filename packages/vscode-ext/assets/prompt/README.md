@@ -151,10 +151,12 @@ was silent and the code chose, which is the list of decisions nobody signed off.
 benches that judge nothing and print cycle numbers, so "valid at cycle 10851" is a measurement
 rather than arithmetic.
 
-Written this way, **the extension reads the document back.** Each scenario in a section 5 table
-gets a `▶ workflow` that walks the code a step at a time — the current step top right, the one
-before it underneath, the stretch to read bracketed down the gutter — and hovering a signal name
-in the `.v` shows that signal's section 6 entry.
+Written this way, **the extension reads the document back.** The `📖` at the top of the document
+opens a reader that lists every scenario's steps under its heading — click one and that cycle
+opens on the code — and in the document as text each scenario heading gets a `▶ workflow` that
+starts the same walk: the current step top right, the one before it underneath, the stretch to
+read bracketed down the gutter. Hovering a signal name in the `.v` shows that signal's section 6
+entry.
 
 ### `spec` — an idea → `SPEC.md`
 
@@ -214,8 +216,8 @@ components/rtlgraph  →  ⏸ validator + the one idea  →  components/codespec
 
 Nothing is written but drawings and prose: the `.v` files are read-only for the
 whole chain, and anything that looks wrong goes in the final report rather than
-into the code. It stops once, on the schematic, and asks for **the one idea that
-makes the design work** in a sentence — if that sentence cannot be written, the
+into the code. It stops twice; the first, on the schematic, asks for **the one idea
+that makes the design work** in a sentence — if that sentence cannot be written, the
 rest is not worth reading yet. If the project has no testbench at all it stops
 and says so; writing one is not part of this chain.
 

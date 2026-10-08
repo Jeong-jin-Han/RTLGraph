@@ -1,6 +1,7 @@
 PROJECT_ROOT_ABSOLUTE_PATH = <PROJECT_ROOT_ABSOLUTE_PATH>
 PROJECT_FOLDER = PROJECT_ROOT_ABSOLUTE_PATH
 SPEC_DOCUMENT = <비워 두거나, 이 설계가 요구된 명세 문서 경로>
+SPEC_FOLDER = <명세가 있는 폴더, 비워 두면 `me`>
 
 조교 벤치가 도착한 날에 하는 일을 순서대로 묶은 것이다. 아래 단계를 **위에서부터**
 따라라. 각 단계는 "읽고 그대로 할 프롬프트" 아니면 "돌릴 명령" 둘 중 하나다.
@@ -26,8 +27,14 @@ SPEC_DOCUMENT = <비워 두거나, 이 설계가 요구된 명세 문서 경로>
 PROJECT_FOLDER/.agent/rtlgraph/run-tb.sh given
 ```
 
+**`DID NOT COMPILE` 이 나오면** 실행기가 먼저 그 까닭을 말한다. 그 줄을 그대로 옮겨라.
+"정의되지 않은 모듈"이라고 하면 설계가 아니라 **이 기계의 설정** 문제다 — 합성된 넷리스트의
+벤더 셀(LUT6, FDRE …)은 Vivado 라이브러리에 있다. `RTLGRAPH_VENDOR_SRC` 를 알려 주거나
+`settings64.sh` 를 불러오면 된다고 보고하고, 코드는 한 줄도 건드리지 마라. "다른 탑이
+elaborate 되지 않는다"는 줄은 실행기가 이미 알아서 피한 것이니 그대로 두면 된다.
+
 ⏸ **여기서 멈춘다.** 판정 줄(PASS/FAIL)과, 벤치가 찍은 줄 중 판정에 관계된 것을
-그대로 옮겨 보고해라. FAIL 이면 실패한 체크가 무엇을 주장하는지와, 네가 보기에 설계
+그대로 옮겨 보고해라. FAIL 이면 실패한 체크가 무엇을 주장하는지와, 네가 보기에 설계의
 어느 줄이 원인인지까지만 말하고 **고치지는 마라.**
 
 **3. 파형을 남긴다.**
@@ -35,6 +42,9 @@ PROJECT_FOLDER/.agent/rtlgraph/run-tb.sh given
 ```
 PROJECT_FOLDER/.agent/rtlgraph/run-tb.sh given --wave
 ```
+
+설계가 크면(합성된 넷리스트, 셀 수천 개) `--wave` 대신 `--wave-depth 3` 을 써라 —
+LUT 안쪽은 읽을 것이 없고, 전부 덤프하면 VCD 가 감당 못 할 만큼 커진다.
 
 `waveform/<given|mine>/<벤치>.vcd` 와 `<벤치>.waveform.json` 이 생긴다. 벤치는 고쳐지지 않는다 —
 실행기가 덤프 전용 모듈을 따로 붙인다.
@@ -48,6 +58,10 @@ PROJECT_FOLDER/.agent/rtlgraph/run-tb.sh given --wave
 `components/codespec/korean.md` 의 양식 그대로 **조교 벤치가 건드린 시나리오만** 손봐라 —
 확인 수준이 `시뮬` 로 올라간 것, 예상과 달랐던 것, 새로 드러난 `[미정]`. 없으면 **오늘 새로
 쓰지 마라.** 채점 당일에 할 일이 아니다 — 없다고만 말하고 넘어가라.
+
+그다음 **명세를 뷰어로 열어 확인해라**(문서 맨 위 `📖`). 시나리오 제목 아래에 스텝이
+하나도 보이지 않으면 그 제목이나 `00-format.md` 의 표기 표가 양식과 다른 것이니, 보고하기
+전에 고쳐라.
 
 **6. 보고한다.** 다 되면 이 셋만 말해라 — 판정 한 줄, 분석 문서에서 **파형이 보여 준 것
 중 체크가 주장하지 않은 것** 하나, 그리고 아직 증명되지 않은 것 하나.

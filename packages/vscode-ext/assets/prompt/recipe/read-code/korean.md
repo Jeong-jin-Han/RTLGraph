@@ -16,12 +16,16 @@ RTLGRAPH_FOLDER = <비워 두면 각 파일을 코드 옆에, 폴더 이름을 �
 **1. 회로도를 만든다.** `PROJECT_FOLDER/.prompt/rtlgraph/components/rtlgraph/korean.md` 를 읽고
 그대로 해라. RTLGRAPH_FOLDER 는 위 값을 넘겨라.
 
-⏸ **여기서 멈춘다.** 검증기 결과(`0 errors` 여야 한다)와, 어떤 파일을 열면 회로도가
+⏸ **여기서 멈춘다.** 검증기 결과(`0 errors` 여야 한다), 어떤 파일을 열면 회로도가
 보이는지, 그리고 **이 설계를 성립시키는 하나의 생각**을 한 문장으로 보고해라.
 
 **2. 글로 옮긴다.** `PROJECT_FOLDER/.prompt/rtlgraph/components/codespec/korean.md` 를 읽고
 그대로 해라. SPEC_FOLDER 는 `me`. 회로도가 모양을 보여 줬다면 이것은 **동작을 글로** 남기는
 단계다 — 깊이 여섯 절, 숫자마다 출처, 핸드아웃이 말하지 않은 것은 `[미정]`.
+
+다 쓰고 나면 **명세를 뷰어로 열어 확인해라**(문서 맨 위 `📖`). 시나리오 제목 아래에 스텝이
+하나도 보이지 않으면 그 제목이나 `00-format.md` 의 표기 표가 양식과 다른 것이니, 보고하기
+전에 고쳐라.
 
 ⏸ **여기서 멈춘다.** `[미정]` 중 가장 위험한 것 하나와, 재지 못한 숫자를 보고해라.
 
@@ -33,6 +37,14 @@ PROJECT_FOLDER/.agent/rtlgraph/run-tb.sh --wave
 
 벤치가 하나도 없으면(`tb/given/` 과 `tb/mine/` 이 둘 다 비었으면) 여기서 멈추고 그렇게
 말해라 — 벤치를 새로 쓰는 것은 이 순서의 일이 아니다.
+
+컴파일되지 않으면 실행기가 먼저 그 까닭을 말한다. "정의되지 않은 모듈"이라고 하면
+설계가 아니라 **이 기계의 설정** 문제다 — 합성된 넷리스트의 벤더 셀(LUT6, FDRE …)은 Vivado
+라이브러리에 있다. `RTLGRAPH_VENDOR_SRC` 를 알려 주거나 `settings64.sh` 를 불러오면 된다고
+보고하고, 코드는 한 줄도 건드리지 마라.
+
+설계가 크면(합성된 넷리스트, 셀 수천 개) `--wave` 대신 `--wave-depth 3` 을 써라 — LUT
+안쪽은 읽을 것이 없고, 전부 덤프하면 VCD 가 열리지도 않을 만큼 커진다.
 
 **4. 왜 그렇게 도는지 쓴다.** `PROJECT_FOLDER/.prompt/rtlgraph/components/waveform/korean.md` 를
 읽고 그대로 해라. WAVEFORM 은 비워 둬라.

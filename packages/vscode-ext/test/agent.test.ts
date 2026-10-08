@@ -5,7 +5,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 
 import { tmpdir } from 'node:os'
 import { basename, join, relative } from 'node:path'
 import { BASE_REGISTRY } from '@rtlgraph/registry'
-import { AGENT_FILES, BASE_MODULES, COMPONENT_DIR, filesFor, MAKE_SUBMISSION, PROMPT_CHAINS, PROMPT_KINDS, PROMPT_LANGUAGES, RECIPE_DIR, RUN_TB, VALIDATOR_BUNDLE, GITATTRIBUTES } from '../src/agent/files.ts'
+import { AGENT_FILES, BASE_MODULES, COMPONENT_DIR, ENVIRONMENT_FILE, filesFor, MAKE_SUBMISSION, PROMPT_CHAINS, PROMPT_KINDS, PROMPT_LANGUAGES, RECIPE_DIR, RUN_TB, VALIDATOR_BUNDLE, GITATTRIBUTES } from '../src/agent/files.ts'
 import { buildEnvironmentReport } from '../src/agent/environment.ts'
 
 const ROOT = join(import.meta.dirname, '..')
@@ -24,6 +24,32 @@ test('a project with no .gitattributes gets one, and keeps its own', () => {
   assert.match(ours, /Copy Agent Spec/, 'and it says it will not be written over')
   assert.ok(AGENT_FILES.some(f => f.to === GITATTRIBUTES), 'it is one of the copied files')
   assert.ok(filesFor({}).some(f => f.to === GITATTRIBUTES))
+})
+
+// A chain names the prompts it runs and the scripts it calls. Every one of
+// those paths has to be a file the command actually writes: the assignment
+// prompt pointed at `.agent/NODEGRAPH_SPEC.md` for a release, and an agent
+// following it found nothing there and carried on without the companion.
+test('every path the prompts name is a file that gets written', () => {
+  // ENVIRONMENT.md is written by the command rather than copied, so it is not
+  // in the file list, but a prompt may name it.
+  const written = new Set([...filesFor({}).map(f => f.to), ENVIRONMENT_FILE])
+  // Ours only: `.agent/nodegraph/SPEC.md` is the companion's file, written by
+  // the companion, and a prompt is right to name it.
+  const ours = /`?(\.(?:agent|prompt)\/rtlgraph\/[\w./-]+|\.base\/[\w./-]+)`?/g
+  const missing: string[] = []
+  for (const kind of [...PROMPT_KINDS.map(k => `${COMPONENT_DIR}/${k}`), ...PROMPT_CHAINS.map(c => `${RECIPE_DIR}/${c}`)]) {
+    for (const language of PROMPT_LANGUAGES) {
+      const text = read(`assets/prompt/${kind}/${language}.md`)
+      for (const [, found] of text.matchAll(ours)) {
+        const named = found.replace(/\.$/, '') // a path at the end of a sentence
+        // Folders and the two the prompts tell an agent to make are not files.
+        if (named.endsWith('/') || /\/(given|mine)$/.test(named)) continue
+        if (!written.has(named)) missing.push(`${kind}/${language}: ${named}`)
+      }
+    }
+  }
+  assert.deepEqual(missing, [], 'a prompt naming a path nothing writes sends an agent looking')
 })
 
 test('every file the command copies exists in the extension', () => {

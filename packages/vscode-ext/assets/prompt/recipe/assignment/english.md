@@ -30,6 +30,11 @@ creates `tb/given/` (empty, waiting) and `tb/mine/`.
 PROJECT_FOLDER/.agent/rtlgraph/run-tb.sh mine
 ```
 
+If it does not compile, the runner says why first. Modules that are instantiated and defined
+nowhere are **this machine's setup, not a fault in the design** — a synthesized netlist is made
+of vendor cells (LUT6, FDRE …) that live in Vivado's library. Report that
+`RTLGRAPH_VENDOR_SRC`, or sourcing `settings64.sh`, would fix it, and change no code.
+
 ⏸ **Stop here.** Report a verdict line per bench and what the validator said
 (`0 errors` is the bar). If something FAILed, say what is wrong **before fixing
 it** — whether the bench or the design is wrong is my call.
@@ -40,6 +45,10 @@ it** — whether the bench or the design is wrong is my call.
 PROJECT_FOLDER/.agent/rtlgraph/run-tb.sh --wave
 ```
 
+On a large design (a synthesized netlist, thousands of cells) use `--wave-depth 3` rather than
+`--wave`: there is nothing to read inside a LUT, and dumping all of it makes a VCD nothing will
+open.
+
 **4. Write why it passed.** Read
 `PROJECT_FOLDER/.prompt/rtlgraph/components/waveform/english.md` and do what it says, with
 WAVEFORM empty so it covers every report you just made.
@@ -49,6 +58,10 @@ WAVEFORM empty so it covers every report you just made.
 SPEC_FOLDER = `me` and SPEC_DOCUMENT as set above. On marking day there is no time to read the
 design again and this document stands in for it — above all the **`[undecided]` list**, since
 what the brief never settled is exactly where a marking bench can land.
+
+When it is written, **open the specification in the reader** (`📖` at the top of the document).
+A scenario heading with no steps under it means that heading, or the marker table in
+`00-format.md`, does not match the format — fix it before reporting.
 
 **6. Look at the submission, do not build it.**
 

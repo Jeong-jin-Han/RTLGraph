@@ -27,6 +27,10 @@ do what it says, with SPEC_FOLDER = `me`. The schematic showed the shape; this i
 behaviour gets written — six depths, every number with its provenance, and `[undecided]` on
 everything the brief never settled.
 
+When it is written, **open the specification in the reader** (`📖` at the top of the document).
+A scenario heading with no steps under it means that heading, or the marker table in
+`00-format.md`, does not match the format — fix it before reporting.
+
 ⏸ **Stop here.** Report the most dangerous `[undecided]` and any number you could not measure.
 
 **3. Run the testbenches, if there are any.**
@@ -37,6 +41,15 @@ PROJECT_FOLDER/.agent/rtlgraph/run-tb.sh --wave
 
 If both `tb/given/` and `tb/mine/` are empty, stop and say so — writing a bench
 from scratch is not part of this chain.
+
+If it does not compile, the runner says why first. Modules that are instantiated and defined
+nowhere are **this machine's setup, not a fault in the design** — a synthesized netlist is made
+of vendor cells (LUT6, FDRE …) that live in Vivado's library. Report that
+`RTLGRAPH_VENDOR_SRC`, or sourcing `settings64.sh`, would fix it, and change no code.
+
+On a large design (a synthesized netlist, thousands of cells) use `--wave-depth 3` rather than
+`--wave`: there is nothing to read inside a LUT, and dumping all of it makes a VCD nothing will
+open.
 
 **4. Write why it behaves that way.** Read
 `PROJECT_FOLDER/.prompt/rtlgraph/components/waveform/english.md` and do what it says, with
