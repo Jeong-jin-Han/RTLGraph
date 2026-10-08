@@ -72,7 +72,7 @@ while [ $# -gt 0 ]; do
         --with-rtlgraph) with_rtlgraph=1; shift ;;
         --with-pdf)      with_pdf=1; shift ;;
         --no-deps)       deps=0; shift ;;
-        --only)          only+=("$2"); shift 2 ;;
+        --only)          only+=("${2:?--only needs a file}"); shift 2 ;;
         --all)           with_tb=1; with_given=1; with_base=1; with_rtlgraph=1; with_pdf=1; shift ;;
         --keep-tree)     flat=0; shift ;;
         --no-check)      check=0; shift ;;
@@ -126,19 +126,31 @@ rtl_at() { # maxdepth
 }
 deep=0
 if [ ${#only[@]} -gt 0 ]; then
-    found=$(for f in "${only[@]}"; do
+    # Checked here, not inside the command substitution below: `die` in a
+    # subshell ends the subshell, and a typo then shipped a partial zip and
+    # said it was fine.
+    resolved=()
+    for f in "${only[@]}"; do
         [ -e "$f" ] || die "--only: no such file: $f"
-        ( cd -- "$(dirname -- "$f")" && printf '%s/%s\n' "$(pwd)" "$(basename -- "$f")" )
-    done)
+        abs=$(cd -- "$(dirname -- "$f")" && printf '%s/%s' "$(pwd)" "$(basename -- "$f")")
+        case "$abs" in
+            "$project"/*) ;;
+            *) die "--only: $f is outside $project — a submission is made of the project's own files" ;;
+        esac
+        resolved+=("$abs")
+    done
+    found=$(printf '%s\n' "${resolved[@]}")
 else
     found=$(rtl_at 1)
     if [ -z "$found" ]; then found=$(rtl_at 8); deep=1; fi
 fi
 while IFS= read -r f; do
     [ -n "$f" ] || continue
-    # Deeper than the project folder, two files can share a name; keep the path
-    # for those so nothing is silently overwritten on the way in.
-    add_file "$f" "$(basename -- "$f")"
+    # Keep the project-relative path as the staged name. Flattening happens
+    # later and knows to keep a folder when two names would collide — but only
+    # if there is a folder left to keep, and `rtl/core/mem.v` reduced to
+    # `mem.v` here used to lose one of the two silently.
+    add_file "$f" "${f#"$project"/}"
 done < <(printf '%s\n' "$found")
 
 [ ${#entries[@]} -gt 0 ] || die "no .v or .sv anywhere under $project that is not a testbench"
@@ -180,7 +192,8 @@ fi
 added=()
 if [ "$deps" = 1 ] && command -v iverilog >/dev/null 2>&1; then
     provider() {  # provider <module> — the project file that declares it, .base/ first
-        local module=$1 f
+        # `$` is a legal character in a Verilog name and an anchor in an ERE.
+        local module=${1//$/\\$} f
         for f in "$project/.base"/*.v "$project/.base"/*.sv; do
             [ -f "$f" ] || continue
             grep -qE "^[[:space:]]*module[[:space:]]+$module([[:space:]]|#|\(|$)" "$f" && { printf '%s' "$f"; return 0; }
@@ -197,7 +210,9 @@ if [ "$deps" = 1 ] && command -v iverilog >/dev/null 2>&1; then
     for _round in 1 2 3 4 5 6 7 8; do
         sources=()
         for e in "${entries[@]}"; do sources+=("${e%%|*}"); done
-        iverilog -g2005 -o /dev/null "${sources[@]}" >"$log" 2>&1 && break
+        deps_dialect=-g2005
+        for f in "${sources[@]}"; do case "$f" in *.sv) deps_dialect=-g2012 ;; esac; done
+        iverilog "$deps_dialect" -o /dev/null "${sources[@]}" >"$log" 2>&1 && break
         missing=$(sed -n 's/.*Unknown module type: \([A-Za-z_][A-Za-z0-9_$]*\).*/\1/p' "$log" | sort -u)
         [ -n "$missing" ] || break        # a real error, not a missing module: the check below reports it
         grew=0
@@ -245,8 +260,16 @@ if [ "$check" = 1 ] && command -v iverilog >/dev/null 2>&1; then
     staged=()
     while IFS= read -r f; do staged+=("$f"); done \
         < <(find "$stage" -type f \( -name '*.v' -o -name '*.sv' \) | sort)
-    if iverilog -g2005 -o /dev/null "${staged[@]}" >"$log" 2>&1; then
-        printf 'elaboration    iverilog -g2005: ok\n'
+    # SystemVerilog in the staging folder needs the dialect that reads it;
+    # -g2005 called every .sv project broken.
+    dialect=-g2005
+    for f in ${staged[@]+"${staged[@]}"}; do case "$f" in *.sv) dialect=-g2012 ;; esac; done
+    if [ ${#staged[@]} -eq 0 ]; then
+        # A deliverable that is not Verilog — a C file, a changed constant —
+        # is a deliverable, and there is nothing to elaborate.
+        printf 'elaboration    skipped: nothing in the zip to compile\n'
+    elif iverilog "$dialect" -o /dev/null "${staged[@]}" >"$log" 2>&1; then
+        printf 'elaboration    iverilog %s: ok\n' "$dialect"
         if [ ${#added[@]} -gt 0 ]; then
             printf 'added          %s\n' "${added[*]}"
             printf '               the handout instantiates these but does not ship them, so the zip\n'
@@ -254,7 +277,7 @@ if [ "$check" = 1 ] && command -v iverilog >/dev/null 2>&1; then
             printf '               without them: --no-deps.\n'
         fi
     else
-        printf 'elaboration    iverilog -g2005: FAILED\n'
+        printf 'elaboration    iverilog %s: FAILED\n' "$dialect"
         sed 's/^/  /' "$log"
         printf '               (the zip was still written)\n'
         status=1
