@@ -215,6 +215,12 @@ export async function run(): Promise<void> {
     assert.ok(said.length > 0, 'hovering a signal says what the specification says about it')
     assert.match(said.join('\n'), /0 ~ 1084/, 'the entry itself, not just its name')
     assert.match(said.join('\n'), /30-uart_receiver\.md/, 'and a link back to where it is written')
+    // Two projects in one workspace hold two files called uart_receiver.v, each
+    // with its own specification. The nearest one answers — picking by file
+    // name alone answered out of whichever was found first.
+    assert.match(said.join('\n'), new RegExp(`${specFile.split('/').at(-1)}`),
+      'and out of this project\'s specification, not another project\'s')
+
     // A name no section 6 mentions gets no hover of ours: a guess is worse than
     // silence.
     const keyword = code.getText().split('\n').findIndex(l => l.trimStart().startsWith('always'))

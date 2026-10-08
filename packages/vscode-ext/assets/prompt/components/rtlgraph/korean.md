@@ -1,6 +1,7 @@
 PROJECT_ROOT_ABSOLUTE_PATH = <PROJECT_ROOT_ABSOLUTE_PATH>
 PROJECT_FOLDER = PROJECT_ROOT_ABSOLUTE_PATH
 SPEC_DOCUMENT = <비워 두거나, 이 설계가 요구된 문서 경로 예: spec/pwm_brief.pdf>
+RTLGRAPH_FOLDER = <비워 두면 각 파일을 코드 옆에, 폴더 이름을 적으면 그 폴더 하나에 모아서 예: rtlgraph>
 
 PROJECT_FOLDER/.agent/rtlgraph/SPEC.md 와 PROJECT_FOLDER/.agent/rtlgraph/ENVIRONMENT.md
 파일은 이미 준비돼 있어 — 둘 다 끝까지 꼼꼼히 읽어줘. 그 중에서 "Workflow A — RTL →
@@ -9,8 +10,10 @@ RTLGraph" 를 따라줘. 이미 있는 RTL 코드로 회로도를 만드는 작�
 
 먼저 이 프로젝트의 탑 모듈, 컴포넌트 트리(main component 와, 어떤 모듈이 그 안의
 컴포넌트 상자가 되는지), 그리고 계약 C1–C7 을 얼마나 따르는지를 간단히 설명해줘.
-그 다음 바로 RTLGraph 파일들을 만들어줘: PROJECT_FOLDER 에 루트 <top>.rtlgraph.json,
-그리고 컴포넌트마다 그 컴포넌트 폴더에 <이름>.rtlgraph-schematic.json. 상태 기계(FSM)
+그 다음 바로 RTLGraph 파일들을 만들어줘. **RTLGRAPH_FOLDER 가 비어 있으면** 루트
+<top>.rtlgraph.json 은 PROJECT_FOLDER 에, <이름>.rtlgraph-schematic.json 은 컴포넌트마다
+그 컴포넌트 폴더에. **폴더 이름이 적혀 있으면 루트까지 포함해 전부 그 폴더 하나에** 넣고,
+각 파일의 source.root 를 거기서 코드까지 가는 길로 맞춰줘(대개 ".."). 상태 기계(FSM)
 를 가진 컴포넌트라면 같은 폴더에 <이름>.rtlgraph-fsm.json 까지 쓰고(Step 7b), 상태
 레지스터에 fsm 을 표시해줘.
 

@@ -1,6 +1,7 @@
 PROJECT_ROOT_ABSOLUTE_PATH = <PROJECT_ROOT_ABSOLUTE_PATH>
 PROJECT_FOLDER = PROJECT_ROOT_ABSOLUTE_PATH
 SPEC_DOCUMENT = <leave empty, or the path of the brief this design was asked for, e.g. spec/pwm_brief.pdf>
+RTLGRAPH_FOLDER = <empty puts each file beside its code; a folder name gathers them all in that one folder, e.g. rtlgraph>
 
 PROJECT_FOLDER/.agent/rtlgraph/SPEC.md and PROJECT_FOLDER/.agent/rtlgraph/ENVIRONMENT.md
 are already prepared for you — read both in full. Follow "Workflow A — RTL →
@@ -9,9 +10,11 @@ any .v/.sv file.
 
 First, briefly explain this project's top module, its component tree (the main
 component and which modules become nested component boxes), and how far it follows
-contracts C1–C7. Then build the RTLGraph files right away: the root
-<top>.rtlgraph.json in PROJECT_FOLDER and one <name>.rtlgraph-schematic.json per
-component in that component's folder. Where a component holds a state machine,
+contracts C1–C7. Then build the RTLGraph files right away. **With RTLGRAPH_FOLDER empty**, the root
+<top>.rtlgraph.json goes in PROJECT_FOLDER and one <name>.rtlgraph-schematic.json in each
+component's own folder. **With a folder named, everything including the root goes in that
+one folder**, and each file's source.root becomes the path from there to the code
+(usually ".."). Where a component holds a state machine,
 write its <name>.rtlgraph-fsm.json as well (Step 7b) and mark the state register
 with fsm.
 

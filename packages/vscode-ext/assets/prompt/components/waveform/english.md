@@ -51,7 +51,9 @@ same file and are matched by the same headings, so they mix freely.
 taken`), and `## Coming up` — or the same words in your language — for the
 opening one. The waveform view reads this file back and puts each section beside
 the instants it explains, matching them by that heading; a section whose heading
-names no check is shown on its own rather than pinned to the wrong one.
+names no check is shown on its own rather than pinned to the wrong one. Where the line
+carries `#` or table marks a heading cannot hold, tidy just those and keep the line itself
+verbatim as the section's first line (`##   TEST PASS   ##` becomes `## TEST PASS`).
 
 **First, decide who you are writing to, and say so in the first line.** One person
 you could name, with the **minimum** expertise you expect — "knows Verilog and

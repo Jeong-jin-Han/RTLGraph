@@ -41,7 +41,9 @@ PROJECT_FOLDER/.agent/rtlgraph/ENVIRONMENT.md 는 이미 준비돼 있어 — �
 
 ## 읽은 보고서 옆, `waveform/<given|mine>/<벤치>.waveform-analysis.md` 를 써
 
-**절 제목은 벤치가 찍은 줄 그대로** 써줘(`## ok: cleared once taken`). 첫 절은
+**절 제목은 벤치가 찍은 줄 그대로** 써줘(`## ok: cleared once taken`). 줄에 `#` 이나 표
+기호가 섞여 제목으로 쓸 수 없으면 거기만 다듬되, 원문은 그 절의 첫 줄에 그대로 남겨라
+(`##   TEST PASS   ##` → `## TEST PASS`). 첫 절은
 `## 깨어나는 과정`(또는 영어면 `Coming up`). 파형 뷰가 이 파일을 다시 읽어서 각 절을
 그것이 설명하는 순간 옆에 붙이는데, 그 연결을 **제목으로** 한다. 어느 체크도 가리키지
 않는 제목의 절은 엉뚱한 곳에 붙이지 않고 따로 보여준다.

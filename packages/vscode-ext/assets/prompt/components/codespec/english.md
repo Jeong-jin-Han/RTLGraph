@@ -161,7 +161,9 @@ through the code.
 
 **Open the reader once you are done.** A scenario heading with no steps listed under it means
 that heading, or the marker table in `00-format.md`, does not match the shapes above — fix it
-before moving to the next file.
+before moving to the next file. Where no window can be opened, check the same three things by
+hand: that every scenario heading matches `^#{2,4} [A-Z]{1,4}-[NE][0-9]+[. ]`, that each one has
+a section 5 table under it, and that the marker cells in `00-format.md` carry their colon.
 
 Section 6 is read too. **Hovering a name in the `.v`** shows that name's section 6 entry, the way
 a library function shows its doc comment. Two things make that work.

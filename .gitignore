@@ -15,6 +15,9 @@ demo/uart-p01/
 # 0.2.0 notes: a Vivado project, a synthesized netlist, and a C file as the
 # answer. Course material, and 400MB of it.
 demo/d04-soc/
+# A clean copy of the UART assignment, for trying the prompts the way a new
+# user meets them: nothing in it but the code, the handout and the bench.
+demo/uart-fresh/
 
 # Copied from the repository root at package time so the marketplace page is the
 # same document as GitHub's, with its links rewritten to absolute ones.

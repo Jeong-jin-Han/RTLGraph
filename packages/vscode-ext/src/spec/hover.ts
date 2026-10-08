@@ -24,6 +24,15 @@ interface Read {
 // is a citation whether or not the writer marked it up as one.
 const CITATION = /`?([A-Za-z_][\w./-]*(?:\.s?v)?):(\d+)(?:\s*[-–]\s*\d+)?`?/g
 
+/** How much of two paths is the same folder, in segments. */
+function shared(one: string, other: string): number {
+  const a = one.split('/')
+  const b = other.split('/')
+  let n = 0
+  while (n < a.length && n < b.length && a[n] === b[n]) n += 1
+  return n
+}
+
 /** Every file a document's citations name, through the project's prefixes. */
 function about(doc: string, prefixes: Map<string, string>): Set<string> {
   const out = new Set<string>()
@@ -41,25 +50,33 @@ export class SpecHover implements vscode.HoverProvider {
   async provideHover(doc: vscode.TextDocument, at: vscode.Position): Promise<vscode.Hover | undefined> {
     const range = doc.getWordRangeAtPosition(at, /[A-Za-z_]\w*/)
     if (!range) return undefined
-    const word = doc.getText(range)
-    const here = doc.uri.path.split('/').at(-1)!
-
-    const found = await this.find(word, here)
+    const found = await this.find(doc.getText(range), doc.uri)
     if (!found) return undefined
     return new vscode.Hover(await this.card(found.entry, found.spec), range)
   }
 
-  /** The entry for a name, preferring a document that is about this file. */
-  private async find(word: string, here: string): Promise<{ entry: Entry; spec: vscode.Uri } | undefined> {
+  /**
+   * The entry for a name, from the specification that is about this file —
+   * and, where several are, the nearest one.
+   *
+   * A workspace holding two projects holds two files called
+   * `uart_receiver.v`, each with its own specification, and the first match
+   * is as likely to be the other project's as this one's. Nearest means the
+   * longest shared path, which is the folder the reader is working in.
+   */
+  private async find(word: string, doc: vscode.Uri): Promise<{ entry: Entry; spec: vscode.Uri } | undefined> {
+    const here = doc.path.split('/').at(-1)!
+    let best: { entry: Entry; spec: vscode.Uri; near: number } | undefined
     let loose: { entry: Entry; spec: vscode.Uri } | undefined
     for (const spec of await vscode.workspace.findFiles('**/spec/*.md', '**/node_modules/**', 40)) {
       const read = await this.read(spec)
       const entry = read?.entries.get(word)
       if (!read || !entry) continue
-      if (read.about.has(here)) return { entry, spec }
-      loose ??= { entry, spec }
+      if (!read.about.has(here)) { loose ??= { entry, spec }; continue }
+      const near = shared(spec.path, doc.path)
+      if (!best || near > best.near) best = { entry, spec, near }
     }
-    return loose
+    return best ?? loose
   }
 
   /** Parsed on first ask, and again whenever the file has been written. */
