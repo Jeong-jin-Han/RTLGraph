@@ -59,7 +59,17 @@ A module file is these six sections, in this order:
 | 3 | Ports | direction, width, one line each | one table |
 | 4 | Scenarios, one line each | event → outcome → how well confirmed | one table |
 | 5 | The path, by cycle | one table per scenario: cycle · condition that became true · assignment that ran · **what happens** | 10 rows |
-| 6 | Detail | every signal, every use, side effects, the why | no limit |
+| 6 | Detail | every signal, every use, side effects, the why | **six lines a signal**, and a module file's section 6 may not be longer than its section 5 |
+
+Keep `01-overview.md` under 60 lines and `00-format.md` under 80 (for the `90-` file see
+"Scenarios that cross modules" below — ten rows a scenario rather than a line count). **A module
+with no logic** — a shell of wiring and flops — gets a file of 80 lines in all: the ports' meaning
+and the signals underneath are already in the files of the modules below it. And a **parameter
+derived from another** (`SAMPLE_TIME = SYMBOL_EDGE_TIME / 2`) is written in **section 6 only**: if
+one expression changes and there are five places to fix, three of them stay wrong.
+
+Put **one ASCII block diagram that matches the RTL one for one** above section 1. In a file that
+crosses modules (`90-`), show which port joins which before anything else.
 
 ## The seven rules
 
@@ -68,19 +78,33 @@ A module file is these six sections, in this order:
 2. **Paths go in cycle order, not line order.** The `if`s in one `always` block are evaluated in
    the same cycle. For every cycle, ask separately: **what else became true here?** That question
    is the only thing that finds, say, a shift that still happens in a frame that was cancelled.
+   Then two more. **What was the rest of the design doing when this scenario opened** — above
+   all, was a previous byte still standing with its `valid` up? A combinational output moves
+   whatever the flags say, so a flag that did not rise does not mean nothing happened outside.
+   And once you find the line that raises a flag, **measure what happens when the line that
+   clears it lands one cycle before or after**: the same cycle is settled by priority, but one
+   cycle apart is how the same value goes out twice or vanishes altogether.
 3. **"Why" lives in section 6 only.** If a path table makes you want to explain *the reason*,
    that belongs in 6. The one exception is section 5's last column, **what happens**: one line
    per cycle saying **in words** what became true there. Without it, walking a scenario shows the
    same code lines twice and tells the reader nothing.
 4. **Every number says where it came from.** `measured` — a bench in `sim/` printed it; `derived`
    — worked out from the code; `read` — read off the source. Never let a derived number pass as a
-   measured one.
+   measured one. **`measured` means the bench showed the row's last cell too** — the *what
+   happens*, not only the cycle number. A row whose number was printed and whose consequence you
+   reasoned out is `read`, not `measured`. And for every exceptional scenario, name **the line of
+   the `sim/` file that created that exception**, one line above the table: with no stimulus,
+   nothing there was measured.
 5. **Every statement says whose it is.** `[PDF]` the brief asked for it · `[code]` the code does
    it · `[undecided]` the brief is silent and the code chose. **The third is the valuable one**:
    it is the list of decisions nobody signed off. **When there is no brief at all**, say so in
    `00-format.md` and do not use `[PDF]`. And **a comment is not evidence**: a header saying
    "(Moore)" over a machine that is Mealy is a finding — check what the comments claim against the
-   code, and write down where they disagree.
+   code, and write down where they disagree. **Before writing `[undecided]`, read the
+   requirements on the module at the other end**: in a communication design a requirement on the
+   receiver often fixes a value in the transmitter, and a page that does not mention it does not
+   make it undecided. Cite **the PDF's own page**, and count the pages yourself where the
+   handout's printed footer disagrees with them.
 6. **Line numbers are dated.** Put a hash of each referenced file in `00-format.md` (first 8 of
    `sha1sum`) and print the code fragment beside every citation. One comment moves them all.
 7. **Say it once — but do not break the flow.** Machinery two modules share goes in
@@ -90,7 +114,11 @@ A module file is these six sections, in this order:
    **cite the one line where the flow passes through each module**. See below.
 
 Scenario numbers: module abbreviation − kind (`N` normal / `E` exceptional) + an index, e.g.
-`RX-E3`.
+`RX-E3`. **The order is not free either**: number the `N`s from the simplest normal path, and the
+`E`s **in the order of the six items** in "Hunt the exceptions first" below, so the same design
+written twice gets the same numbers and a reader's `RX-E3` survives. **When amending a
+specification that already has numbers, the existing numbers win**: append the new scenario and
+renumber nothing. The ordering rule is for numbering the first time.
 
 **The heading is not free-form.** It is how the extension finds a scenario:
 
@@ -106,21 +134,30 @@ table under a heading of any other shape is **not a scenario** and gets no walk.
 **Numbering**: components take the tens — 10, 20, 30 — and the modules inside one take the units
 (`20-pulse_top`, `21-pulse_fsm`, `22-pulse_dp`). Leave `90-` free however many modules there are.
 
-**Say where cycle 0 is, per scenario.** Two people measuring the same design get 10850 and 10851
-— one counted from the cycle in which the condition was true, the other from the cycle whose edge
-consumed it. Both are right, and side by side neither is believable. **Use: cycle 0 = the cycle in
-which the condition that opens the scenario is true** (the cycle `start` is 1, say). Put that one
-line above the section-4 table, in the same words in every file.
+**There is one definition.** Two people measuring the same design get 10850 and 10851 — one
+counted from the cycle in which the condition was true, the other from the cycle whose edge
+consumed it. Both are right, and side by side neither is believable. So do not choose; write
+this:
+
+> **Cycle n is the n-th clock period**, and every signal is written as the value seen from
+> outside during that period. The period in which the scenario's opening condition is true is
+> **0**, and the register value the edge made out of it belongs to **cycle 1** — not the same row.
+
+Put that line above the section-4 table, in the same words in every file. And **no row spans two
+cycles**. One cycle taking more than one row is fine: when two modules move in the same cycle a
+row each is natural (the walk makes a step per file anyway), and the second row starts "same
+cycle,".
 
 **A combinational signal and a register are read at different moments.** A combinational signal
 (`start`, `sample`) is **the value the coming rising edge will consume**, so it is read *before*
 the edge; a register's result is read *after* it. Sample everything at one moment and a one-cycle
 combinational signal like `start` never appears in the trace at all.
 
-**Settle what a cycle number means before anything else.** Every number in the document stands on
-it. The definition to use is **cycle k = just after the k-th rising edge**; build the tracing macro
-that prints one row per cycle, check it prints that, and only then write section 5. The other order
-leaves every table off by one.
+**Build the tracer first.** Every number in the document stands on the definition above. Build the
+macro that prints one row per cycle, check that it prints what that definition says, and only then
+write section 5 — if your tracer reads registers *just after* the edge, its numbers are one early
+for that definition, so **add 1** when you write them down. The other order leaves every table off
+by one.
 
 **Purely combinational modules** (`*_fsm`, `*_dp`, `*_cp`) have no cycle path. Give each truth-table
 row a scenario number in section 4, and in section 5 point at the scenario of the module that uses
@@ -192,13 +229,18 @@ what the far side sees when this side stops. Those scenarios belong in the `90-`
 cite lines there too.**
 
 ```
-| Cycle | Where | What happens | Code | Detail |
-|---|---|---|---|---|
-| 0 | A's transmitter | loads the byte and starts sending | `tx:46` `tx:60` | TX-N1 |
-| 1 | A's transmitter | the start bit goes out on the line | `tx:40` | TX-N1 |
-| 2 | the line | through A's output flop | `top:23` | TOP-N1 |
-| 3 | B's receiver | sees the fall and starts a frame | `top:24` `rx:74` | RX-N1 |
+| Cycle | Condition that became true | Assignment that ran | What happens |
+|---|---|---|---|
+| 0 | A's `start` (`tx:46`) → TX-N1 | `tx:60` loads the byte | starts sending |
+| 1 | `tx:40` | — | the start bit goes out on the line |
+| 2 | `top:23` → TOP-N1 | — | through A's output flop |
+| 3 | `top:24` · B's `start` (`rx:74`) → RX-N1 | `rx:97` | sees the fall and starts a frame |
 ```
+
+**The same four columns as a module file.** The only difference is the `→ TX-N1` pointing at
+that module's own scenario. Add a `Where` column (A's transmitter / the line / B's receiver) if
+it helps — the tool asks for two things only: **citations inside the cells**, and **an
+explanation column named one of `what happens` / `in words` / `무슨 일` / `일어나는 일`.**
 
 - **No `Code` column, no walk.** A table of scenario numbers reads fine and has nowhere to go: a
   `90-` file written that way gave **two** steps for a six-row flow.
@@ -209,6 +251,12 @@ cite lines there too.**
 - This is not only for communication. A control path and its data path, the stages of a pipeline,
   an arbiter and the memory behind it — **if one event touches two modules, that event is a `90-`
   scenario.**
+- The scenario a row points at may be that module's **normal** path (`RX-N1`), and often that is
+  the finding: if the sender vanished and the receiver still walks its ordinary path to the end,
+  the honest pointer is the normal scenario, not an exception.
+- No line limit on this file. One table per scenario, ten rows, as in a module file: length that
+  comes from carrying a flow is fine, length that comes from repeating a module's own story is
+  not.
 
 ## Hunt the exceptions first
 
