@@ -147,6 +147,25 @@ export async function run(): Promise<void> {
     const tabs = vscode.window.tabGroups.all.flatMap(g => g.tabs).filter(t => /\.s?v$/.test(t.label))
     assert.ok(tabs.length <= 2, `a walk leaves no pile of tabs: ${tabs.map(t => t.label)}`)
 
+    // A flow does not end at a file. The link scenario walks the transmitter,
+    // the top's flops and the receiver in turn, which is the only way to
+    // follow one event across the design.
+    const linkFile = join(dirname(specFile), '40-link.md')
+    if (existsSync(linkFile)) {
+      const link = await vscode.workspace.openTextDocument(vscode.Uri.file(linkFile))
+      await vscode.commands.executeCommand('rtlgraph.walkWorkflow', link.uri, 'L-N1')
+      const visited = new Set<string>()
+      for (let step = 0; step < 5; step += 1) {
+        await sleep(700)
+        const top = vscode.window.visibleTextEditors.find(e => e.viewColumn === vscode.ViewColumn.Two)
+        if (top) visited.add(top.document.uri.path.split('/').pop()!)
+        await vscode.commands.executeCommand('rtlgraph.walkNext')
+      }
+      await vscode.commands.executeCommand('rtlgraph.walkStop')
+      assert.ok(visited.size >= 3, `one scenario, every module it touches: ${[...visited]}`)
+      log(`a scenario that crosses modules walks all of them: ${[...visited].join(' → ')}`)
+    }
+
     // The reader: the document with the steps of each scenario under its
     // heading, which is the only place a walk can be started by clicking.
     await vscode.commands.executeCommand('rtlgraph.readSpec', specDoc.uri)

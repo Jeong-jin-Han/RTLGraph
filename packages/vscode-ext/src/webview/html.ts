@@ -307,6 +307,7 @@ body.spec-page {
 .spec-doc .walk-bar button.move { width: 26px; padding: 0; }
 .spec-doc .walk-bar button:disabled { opacity: 0.4; cursor: default; }
 .spec-doc .walk-bar .count { color: var(--vscode-descriptionForeground, #6b7280); font-size: 0.85em; white-space: nowrap; }
+.spec-doc .walk-bar .count.across { color: var(--vscode-textLink-foreground, #5b21b6); }
 .spec-doc .walk-bar .now { margin-left: auto; font: 600 0.85em var(--vscode-editor-font-family, ui-monospace, monospace); color: var(--vscode-textLink-foreground, #5b21b6); white-space: nowrap; }
 .spec-doc .steps { margin: 0; padding: 0 6px 6px 8px; list-style: none; }
 .spec-doc .steps .step { display: flex; gap: 8px; align-items: flex-start; padding: 4px 6px; border-radius: 4px; cursor: pointer; }

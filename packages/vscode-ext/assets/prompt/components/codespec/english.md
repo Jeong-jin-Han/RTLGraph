@@ -83,10 +83,11 @@ A module file is these six sections, in this order:
    code, and write down where they disagree.
 6. **Line numbers are dated.** Put a hash of each referenced file in `00-format.md` (first 8 of
    `sha1sum`) and print the code fragment beside every citation. One comment moves them all.
-7. **Say it once.** Machinery two modules share goes in `01-overview.md`. A scenario lives in the
-   file of the module whose port the event arrives at. Anything crossing modules goes in the `90-`
-   file and refers to the others by scenario number (`TX-N1`, `RX-E7`) rather than repeating their
-   paths.
+7. **Say it once — but do not break the flow.** Machinery two modules share goes in
+   `01-overview.md`. A scenario lives in the file of the module whose port the event arrives at.
+   Anything crossing modules goes in the `90-` file and refers to the others by scenario number
+   (`TX-N1`, `RX-E7`) rather than repeating **the detail** of their paths — but it must still
+   **cite the one line where the flow passes through each module**. See below.
 
 Scenario numbers: module abbreviation − kind (`N` normal / `E` exceptional) + an index, e.g.
 `RX-E3`.
@@ -182,6 +183,32 @@ digit are what find the section; `## Detail` loses every hover in that file.
 A name mentioned only mid-sentence gets no hover. Every citation inside an entry becomes a link to
 that line, so **saying where a signal is made and where it is read, by line number**, pays for
 itself.
+
+## Scenarios that cross modules — a flow does not end at a file
+
+With a transmitter and a receiver, or any pipeline of stages, **what a reader wants to know is
+usually not inside one module but between them**: how what was sent arrives at the other end,
+what the far side sees when this side stops. Those scenarios belong in the `90-` file, **and they
+cite lines there too.**
+
+```
+| Cycle | Where | What happens | Code | Detail |
+|---|---|---|---|---|
+| 0 | A's transmitter | loads the byte and starts sending | `tx:46` `tx:60` | TX-N1 |
+| 1 | A's transmitter | the start bit goes out on the line | `tx:40` | TX-N1 |
+| 2 | the line | through A's output flop | `top:23` | TOP-N1 |
+| 3 | B's receiver | sees the fall and starts a frame | `top:24` `rx:74` | RX-N1 |
+```
+
+- **No `Code` column, no walk.** A table of scenario numbers reads fine and has nowhere to go: a
+  `90-` file written that way gave **two** steps for a six-row flow.
+- **One line per module is enough.** Whatever else happens inside that module is already in the
+  scenario the `Detail` column points at. Do not repeat it — rule 7 stands.
+- A row citing two files becomes **one step per file**, so the walk moves `tx → top → rx` and the
+  reader follows one event across the design in the editor itself.
+- This is not only for communication. A control path and its data path, the stages of a pipeline,
+  an arbiter and the memory behind it — **if one event touches two modules, that event is a `90-`
+  scenario.**
 
 ## Hunt the exceptions first
 

@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { entriesIn, prefixesIn, walksIn } from '../src/spec/steps.ts'
+import { entriesIn, filesIn, prefixesIn, walksIn } from '../src/spec/steps.ts'
 
 // A specification written by `components/codespec` carries, per scenario, a
 // table of one row per cycle with the lines each cycle ran. That table is a
@@ -93,6 +93,27 @@ test('a path table with no explanation column falls back to its prose', () => {
 | 0 | \`rx:74\` \`start\` | 프레임이 시작된다 |
 `, prefixesIn(FORMAT))
   assert.equal(walks[0].steps[0].why, '프레임이 시작된다')
+})
+
+// What a reader opens a link file for: following one event across the design.
+// The scenario that does that used to point at other scenarios by number
+// instead of citing lines, and a six-row flow walked two steps.
+test('a scenario that crosses modules walks them in the order it meets them', () => {
+  const walks = walksIn(`### L-N1. 끝에서 끝까지
+
+| 사이클 | 어디서 | 일어나는 일 | 코드 | 자세히 |
+|---|---|---|---|---|
+| 0 | A 송신기 | 보내기 시작한다 | \`uart_transmitter.v:46\` | TX-N1 |
+| 2 | 선 | 출력 플롭을 지난다 | \`top:23\` | TOP-N1 |
+| 3 | B 수신기 | 하강을 본다 | \`top:24\` \`rx:74\` | RX-N1 |
+`, prefixesIn(FORMAT))
+  const walk = walks[0]
+  assert.deepEqual(walk.steps.map(s => s.file),
+    ['uart_transmitter.v', 'uart.v', 'uart.v', 'uart_receiver.v'],
+    'one step per file, in the order the flow reaches them')
+  assert.deepEqual(filesIn(walk), ['uart_transmitter.v', 'uart.v', 'uart_receiver.v'])
+  assert.equal(walk.steps[2].why, '하강을 본다', 'both halves of a split row keep the sentence')
+  assert.equal(walk.steps[3].why, '하강을 본다')
 })
 
 test('a citation that names its own file needs no prefix table', () => {

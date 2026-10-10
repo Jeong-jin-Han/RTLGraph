@@ -36,6 +36,7 @@ interface At {
 interface Words {
   walk: string
   steps: (n: number) => string
+  across: (n: number) => string
   stop: string
   source: string
   nothing: string
@@ -52,6 +53,7 @@ const WORDS: Record<'ko' | 'en', Words> = {
   ko: {
     walk: '걷기',
     steps: n => `${n} 스텝`,
+    across: n => `${n} 파일을 건넌다`,
     stop: '끝',
     source: '본문 열기',
     nothing: '이 문서에는 걸을 수 있는 5 절 표가 없다.',
@@ -59,6 +61,7 @@ const WORDS: Record<'ko' | 'en', Words> = {
   en: {
     walk: 'Walk',
     steps: n => `${n} steps`,
+    across: n => `across ${n} files`,
     stop: 'Stop',
     source: 'Open the source',
     nothing: 'This document has no section 5 table to walk.',
@@ -346,6 +349,10 @@ function markWalk(only?: string): void {
     go.addEventListener('click', () => vscode.postMessage({ type: 'walk', id, index: 0 }))
     found.bar.append(go)
     found.bar.append(el('span', 'count', words.steps(found.walk.steps.length)))
+    // A scenario that crosses modules is the one a reader opens to follow a
+    // flow, and it should be recognisable before it is clicked.
+    const files = new Set(found.walk.steps.map(step => step.file))
+    if (files.size > 1) found.bar.append(el('span', 'count across', words.across(files.size)))
     if (live && at) {
       found.bar.append(el('span', 'now', want))
       for (const [label, by] of [['◀', -1], ['▶', 1]] as const) {

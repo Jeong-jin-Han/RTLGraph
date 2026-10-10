@@ -38,6 +38,13 @@ export interface Walk {
   steps: readonly Step[]
 }
 
+/** The files a walk visits, in the order it first reaches each. */
+export function filesIn(walk: Walk): string[] {
+  const seen: string[] = []
+  for (const step of walk.steps) if (!seen.includes(step.file)) seen.push(step.file)
+  return seen
+}
+
 /**
  * `rx:74` — the short form a spec uses once it has said which file `rx` is.
  *

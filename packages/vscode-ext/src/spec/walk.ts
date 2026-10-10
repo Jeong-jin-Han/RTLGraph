@@ -10,12 +10,13 @@
 
 import * as vscode from 'vscode'
 import { langOf, type Lang } from '@rtlgraph/wave'
-import { prefixesIn, walksIn, type Step, type Walk } from './steps.ts'
+import { filesIn, prefixesIn, walksIn, type Step, type Walk } from './steps.ts'
 
 // The few words this shows. Everything else on screen is the document's own.
 const WORDS = {
   ko: {
     steps: (n: number) => `${n} 스텝`,
+    across: (n: number) => `${n} 파일을 건넌다`,
     pick: '어느 시나리오를 걸을까?',
     list: (id: string, title: string) => `${id} — ${title}`,
     stepper: '목록에서 고르면 그 스텝이 열린다 · Esc 로 끝',
@@ -264,7 +265,11 @@ export class WalkSession {
     const total = this.walk.steps.length
     // Nothing before the first step, so no button that pretends otherwise.
     this.back.text = at > 0 ? '$(chevron-left)' : '$(blank)'
-    this.status.text = `$(debug-step-over) ${this.walk.id}  ${at + 1}/${total}  ·  ${step.cycle}`
+    // Which file, once a scenario crosses more than one: in a walk that goes
+    // transmitter → line → receiver, the cycle alone does not say where you
+    // are, and that crossing is the whole reason the scenario exists.
+    const across = filesIn(this.walk).length > 1 ? `  ·  ${step.file}` : ''
+    this.status.text = `$(debug-step-over) ${this.walk.id}  ${at + 1}/${total}  ·  ${step.cycle}${across}`
     // What happens here, in words — the step's own sentence if the table has
     // one, and only then how to work the buttons.
     this.status.tooltip = `${(step.why || step.said).replace(/`/g, '')}\n\n${words().tip}`

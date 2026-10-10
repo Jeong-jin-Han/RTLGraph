@@ -233,6 +233,15 @@ extension, so each line is something that broke once.
   walk is standing on; in any other step the same click walks there first,
   because jumping into a step the walk is not on leaves the editor somewhere
   the bracket is not.
+- **A walk follows an event across modules.** A scenario whose rows cite the
+  transmitter, the top's flops and the receiver walks all three in turn, one
+  step per file, and the card says so (`7 스텝 · 3 파일을 건넌다`) before it is
+  clicked. What stopped this was the specification format, not the walker:
+  `codespec` told an agent that a cross-module scenario should point at the
+  other modules' scenarios by number instead of citing their lines, so a
+  six-row flow walked two steps. It now says to cite the one line the flow
+  passes through in each module and leave the detail to the pointer — the rule
+  against saying a thing twice stands, but a flow may not be cut at a file.
 - Nothing comes before the first step, so the pane under it is left empty
   rather than holding the last walk's last step, and the button that would
   step backwards from there is not offered.
