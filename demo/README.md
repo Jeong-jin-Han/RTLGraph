@@ -88,16 +88,16 @@ bash packages/vscode-ext/assets/agent/run-tb.sh --project demo/hw
 
 That is the script `RTLGraph: Copy Agent Spec to Workspace` writes as
 `.agent/rtlgraph/run-tb.sh`. Add `--wave` and it also dumps a waveform and reads
-it back into `waveform/<bench>.waveform.md` — measurements only: clock, reset,
+it back into `waveform/<given|mine>/<bench>.waveform.md` — measurements only: clock, reset,
 what was undefined after it, every handshake, one stretch per check. The
 `<bench>.waveform.json` beside it opens as a waveform view: open
-`demo/uart-p01/waveform/tb_uart_corner.waveform.json` from the Explorer and the
+`demo/uart-p01/waveform/mine/tb_uart_corner.waveform.json` from the Explorer and the
 run is there to walk, check by check — each check linking to the testbench line
 that printed it, each signal name to the RTL line that drives it. The demo's
 reports are written in Korean (`RTLGRAPH_LANG=ko`), which is also what the
 `rtlgraph.language` setting does for the view.
 `tb_uart_corner.waveform-analysis.md` is the other half of that pair, written
-against the code the way `.prompt/rtlgraph/waveform/korean.md` asks for it: the
+against the code the way `.prompt/rtlgraph/components/waveform/korean.md` asks for it: the
 view folds each of its sections in under the check it explains, and every
 `uart_receiver.v:NN` in it opens that line. Reports live with the project; only the
 compiler's scratch goes to `.rtlgraph-build/`. It finds the benches (`tb/given/` for whatever the course
@@ -156,11 +156,20 @@ so a project of your own carries its own copy instead of referencing this folder
 `packages/vscode-ext/test/agent.test.ts` checks the two copies are identical, and
 the end-to-end run checks the copied `DFF.v` is the one the demos are drawn from.
 
-## A real assignment, kept out of the repository
+## Real assignments, kept out of the repository
 
-Course material cannot be committed, so a handed-out assignment is dropped in as
-`demo/uart-p01/` (the handout PDF, the skeleton as unzipped, and the RTLGraph
-files written for it) and that path is git-ignored. It is the only way to check
+Course material cannot be committed, so three handed-out projects sit in `demo/`
+behind git-ignore. They are where everything that no written-for-the-repo demo
+can exercise gets checked.
+
+| Folder | What it is for |
+|---|---|
+| `uart-p01/` | The UART assignment, with the specification `me/` written by hand: 24 scenarios, 78 steps, every one walkable, five of them crossing three files. The showcase for `codespec`, the reader, the walk and the hover |
+| `uart-fresh/` | The same handout with nothing but the code, the PDF and the marking bench in it. A fresh agent is given one prompt path and the result is compared against `uart-p01` — which is how most of the prompt's holes were found |
+| `d04-soc/` | A RISC-V SoC lab: a Vivado project, a synthesized netlist for the core, and a C file as the answer. The case the runner was not written for, and the reason it no longer parses Verilog to find vendor cells |
+
+`demo/uart-p01/` holds the handout PDF, the skeleton as unzipped, and the
+RTLGraph files written for it. It is the only way to check
 the parts that no written-for-the-repo demo can exercise: an eleven-page
 PowerPoint handout, a skeleton whose folders may not be touched, and quotes that
 the deck spells its own way — `serial_in` in bold mid-sentence, an arrow drawn

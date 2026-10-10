@@ -1,10 +1,27 @@
 # Third-party code in RTLGraph
 
 RTLGraph has no runtime dependencies of its own: the SVG, PDF and XLSX writers
-are all in this repository. One thing is shipped inside the extension, and one is
-used to build it.
+are all in this repository. Two things are shipped inside the extension, and one
+is used to build it.
 
 ## Shipped inside the extension
+
+### KaTeX — MIT License
+
+An analysis and a specification both carry arithmetic — 125 MHz / 115 200 baud =
+1085 — and both are written by hand in `$…$`, the same syntax the writer uses in
+NodeGraph. The waveform view and the specification reader render it with KaTeX
+rather than shipping a formula renderer of this repository's own.
+
+| What | Where | Comes from |
+|---|---|---|
+| the library itself | bundled by esbuild into `dist/wave.js` and `dist/spec.js` | the `katex` package |
+| `katex.min.css`, `fonts/` | copied into `dist/katex/` at build time | the same package |
+
+The stylesheet and the fonts have to be files rather than part of the bundle: a
+webview's content policy loads a font by source, not by nonce, which is why the
+view's CSP carries a `font-src` at all. A formula KaTeX cannot parse is left as
+the writer typed it instead of being replaced by a red error.
 
 ### pdf.js — Apache License 2.0
 
