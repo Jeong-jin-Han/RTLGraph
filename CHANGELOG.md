@@ -1,5 +1,164 @@
 # Changelog
 
+## 0.3.0
+
+A specification is a document somebody has to read, and this release is
+about making the one an agent writes worth reading back. `components/codespec`
+turns code into it; the extension then reads it the other way — a reader with
+every scenario's steps under its heading, a walk that follows one of them
+through the editors, and a hover that answers out of it. Driven through two
+real labs, which is where most of what follows comes from.
+
+### Code nobody wrote down, written down
+
+- **`components/codespec`**: a prompt that reads code and produces a
+  specification — one file per module, in six sections whose **depths do not
+  mix**, so a reader who stops after section 1 is left with less and never with
+  something wrong. Numbers carry where they came from (`measured`/`derived`/
+  `read`) and statements carry whose they are (`[PDF]`/`[code]`/`[undecided]`);
+  `[undecided]` is the list of decisions nobody signed off. All three chains
+  end by writing one, because the day the marking bench arrives is not the day
+  to re-read your own code.
+- **`▶ workflow` on a scenario.** Section 5 is a table of one row per cycle,
+  each citing the lines that ran — which is a path through the code already.
+  Clicking the lens walks it: the current step opens top right, the step before
+  it underneath, and the stretch to read is bracketed down the gutter. The
+  status bar carries `◀  RX-N1 3/6 · 1085  ▶`, so stepping is a click and the
+  count is on screen; clicking the middle opens the whole step list, where
+  moving the selection moves the walk. `alt+→`/`alt+←` do the same, and mean
+  nothing when no walk is on. A lens only exists in a text editor, so from the
+  rendered **preview** the palette's `RTLGraph: Walk a Workflow` offers the
+  previewed document's scenarios instead. A step
+  never leaves one file — a row citing two files becomes two steps of the same
+  cycle, because an editor that jumps elsewhere halfway through loses the
+  reader's place — and each step replaces what is in its pane, so a walk of ten
+  steps leaves two tabs behind rather than ten.
+- **A reader for the specification itself** (`📖` at the top of the document,
+  or the book in its title bar). VS Code's markdown preview renders the text
+  and stops there — a lens cannot live in it — so this is the preview a spec
+  needs: the document, and under every scenario heading the steps of that
+  scenario, each saying its cycle and the lines it runs. Click one and the
+  walk goes there; `▶ ◀ ■` sit in the same strip; the step you are on is
+  marked as the editors on the right move. Every citation in the document is a
+  button that opens that line. Scenarios fold, and a fold you close stays
+  closed.
+- A path table's last column, **what happens**, is what a step is titled
+  with: one line per cycle in human words. Restating the code there would
+  have shown the reader the same lines twice — they are open beside them
+  already — so the sentence leads and the citations sit under it. A table
+  written before that column existed still walks: whatever in the row is not
+  a citation is used instead.
+- The reader follows the VS Code theme, the way the markdown preview does —
+  colours, fonts, heading scale, table rules and all, down to
+  `markdown.preview.fontFamily`. It sits beside that preview, and a document
+  that set its own look read as a different tool's: the tables had rules down
+  every column and the citations were tinted boxes, so a cell holding four of
+  them was a row of buttons rather than a sentence. Citations now read as the
+  code they are and light up under the hand. The schematic
+  and the waveform stay white on purpose: they are figures, and a figure is
+  the same figure in any theme. A document is not.
+- A step's line numbers are individually clickable, but only in the step the
+  walk is standing on; in any other step the same click walks there first,
+  because jumping into a step the walk is not on leaves the editor somewhere
+  the bracket is not.
+- **A walk follows an event across modules.** A scenario whose rows cite the
+  transmitter, the top's flops and the receiver walks all three in turn, one
+  step per file, and the card says so (`7 스텝 · 3 파일을 건넌다`) before it is
+  clicked. What stopped this was the specification format, not the walker:
+  `codespec` told an agent that a cross-module scenario should point at the
+  other modules' scenarios by number instead of citing their lines, so a
+  six-row flow walked two steps. It now says to cite the one line the flow
+  passes through in each module and leave the detail to the pointer — the rule
+  against saying a thing twice stands, but a flow may not be cut at a file.
+- Nothing comes before the first step, so the pane under it is left empty
+  rather than holding the last walk's last step, and the button that would
+  step backwards from there is not offered.
+- **Hovering a signal name** in the `.v` shows what section 6 of the
+  specification says about it: where it is made, where it is read, the range it
+  holds, and why. Every citation in the entry is a link to that line. A name no
+  specification mentions gets no hover — a guess there is worse than silence.
+
+### What a real assignment broke
+
+A user drove `recipe/assignment` through a RISC-V SoC lab — a Vivado
+project, a synthesized netlist for a core, a C file as the answer — and
+wrote up sixteen places where this fell short. Most of them are fixed here,
+and the ones that are not are now written down in the spec as workarounds
+rather than left for the next person to rediscover.
+
+- **A netlist of vendor cells compiles.** `run-tb.sh` now works out which
+  modules are instantiated and defined nowhere in the project, and when there
+  are any it hands iverilog Vivado's `unisims` library and `glbl` as a second
+  top. Found by what is undefined rather than by a list of cell names, because
+  a list only knows the cells somebody has already hit.
+- **A top that does not elaborate no longer takes the bench down with it.** A
+  project can carry a board wrapper meant for a later lab; the build is tried
+  the old way first (every uninstantiated module a top) and then with the bench
+  named as the only one, saying which it took.
+- **The compile log you are shown is the attempt that got furthest**, not the
+  first. With a SystemVerilog design the first was a wall of "requires
+  SystemVerilog" hiding the real reason — and `-g2005` is now skipped outright
+  when the design has a `.sv` in it.
+- **A verdict is read from the simulation's own output**, with the build log
+  kept separate and shown separately. A vendor library warning with the word
+  "error" in it is not a bench failing. A line that starts with `PASS` or
+  `FAIL` is taken at its word before anything looser is tried.
+- **A bench cannot hang the run**: `--timeout` (900s by default) ends it, xsim
+  is given no stdin to wait on, and a copy left in the project folder by a run
+  that was killed is noticed and removed on the next one.
+- **`--wave-depth N`** stops the dump N levels under the bench — there is
+  nothing to read inside a LUT.
+- **Vivado**: `.v` and `.sv` are compiled apart (a `.v` bench over a `.sv` bus
+  is normal), with `-L unisims_ver -L unimacro_ver -L secureip`, `glbl` as a
+  second top, and `xelab --relax`, which is what Vivado's own script passes
+  and what a design mixing files with and without a `timescale` needs.
+- **`make-submission.sh` looks deeper than the project folder** when there is
+  no RTL directly in it, and `--only FILE` names the deliverable outright for
+  a lab whose answer is not a pile of `.v`.
+- **Measuring benches stay out of the design.** `sim/` — where the
+  specification prompt puts benches that judge nothing — is no longer swept up
+  as design files or listed as testbenches.
+- **The validator**: a `_reg` node may sit on `always_ff` (`\balways\b` never
+  matched it, because `_` is a word character), and `source.spec` inheritance
+  is honoured through a hierarchy, so a component six folders deep quotes the
+  brief without repeating `../../../../../..` — and a child validated alone is
+  not told off for leaving it out.
+- **The environment report** names the software toolchain when there is one: a
+  lab whose answer is C is not testable until the hex exists, and a cross
+  compiler without a libc is a wall you hit before the simulator matters.
+- **The assignment prompt** pointed at the wrong path for NodeGraph's spec
+  (`.agent/nodegraph/SPEC.md`), and asked for a node shape NodeGraph's own
+  checker rejects: a quote plus code links means "the quote is at the first
+  link's line". The shape that works — the requirement node carries the quote
+  and no code link, a test node's first link is where the bench quotes it — is
+  now the rule, with the reason.
+- **Three things the format cannot draw** are written down with the answer to
+  use today: a project's own flip-flop (`kind: "reg"` with its own `module`),
+  a memory array (one `expr` box, shape in the label), a bit-select (an `expr`
+  node where it feeds a primitive, a `slice` diagnostic elsewhere). Each says
+  why it is a workaround.
+- **The same bench found twice** — once in `tb/given/`, once where it was
+  copied from inside a vendor project — is run once. And a netlist that says
+  the same thing about every one of its cells is counted rather than sampled:
+  `118 x : Padding N high bits of the port` instead of eight of them.
+- **"Evaluating parameters" says which value**: the one the instantiation
+  passes, not the declared default, recorded in a `param-evaluated` diagnostic.
+
+### The runner, after a lab it had never seen
+
+The whole of "What a real assignment broke" above, plus twenty defects a
+review of the scripts reproduced afterwards: a swap window in which a signal
+deleted the project's own file, a trap that tidied up and carried on, a bench
+that printed PASS and then hung being counted as a pass, and a vendor-cell
+detection that did not fire on the netlist it was written for — it matched
+instantiations with a regex, and real `write_verilog` output puts the type,
+the parameters and an escaped instance name on three lines. The regex is
+gone: the build is tried as it stands and the library is fetched only when
+the compiler says `Unknown module type`.
+
+`0.2.0` below was never published, and its notes still apply.
+
+
 ## 0.2.0
 
 A minor number rather than a patch: what began as a fix on top of 0.1.1
@@ -180,141 +339,6 @@ extension, so each line is something that broke once.
   real: a fresh agent ran `recipe/assignment` against a bare two-file skeleton
   and came back with five benches, a schematic, `0 errors`, five waveforms, five
   analyses and a submission list, with the handout untouched.
-
-### Code nobody wrote down, written down
-
-- **`components/codespec`**: a prompt that reads code and produces a
-  specification — one file per module, in six sections whose **depths do not
-  mix**, so a reader who stops after section 1 is left with less and never with
-  something wrong. Numbers carry where they came from (`measured`/`derived`/
-  `read`) and statements carry whose they are (`[PDF]`/`[code]`/`[undecided]`);
-  `[undecided]` is the list of decisions nobody signed off. All three chains
-  end by writing one, because the day the marking bench arrives is not the day
-  to re-read your own code.
-- **`▶ workflow` on a scenario.** Section 5 is a table of one row per cycle,
-  each citing the lines that ran — which is a path through the code already.
-  Clicking the lens walks it: the current step opens top right, the step before
-  it underneath, and the stretch to read is bracketed down the gutter. The
-  status bar carries `◀  RX-N1 3/6 · 1085  ▶`, so stepping is a click and the
-  count is on screen; clicking the middle opens the whole step list, where
-  moving the selection moves the walk. `alt+→`/`alt+←` do the same, and mean
-  nothing when no walk is on. A lens only exists in a text editor, so from the
-  rendered **preview** the palette's `RTLGraph: Walk a Workflow` offers the
-  previewed document's scenarios instead. A step
-  never leaves one file — a row citing two files becomes two steps of the same
-  cycle, because an editor that jumps elsewhere halfway through loses the
-  reader's place — and each step replaces what is in its pane, so a walk of ten
-  steps leaves two tabs behind rather than ten.
-- **A reader for the specification itself** (`📖` at the top of the document,
-  or the book in its title bar). VS Code's markdown preview renders the text
-  and stops there — a lens cannot live in it — so this is the preview a spec
-  needs: the document, and under every scenario heading the steps of that
-  scenario, each saying its cycle and the lines it runs. Click one and the
-  walk goes there; `▶ ◀ ■` sit in the same strip; the step you are on is
-  marked as the editors on the right move. Every citation in the document is a
-  button that opens that line. Scenarios fold, and a fold you close stays
-  closed.
-- A path table's last column, **what happens**, is what a step is titled
-  with: one line per cycle in human words. Restating the code there would
-  have shown the reader the same lines twice — they are open beside them
-  already — so the sentence leads and the citations sit under it. A table
-  written before that column existed still walks: whatever in the row is not
-  a citation is used instead.
-- The reader follows the VS Code theme, the way the markdown preview does —
-  colours, fonts, heading scale, table rules and all, down to
-  `markdown.preview.fontFamily`. It sits beside that preview, and a document
-  that set its own look read as a different tool's: the tables had rules down
-  every column and the citations were tinted boxes, so a cell holding four of
-  them was a row of buttons rather than a sentence. Citations now read as the
-  code they are and light up under the hand. The schematic
-  and the waveform stay white on purpose: they are figures, and a figure is
-  the same figure in any theme. A document is not.
-- A step's line numbers are individually clickable, but only in the step the
-  walk is standing on; in any other step the same click walks there first,
-  because jumping into a step the walk is not on leaves the editor somewhere
-  the bracket is not.
-- **A walk follows an event across modules.** A scenario whose rows cite the
-  transmitter, the top's flops and the receiver walks all three in turn, one
-  step per file, and the card says so (`7 스텝 · 3 파일을 건넌다`) before it is
-  clicked. What stopped this was the specification format, not the walker:
-  `codespec` told an agent that a cross-module scenario should point at the
-  other modules' scenarios by number instead of citing their lines, so a
-  six-row flow walked two steps. It now says to cite the one line the flow
-  passes through in each module and leave the detail to the pointer — the rule
-  against saying a thing twice stands, but a flow may not be cut at a file.
-- Nothing comes before the first step, so the pane under it is left empty
-  rather than holding the last walk's last step, and the button that would
-  step backwards from there is not offered.
-- **Hovering a signal name** in the `.v` shows what section 6 of the
-  specification says about it: where it is made, where it is read, the range it
-  holds, and why. Every citation in the entry is a link to that line. A name no
-  specification mentions gets no hover — a guess there is worse than silence.
-
-### What a real assignment broke
-
-A user drove `recipe/assignment` through a RISC-V SoC lab — a Vivado
-project, a synthesized netlist for a core, a C file as the answer — and
-wrote up sixteen places where this fell short. Most of them are fixed here,
-and the ones that are not are now written down in the spec as workarounds
-rather than left for the next person to rediscover.
-
-- **A netlist of vendor cells compiles.** `run-tb.sh` now works out which
-  modules are instantiated and defined nowhere in the project, and when there
-  are any it hands iverilog Vivado's `unisims` library and `glbl` as a second
-  top. Found by what is undefined rather than by a list of cell names, because
-  a list only knows the cells somebody has already hit.
-- **A top that does not elaborate no longer takes the bench down with it.** A
-  project can carry a board wrapper meant for a later lab; the build is tried
-  the old way first (every uninstantiated module a top) and then with the bench
-  named as the only one, saying which it took.
-- **The compile log you are shown is the attempt that got furthest**, not the
-  first. With a SystemVerilog design the first was a wall of "requires
-  SystemVerilog" hiding the real reason — and `-g2005` is now skipped outright
-  when the design has a `.sv` in it.
-- **A verdict is read from the simulation's own output**, with the build log
-  kept separate and shown separately. A vendor library warning with the word
-  "error" in it is not a bench failing. A line that starts with `PASS` or
-  `FAIL` is taken at its word before anything looser is tried.
-- **A bench cannot hang the run**: `--timeout` (900s by default) ends it, xsim
-  is given no stdin to wait on, and a copy left in the project folder by a run
-  that was killed is noticed and removed on the next one.
-- **`--wave-depth N`** stops the dump N levels under the bench — there is
-  nothing to read inside a LUT.
-- **Vivado**: `.v` and `.sv` are compiled apart (a `.v` bench over a `.sv` bus
-  is normal), with `-L unisims_ver -L unimacro_ver -L secureip`, `glbl` as a
-  second top, and `xelab --relax`, which is what Vivado's own script passes
-  and what a design mixing files with and without a `timescale` needs.
-- **`make-submission.sh` looks deeper than the project folder** when there is
-  no RTL directly in it, and `--only FILE` names the deliverable outright for
-  a lab whose answer is not a pile of `.v`.
-- **Measuring benches stay out of the design.** `sim/` — where the
-  specification prompt puts benches that judge nothing — is no longer swept up
-  as design files or listed as testbenches.
-- **The validator**: a `_reg` node may sit on `always_ff` (`\balways\b` never
-  matched it, because `_` is a word character), and `source.spec` inheritance
-  is honoured through a hierarchy, so a component six folders deep quotes the
-  brief without repeating `../../../../../..` — and a child validated alone is
-  not told off for leaving it out.
-- **The environment report** names the software toolchain when there is one: a
-  lab whose answer is C is not testable until the hex exists, and a cross
-  compiler without a libc is a wall you hit before the simulator matters.
-- **The assignment prompt** pointed at the wrong path for NodeGraph's spec
-  (`.agent/nodegraph/SPEC.md`), and asked for a node shape NodeGraph's own
-  checker rejects: a quote plus code links means "the quote is at the first
-  link's line". The shape that works — the requirement node carries the quote
-  and no code link, a test node's first link is where the bench quotes it — is
-  now the rule, with the reason.
-- **Three things the format cannot draw** are written down with the answer to
-  use today: a project's own flip-flop (`kind: "reg"` with its own `module`),
-  a memory array (one `expr` box, shape in the label), a bit-select (an `expr`
-  node where it feeds a primitive, a `slice` diagnostic elsewhere). Each says
-  why it is a workaround.
-- **The same bench found twice** — once in `tb/given/`, once where it was
-  copied from inside a vendor project — is run once. And a netlist that says
-  the same thing about every one of its cells is counted rather than sampled:
-  `118 x : Padding N high bits of the port` instead of eight of them.
-- **"Evaluating parameters" says which value**: the one the instantiation
-  passes, not the declared default, recorded in a `param-evaluated` diagnostic.
 
 ### Comments are part of the deliverable
 

@@ -151,6 +151,10 @@ was silent and the code chose, which is the list of decisions nobody signed off.
 benches that judge nothing and print cycle numbers, so "valid at cycle 10851" is a measurement
 rather than arithmetic.
 
+A scenario that crosses modules (the `90-` file) cites the line it passes through in each one,
+so **one event can be walked from the transmitter through the line to the receiver** in a single
+go.
+
 Written this way, **the extension reads the document back.** The `📖` at the top of the document
 opens a reader that lists every scenario's steps under its heading — click one and that cycle
 opens on the code — and in the document as text each scenario heading gets a `▶ workflow` that

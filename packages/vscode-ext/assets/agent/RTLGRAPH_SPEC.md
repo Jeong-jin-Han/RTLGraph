@@ -633,9 +633,16 @@ Rules that keep the layers honest:
    `### \`clock_counter\`` subheading, or a table row whose first cell is `` `clock_counter` ``
    (backticked) — because hovering that name in the `.v` shows that entry. A name mentioned only
    mid-sentence gets no hover.
-7. **Say a thing once.** Shared machinery goes in the overview; a scenario lives in the file of the
-   module whose port the event arrives at; anything crossing modules goes in the across-file and
-   refers to the others by scenario number (`TX-N1`, `RX-E7`), never by repeating their paths.
+7. **Say a thing once — but do not cut a flow at a file.** Shared machinery goes in the overview;
+   a scenario lives in the file of the module whose port the event arrives at; anything crossing
+   modules goes in the across-file and refers to the others by scenario number (`TX-N1`,
+   `RX-E7`) rather than repeating **the detail** of their paths. It must still **cite the one
+   line where the flow passes through each module**: a row citing two files becomes one step per
+   file, so the walk moves transmitter → line → receiver and a reader follows one event across
+   the design. An across-file written as cross-references alone gave two steps for a six-row
+   flow. This is not only for communication — a control path and its data path, the stages of a
+   pipeline, an arbiter and the memory behind it: if one event touches two modules, that event is
+   an across-file scenario.
 
 `sim/` holds benches that **print and judge nothing** — `$display` of the cycle a thing happened —
 because their job is to make the document's numbers measurements rather than arithmetic. They are

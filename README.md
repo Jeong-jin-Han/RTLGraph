@@ -99,7 +99,10 @@ click rather than a memory test.
 | **Export** | SVG / PNG / PDF of exactly what is on screen, and XLSX of the tables behind it — all written without a dependency |
 | **Validator** | Schema, widths, ports, unreachable nets, missing `meaning`, and every `origin` checked against the Verilog itself. A `source.root` pointing at the wrong folder is reported once, with the value it should have, instead of once per element |
 | **Its own file icon** | RTLGraph marks the tabs it owns — the schematic, the state diagram, the waveform, the requirement reader — whichever icon theme you use. In the Explorer the icon belongs to your theme; `RTLGraph: Mark RTLGraph Files in the Explorer` teaches Material Icon Theme about them |
-| **Agent-friendly** | `.agent/rtlgraph/SPEC.md` plus six ready-to-paste prompts, one per kind of job |
+| **A reader for the specification** | A spec written by `components/codespec` opens in a reader of its own (`📖`): the document rendered in your VS Code theme, with the steps of every scenario listed under its heading. Click one and that cycle opens on the code |
+| **Walk a scenario through the code** | `▶ workflow` on a scenario steps its cycle-by-cycle table through the editors — the current step top right, the one before it underneath, the stretch to read bracketed down the gutter. One event is followed **across modules**: transmitter → the top's flops → receiver, one step per file |
+| **Hover a signal for what the spec says** | Hovering a name in the `.v` shows that signal's section 6 entry — where it is made, where it is read, the range it holds — with every citation in it a link to that line |
+| **Agent-friendly** | `.agent/rtlgraph/SPEC.md` plus seven ready-to-paste prompts, one per kind of job, and three chains that run several of them in order |
 
 ---
 
@@ -411,6 +414,8 @@ node packages/vscode-ext/dist/agent/rtlgraph-validate.mjs <graph>
 | `RTLGraph: Run the Testbenches` | Runs `.agent/rtlgraph/run-tb.sh` in a terminal — both folders, or only `given` / `mine` |
 | `RTLGraph: Package the Submission` | Runs `.agent/rtlgraph/make-submission.sh` — list first, or write the zip |
 | `rtlgraph.language` (setting) | `auto`, `english` or `korean` — RTLGraph's own wording in the waveform view and in what `--wave` writes. Names from the code are never translated |
+| `RTLGraph: Read the Specification` | Opens a `codespec` specification in RTLGraph's reader (also the 📖 above the document, and the book in its title bar) |
+| `RTLGraph: Walk a Workflow` | Walks one scenario's path through the code; `alt+→` / `alt+←` step, and the status bar's `◀  RX-N1 3/6  ▶` steps by clicking |
 | `RTLGraph: Mark RTLGraph Files in the Explorer` | Teaches Material Icon Theme about `*.rtlgraph.json` and `*.waveform.json` (asks before touching your settings) |
 | `RTLGraph: Export Schematic (SVG / PNG / PDF)` | Exports the current view (also the **Export…** toolbar button) |
 | `RTLGraph: Fold Components` / `Unfold Components` | The selected component — on its own (what is inside goes back to folded) or with everything inside — else the whole hierarchy |

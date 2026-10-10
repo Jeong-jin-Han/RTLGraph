@@ -30,6 +30,40 @@ test('a project with no .gitattributes gets one, and keeps its own', () => {
 // those paths has to be a file the command actually writes: the assignment
 // prompt pointed at `.agent/NODEGRAPH_SPEC.md` for a release, and an agent
 // following it found nothing there and carried on without the companion.
+// The English prompt fell six rules behind the Korean without anything
+// noticing: a reader in one language was being told to do a different job.
+// Structure is what can be compared mechanically — the sections and the
+// numbered rules — and it is what drifts first.
+test('the two languages of a prompt have the same shape', () => {
+  const shape = (text: string) => ({
+    sections: [...text.matchAll(/^## /gm)].length,
+    rules: [...text.matchAll(/^\d+\. \*\*/gm)].length,
+    tables: [...text.matchAll(/^\|[^|]+\|/gm)].length > 0,
+  })
+  for (const kind of [...PROMPT_KINDS.map(k => `${COMPONENT_DIR}/${k}`), ...PROMPT_CHAINS.map(c => `${RECIPE_DIR}/${c}`)]) {
+    const ko = shape(read(`assets/prompt/${kind}/korean.md`))
+    const en = shape(read(`assets/prompt/${kind}/english.md`))
+    assert.deepEqual(en, ko, `${kind}: the two languages have drifted apart`)
+  }
+})
+
+// The three chains were left behind for two weeks while the component prompts
+// and the runner moved on. Each thing a chain has to pass on is one line here.
+test('every chain carries what the runner and the reader need', () => {
+  for (const chain of PROMPT_CHAINS) {
+    for (const language of PROMPT_LANGUAGES) {
+      const text = read(`assets/prompt/${RECIPE_DIR}/${chain}/${language}.md`)
+      for (const [what, mark] of [
+        ['what a failed compile means', 'RTLGRAPH_VENDOR_SRC'],
+        ['the dump depth for a big design', '--wave-depth'],
+        ['checking the specification in the reader', '📖'],
+      ] as const) {
+        assert.ok(text.includes(mark), `${chain}/${language} says nothing about ${what}`)
+      }
+    }
+  }
+})
+
 test('every path the prompts name is a file that gets written', () => {
   // ENVIRONMENT.md is written by the command rather than copied, so it is not
   // in the file list, but a prompt may name it.
